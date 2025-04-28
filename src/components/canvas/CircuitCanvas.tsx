@@ -1,6 +1,6 @@
-import { Box, Text, VStack, HStack, Heading, Divider, useColorModeValue, Slider, SliderTrack, SliderFilledTrack, SliderThumb, Flex, IconButton, Tooltip } from '@chakra-ui/react'
+import { Box, Text, VStack, HStack, Heading, Divider, useColorModeValue, Slider, SliderTrack, SliderFilledTrack, SliderThumb, Flex, IconButton, Tooltip, useToast } from '@chakra-ui/react'
 import { useSelector, useDispatch } from 'react-redux'
-import { selectQubits, selectGates, selectMaxPosition, addGate, removeGate, Gate as SliceGate } from '../../store/slices/circuitSlice'
+import { selectQubits, selectGates, selectMaxPosition, addGate, removeGate, Gate } from '../../store/slices/circuitSlice'
 import { selectSelectedGateId, selectGate, selectZoomLevel, setZoomLevel } from '../../store/slices/uiSlice'
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { CircuitPosition, DroppedGate, Gate as CircuitGate } from '../../types/circuit'
@@ -21,10 +21,10 @@ const CircuitCanvas: React.FC = () => {
   const maxPosition = useSelector(selectMaxPosition)
   const selectedGateId = useSelector(selectSelectedGateId)
   const zoomLevel = useSelector(selectZoomLevel)
+  const toast = useToast()
   
   // Local state
   const svgContainerRef = useRef<HTMLDivElement>(null)
-  const [svgContent, setSvgContent] = useState('')
   const [gridHeight, setGridHeight] = useState(300)
   const [visualizationHeight, setVisualizationHeight] = useState(300)
   const [cellSize, setCellSize] = useState(60) // Default cell size
@@ -39,103 +39,179 @@ const CircuitCanvas: React.FC = () => {
   const headingColor = useColorModeValue('gray.700', 'gray.200')
   const controlsBg = useColorModeValue('gray.100', 'gray.700')
   
-  // Convert SliceGate[] to CircuitGate[] for GridCell compatibility
+  // Convert SliceGate[] to CircuitGate[] for GridCell compatibility - with error protection
   const circuitGates = useMemo(() => {
-    return gates.map(gate => {
-      // Find the gate definition for additional properties
-      const gateDefinition = gateLibrary.find(g => g.id === gate.type);
-      
-      // Return a compatible gate object
-      return {
-        ...gate,
-        name: gateDefinition?.name || gate.type,
-        symbol: gateDefinition?.symbol || gate.type,
-        description: gateDefinition?.description || '',
-        category: gateDefinition?.category || 'unknown',
-        color: gateDefinition?.color || '#888888'
-      } as CircuitGate;
-    });
+    try {
+      return gates.map(gate => {
+        // Find the gate definition for additional properties
+        const gateDefinition = gateLibrary.find(g => g.id === gate.type);
+        
+        if (!gateDefinition) {
+          console.warn(`Gate type "${gate.type}" not found in library`);
+          return {
+            ...gate,
+            name: gate.type,
+            symbol: gate.type.substring(0, 2).toUpperCase(),
+            description: 'Unknown gate type',
+            category: 'unknown',
+            color: 'gray'
+          } as CircuitGate;
+        }
+        
+        // Return a compatible gate object
+        return {
+          ...gate,
+          name: gateDefinition.name,
+          symbol: gateDefinition.symbol,
+          description: gateDefinition.description || '',
+          category: gateDefinition.category || 'unknown',
+          color: gateDefinition.color || 'gray'
+        } as CircuitGate;
+      });
+    } catch (err) {
+      console.error('Error processing circuit gates:', err);
+      return [];
+    }
   }, [gates]);
   
-  // Update SVG representation when circuit changes
+  // Update SVG representation when circuit changes, with debounce for better performance
   useEffect(() => {
-    const svg = renderCircuitSvg(qubits, gates)
-    setSvgContent(svg)
+    // Don't update SVG for empty circuits
+    if (qubits.length === 0) return;
     
-    // Apply SVG to the container
-    if (svgContainerRef.current) {
-      svgContainerRef.current.innerHTML = svg
-    }
-  }, [qubits, gates])
+    const debounceTimer = setTimeout(() => {
+      try {
+        // Use circuitGates instead of gates for proper typing
+        const svg = renderCircuitSvg(qubits, circuitGates);
+        
+        // Apply SVG to the container
+        if (svgContainerRef.current) {
+          svgContainerRef.current.innerHTML = svg;
+        }
+      } catch (err) {
+        console.error('Error rendering circuit SVG:', err);
+        // Show error toast to user
+        toast({
+          title: 'Visualization Error',
+          description: 'Could not render the circuit visualization.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    }, 100); // 100ms debounce
+    
+    return () => clearTimeout(debounceTimer);
+  }, [qubits, circuitGates, toast]); // Updated dependency array
   
   // Handle zoom level changes
   const handleZoomIn = useCallback(() => {
-    const newZoom = Math.min(zoomLevel + 0.1, 2.0)
-    dispatch(setZoomLevel(newZoom))
-    setCellSize(60 * newZoom) // Adjust cell size based on zoom
-  }, [zoomLevel, dispatch])
+    const newZoom = Math.min(zoomLevel + 0.1, 2.0);
+    dispatch(setZoomLevel(newZoom));
+    setCellSize(60 * newZoom); // Adjust cell size based on zoom
+  }, [zoomLevel, dispatch]);
   
   const handleZoomOut = useCallback(() => {
-    const newZoom = Math.max(zoomLevel - 0.1, 0.5)
-    dispatch(setZoomLevel(newZoom))
-    setCellSize(60 * newZoom) // Adjust cell size based on zoom
-  }, [zoomLevel, dispatch])
+    const newZoom = Math.max(zoomLevel - 0.1, 0.5);
+    dispatch(setZoomLevel(newZoom));
+    setCellSize(60 * newZoom); // Adjust cell size based on zoom
+  }, [zoomLevel, dispatch]);
   
   const handleZoomChange = useCallback((value: number) => {
-    dispatch(setZoomLevel(value))
-    setCellSize(60 * value) // Adjust cell size based on zoom
-  }, [dispatch])
+    dispatch(setZoomLevel(value));
+    setCellSize(60 * value); // Adjust cell size based on zoom
+  }, [dispatch]);
   
   /**
    * Handle dropping a gate onto the circuit
    */
   const handleDrop = useCallback((item: DroppedGate, position: CircuitPosition): void => {
-    const gateDefinition = gateLibrary.find(g => g.id === item.gateType)
-    
-    if (!gateDefinition) return
-    
-    // Create a new gate instance with required properties
-    // Explicitly ensure qubit is a number to match the Redux slice Gate type
-    const newGate = {
-      type: gateDefinition.id,
-      qubit: position.qubit as number,  // Ensure this is a number
-      position: position.position as number, // Ensure this is a number
-      params: {},
+    try {
+      const gateDefinition = gateLibrary.find(g => g.id === item.gateType);
+      
+      if (!gateDefinition) {
+        console.warn(`Gate type "${item.gateType}" not found in library`);
+        return;
+      }
+      
+      // Create a new gate instance with required properties and proper typing
+      // Use Omit<Gate, "id"> to match the expected type for addGate action
+      const newGate: Omit<Gate, "id"> = {
+        type: gateDefinition.id,
+        qubit: position.qubit,
+        position: position.position,
+        params: {},
+      };
+      
+      // For gates with parameters, initialize with defaults
+      if (gateDefinition.params && gateDefinition.params.length > 0) {
+        newGate.params = gateDefinition.params.reduce((acc, param) => {
+          return { ...acc, [param.name]: param.default };
+        }, {});
+      }
+      
+      // For multi-qubit gates, set targets and controls
+      if (gateDefinition.targets && gateDefinition.targets > 0) {
+        // Set default target to the next qubit (or wrap around)
+        const targetQubit = (position.qubit + 1) % qubits.length;
+        newGate.targets = [targetQubit];
+      }
+      
+      if (gateDefinition.controls && gateDefinition.controls > 0) {
+        // For controls, we need to figure out sensible defaults
+        const controlQubit = position.qubit > 0 ? position.qubit - 1 : qubits.length - 1;
+        newGate.controls = [controlQubit];
+      }
+      
+      // Add the gate to the circuit
+      dispatch(addGate(newGate));
+      
+    } catch (err) {
+      // More specific error handling
+      let errorMessage = 'Could not add the gate to the circuit.';
+      
+      if (err instanceof Error) {
+        console.error(`Error adding gate: ${err.message}`);
+        errorMessage = `Error: ${err.message}`;
+      } else {
+        console.error('Unknown error adding gate:', err);
+      }
+      
+      toast({
+        title: 'Error Adding Gate',
+        description: errorMessage,
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
-    
-    // Add the gate to the circuit
-    dispatch(addGate(newGate))
-  }, [dispatch])
-  
-  // Create a drop handler for GridCell to use
-  // This fixes the React hooks rule violation by moving the useDrop hook out of the render loop
-  const createDropHandler = useCallback((qubit: number, position: number) => {
-    return (item: DroppedGate) => handleDrop(item, { qubit, position })
-  }, [handleDrop])
+  }, [dispatch, qubits.length, toast]);
   
   /**
    * Handle clicking on a gate in the circuit
    */
   const handleGateClick = useCallback((gateId: string): void => {
-    dispatch(selectGate(gateId))
-  }, [dispatch])
+    dispatch(selectGate(gateId));
+  }, [dispatch]);
   
   /**
    * Handle removing a gate from the circuit
    */
   const handleGateRemove = useCallback((gateId: string): void => {
-    dispatch(removeGate(gateId))
-  }, [dispatch])
+    dispatch(removeGate(gateId));
+  }, [dispatch]);
   
   /**
    * Create the grid cells for the circuit
    */
   const renderGrid = useMemo(() => {
-    const grid = []
+    if (qubits.length === 0) return null;
+    
+    const grid = [];
     
     // For each qubit, create a row
     for (let qubit = 0; qubit < qubits.length; qubit++) {
-      const cells = []
+      const cells = [];
       
       // For each position, create a cell
       for (let position = 0; position < maxPosition; position++) {
@@ -154,7 +230,7 @@ const CircuitCanvas: React.FC = () => {
             width={`${cellSize}px`}
             height={`${cellSize}px`}
           />
-        )
+        );
       }
       
       // Add the row to the grid
@@ -177,10 +253,10 @@ const CircuitCanvas: React.FC = () => {
           </Box>
           {cells}
         </HStack>
-      )
+      );
     }
     
-    return grid
+    return grid;
   }, [
     qubits, 
     maxPosition, 
@@ -194,7 +270,7 @@ const CircuitCanvas: React.FC = () => {
     handleGateClick,
     handleGateRemove,
     cellSize
-  ])
+  ]);
   
   // If no qubits, show a message
   if (qubits.length === 0) {
@@ -203,7 +279,7 @@ const CircuitCanvas: React.FC = () => {
         <Heading size="md" color={headingColor}>No qubits in circuit</Heading>
         <Text mt={2}>Add qubits from the sidebar to start building your circuit</Text>
       </Box>
-    )
+    );
   }
   
   return (
@@ -257,7 +333,6 @@ const CircuitCanvas: React.FC = () => {
         maxSize={600}
         onResize={setGridHeight}
         mb={4}
-        overflow="auto" // Enable vertical scrolling
       >
         <Box p={4}>
           <Heading size="md" mb={4} color={headingColor}>Quantum Circuit</Heading>
@@ -266,7 +341,7 @@ const CircuitCanvas: React.FC = () => {
             borderColor={canvasBorder} 
             borderRadius="md" 
             overflowX="auto"
-            overflowY="auto" // Enable vertical scrolling
+            overflowY="auto"
             className="circuit-grid-container"
             h="100%"
           >
@@ -286,7 +361,6 @@ const CircuitCanvas: React.FC = () => {
         minSize={200}
         maxSize={600}
         onResize={setVisualizationHeight}
-        overflow="auto" // Enable vertical scrolling
       >
         <Box p={4}>
           <Heading size="md" mb={4} color={headingColor}>Circuit Visualization</Heading>
@@ -297,14 +371,14 @@ const CircuitCanvas: React.FC = () => {
             borderRadius="md" 
             p={4}
             overflowX="auto"
-            overflowY="auto" // Enable vertical scrolling
+            overflowY="auto"
             className="circuit-svg-container"
             h="100%"
           />
         </Box>
       </ResizablePanel>
     </Box>
-  )
-}
+  );
+};
 
-export default CircuitCanvas
+export default CircuitCanvas;

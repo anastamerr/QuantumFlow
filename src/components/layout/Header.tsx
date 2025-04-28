@@ -26,7 +26,7 @@ const Header = () => {
   return (
     <Box as="header" bg="quantum.primary" color="white" p={3} boxShadow="md">
       <Flex align="center">
-        <Heading size="md" fontWeight="bold">QuantumForge</Heading>
+        <Heading size="md" fontWeight="bold">QuantumFlow</Heading>
         <Box ml={2} fontSize="sm" opacity={0.8}>
           {circuitName}
         </Box>

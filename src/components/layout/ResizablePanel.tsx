@@ -41,10 +41,12 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
   // Initialize with the defaultSize
   useEffect(() => {
     setSize(defaultSize);
+    startSize.current = defaultSize;
   }, [defaultSize]);
  
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
     setIsResizing(true);
     startPos.current = direction === 'horizontal' ? e.clientX : e.clientY;
     startSize.current = size;
@@ -57,6 +59,9 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing) return;
    
+    // Prevent text selection during resize
+    e.preventDefault();
+    
     const currentPos = direction === 'horizontal' ? e.clientX : e.clientY;
     const delta = currentPos - startPos.current;
    
@@ -69,7 +74,7 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
    
     setSize(newSize);
 
-    // Update the actual DOM element's size directly
+    // Update the actual DOM element's size directly for better performance
     if (panelRef.current) {
       if (direction === 'horizontal') {
         panelRef.current.style.width = `${newSize}px`;
@@ -108,16 +113,15 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
     }
   }, [size, direction]);
  
-  const sizeProps = direction === 'horizontal'
-    ? { width: `${size}px` }
-    : { height: `${size}px` };
- 
+  // Dynamic styles for the handle
   const handleStyles = {
     position: 'absolute',
     cursor: direction === 'horizontal' ? 'col-resize' : 'row-resize',
-    backgroundColor: handleColor,
-    transition: 'background-color 0.2s',
+    backgroundColor: isResizing ? handleActiveColor : handleColor,
+    transition: isResizing ? 'none' : 'background-color 0.2s',
     zIndex: 10,
+    userSelect: 'none',
+    touchAction: 'none',
     _hover: {
       backgroundColor: handleHoverColor,
     },
@@ -144,13 +148,14 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
     <Box
       ref={panelRef}
       position="relative"
-      overflow="auto"
-      {...sizeProps}
+      overflow="hidden" // Change to hidden to prevent content overflow during resize
+      {...(direction === 'horizontal' ? { width: `${size}px` } : { height: `${size}px` })}
       {...boxProps}
     >
       <Box
         height="100%"
         width="100%"
+        overflow="auto" // Add scroll to inner content box
       >
         {children}
       </Box>

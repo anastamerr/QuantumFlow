@@ -1,10 +1,10 @@
-# QuantumForge: Quantum Circuit Designer
+# QuantumFlow: Quantum Circuit Designer
 
-This document provides a comprehensive explanation of how the QuantumForge project works, including its architecture, components, and the algorithms behind it.
+This document provides a comprehensive explanation of how the QuantumFlow project works, including its architecture, components, and the algorithms behind it.
 
 ## Project Overview
 
-QuantumForge is a visual quantum circuit design application that allows users to create, manipulate, and simulate quantum circuits through an intuitive drag-and-drop interface. The application generates executable Qiskit or Cirq code from the visual representation, enabling users to bridge the gap between visual design and quantum programming.
+QuantumFlow is a visual quantum circuit design application that allows users to create, manipulate, and simulate quantum circuits through an intuitive drag-and-drop interface. The application generates executable Qiskit or Cirq code from the visual representation, enabling users to bridge the gap between visual design and quantum programming.
 
 ## Architecture
 
@@ -62,7 +62,7 @@ The `circuitRenderer.ts` utility converts the internal circuit representation in
 
 ## Code Generation Algorithm
 
-One of the most powerful features of QuantumForge is its ability to generate executable quantum code from the visual circuit. This is handled by the `codeGenerator.ts` utility.
+One of the most powerful features of QuantumFlow is its ability to generate executable quantum code from the visual circuit. This is handled by the `codeGenerator.ts` utility.
 
 ### Qiskit Code Generation
 
@@ -91,7 +91,7 @@ The application also allows exporting the circuit as JSON, which captures the co
 
 ## Data Flow
 
-The data flow in QuantumForge follows this pattern:
+The data flow in QuantumFlow follows this pattern:
 
 1. **User Interaction**: User drags a gate from the sidebar onto the circuit canvas
 2. **State Update**: The Redux store updates with the new gate information
@@ -164,6 +164,6 @@ The application provides several panels for different aspects of quantum circuit
 
 ## Conclusion
 
-QuantumForge bridges the gap between visual design and quantum programming by providing an intuitive interface for creating quantum circuits while automatically generating the corresponding code. This approach makes quantum computing more accessible to those who may not be familiar with the specific syntax of quantum programming frameworks while still producing professional-grade, executable quantum code.
+QuantumFlow bridges the gap between visual design and quantum programming by providing an intuitive interface for creating quantum circuits while automatically generating the corresponding code. This approach makes quantum computing more accessible to those who may not be familiar with the specific syntax of quantum programming frameworks while still producing professional-grade, executable quantum code.
 
 The application's architecture emphasizes modularity and type safety, making it maintainable and extensible for future quantum computing developments. The clear separation between the visual representation and the underlying quantum operations ensures that the application can adapt to advances in quantum computing frameworks and hardware.
