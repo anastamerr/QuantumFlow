@@ -1,4 +1,5 @@
 // Define types for quantum circuit elements
+import { AdvancedOptimizationOptions } from '../utils/circuitOptimizer';
 
 export interface Gate {
   id: string
@@ -58,4 +59,15 @@ export interface CircuitPosition {
 export interface DroppedGate {
   gateType: string
   position: CircuitPosition
+}
+
+// Optimization related types
+export interface OptimizationOptions {
+  consolidateGates: boolean;
+  cancelAdjacentGates: boolean;
+  convertGateSequences: boolean;
+  transpileToBackend: boolean;
+  backendName?: string;
+  enableAdvancedOptimization?: boolean;
+  advancedOptions?: AdvancedOptimizationOptions;
 }

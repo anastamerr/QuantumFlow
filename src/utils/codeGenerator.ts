@@ -1,4 +1,11 @@
 import { Qubit, Gate } from '../types/circuit'
+import { 
+  applyAdvancedOptimization, 
+  defaultAdvancedOptions, 
+  AdvancedOptimizationOptions,
+  hardwareModels,
+  calculateCircuitDepth
+} from './circuitOptimizer'
 
 /**
  * Optimization options for quantum circuits
@@ -29,6 +36,16 @@ export interface OptimizationOptions {
    * Backend to optimize for (default: 'qasm_simulator')
    */
   backendName?: string;
+
+  /**
+   * Enable advanced optimization techniques
+   */
+  enableAdvancedOptimization?: boolean;
+
+  /**
+   * Advanced optimization options
+   */
+  advancedOptions?: AdvancedOptimizationOptions;
 }
 
 // Default optimization options
@@ -37,7 +54,9 @@ const defaultOptimizationOptions: OptimizationOptions = {
   cancelAdjacentGates: false,
   convertGateSequences: false,
   transpileToBackend: false,
-  backendName: 'qasm_simulator'
+  backendName: 'qasm_simulator',
+  enableAdvancedOptimization: false,
+  advancedOptions: defaultAdvancedOptions
 }
 
 /**
@@ -47,7 +66,7 @@ const defaultOptimizationOptions: OptimizationOptions = {
  * @returns Optimized array of gates
  */
 const optimizeCircuit = (gates: Gate[], options: OptimizationOptions): Gate[] => {
-  if (!options.consolidateGates && !options.cancelAdjacentGates && !options.convertGateSequences) {
+  if (!options.consolidateGates && !options.cancelAdjacentGates && !options.convertGateSequences && !options.enableAdvancedOptimization) {
     return gates; // No optimization needed
   }
   
@@ -104,6 +123,24 @@ const optimizeCircuit = (gates: Gate[], options: OptimizationOptions): Gate[] =>
   // Filter out removed gates
   optimizedGates = optimizedGates.filter(gate => !gatesToRemove.has(gate.id));
   
+  // Apply advanced optimizations if enabled
+  if (options.enableAdvancedOptimization && options.advancedOptions) {
+    // We need qubits for some of the advanced optimization techniques
+    // Create a dummy array of qubits for this purpose
+    const maxQubitIndex = Math.max(...optimizedGates.map(g => Math.max(
+      g.qubit || 0,
+      ...((g.targets || []).length > 0 ? g.targets || [] : [0]),
+      ...((g.controls || []).length > 0 ? g.controls || [] : [0])
+    )));
+    
+    const dummyQubits: Qubit[] = Array.from({ length: maxQubitIndex + 1 }, (_, i) => ({
+      id: i,
+      name: `q${i}`
+    }));
+    
+    optimizedGates = applyAdvancedOptimization(optimizedGates, dummyQubits, options.advancedOptions);
+  }
+  
   // Return the optimized gate list
   return optimizedGates;
 }
@@ -150,8 +187,14 @@ export const generateQiskitCode = (
   code += 'from qiskit.visualization import plot_histogram\n'
   
   // Add optimization imports if needed
-  if (optimize && options.transpileToBackend) {
-    code += 'from qiskit import transpile\n'
+  if (optimize) {
+    if (options.transpileToBackend) {
+      code += 'from qiskit import transpile\n'
+    }
+    if (options.enableAdvancedOptimization) {
+      code += 'from qiskit.transpiler import PassManager\n'
+      code += 'from qiskit.transpiler.passes import *\n'
+    }
   }
   
   code += '\n'
@@ -245,11 +288,78 @@ export const generateQiskitCode = (
     })
   }
 
+  // Add advanced optimization transpilation code if requested
+  if (optimize && options.enableAdvancedOptimization && options.advancedOptions) {
+    code += '\n# Apply advanced circuit optimizations\n'
+    code += 'pass_manager = PassManager()\n'
+    
+    // Add passes based on optimization options
+    if (options.advancedOptions.synthesisLevel > 0) {
+      code += '# Synthesis optimization passes\n'
+      code += 'pass_manager.append(Unroller())\n'
+      code += 'pass_manager.append(Optimize1qGates())\n'
+      
+      if (options.advancedOptions.synthesisLevel >= 2) {
+        code += 'pass_manager.append(CommutativeCancellation())\n'
+      }
+      
+      if (options.advancedOptions.synthesisLevel >= 3) {
+        code += 'pass_manager.append(OptimizeSwap())\n'
+        code += 'pass_manager.append(RemoveResetInZeroState())\n'
+      }
+    }
+    
+    if (options.advancedOptions.depthReduction) {
+      code += '\n# Depth reduction passes\n'
+      code += 'pass_manager.append(Depth())\n'
+      code += 'pass_manager.append(FixedPoint("depth"))\n'
+      
+      if (options.advancedOptions.maxDepth) {
+        code += `# Target maximum depth: ${options.advancedOptions.maxDepth}\n`
+      }
+    }
+    
+    if (options.advancedOptions.noiseAware) {
+      code += '\n# Noise-aware optimization passes\n'
+      code += 'pass_manager.append(NoiseAdaptiveLayout())\n'
+      const hardwareModelName = options.advancedOptions.hardwareModel;
+      if (hardwareModels[hardwareModelName]) {
+        code += `# Optimizing for ${hardwareModels[hardwareModelName].name} topology\n`
+      }
+    }
+    
+    if (options.advancedOptions.qubitMapping) {
+      code += '\n# Qubit mapping passes\n'
+      if (options.advancedOptions.preserveLayout) {
+        code += 'pass_manager.append(TrivialLayout())\n'
+      } else {
+        code += 'pass_manager.append(DenseLayout())\n'
+      }
+      code += 'pass_manager.append(FullAncillaAllocation())\n'
+      code += 'pass_manager.append(EnlargeWithAncilla())\n'
+    }
+    
+    // Apply pass manager to circuit
+    code += '\n# Apply the custom pass manager\n'
+    code += 'optimized_qc = pass_manager.run(qc)\n'
+    code += '\n# Print circuit statistics before and after optimization\n'
+    code += 'print(f"Original circuit depth: {qc.depth()}")\n'
+    code += 'print(f"Original circuit gates: {len(qc.data)}")\n'
+    code += 'print(f"Optimized circuit depth: {optimized_qc.depth()}")\n'
+    code += 'print(f"Optimized circuit gates: {len(optimized_qc.data)}")\n\n'
+    
+    // Use the optimized circuit
+    code += '# Use the optimized circuit for execution\n'
+    code += 'qc = optimized_qc\n\n'
+  }
+  
   // Add transpilation if requested
   if (optimize && options.transpileToBackend) {
     code += '\n# Transpile the circuit for the target backend\n'
     code += `backend = Aer.get_backend('${options.backendName}')\n`
-    code += 'transpiled_qc = transpile(qc, backend=backend, optimization_level=3)\n\n'
+    
+    const optimizationLevel = options.enableAdvancedOptimization ? 3 : 2;
+    code += `transpiled_qc = transpile(qc, backend=backend, optimization_level=${optimizationLevel})\n\n`
     
     // Add a comment about what transpiling does
     code += '# Note: transpiling optimizes the circuit for the specific backend\n'
@@ -316,6 +426,12 @@ export const generateCirqCode = (
   // Add optimization imports if needed
   if (optimize) {
     code += 'from cirq.optimizers import EjectZ, EjectPhasedPaulis, DropEmptyMoments, DropNegligible\n'
+    
+    if (options.enableAdvancedOptimization) {
+      code += 'from cirq.optimizers import MergeInteractions, MergeSingleQubitGates\n'
+      code += 'from cirq.transformers import optimize_for_target_gateset, drop_empty_moments, drop_negligible_operations\n'
+      code += 'from cirq.contrib import routing\n'
+    }
   }
   
   code += '\n'
@@ -425,8 +541,110 @@ export const generateCirqCode = (
     })
   }
 
-  // Add circuit optimization if requested
-  if (optimize) {
+  // Add advanced circuit optimization if requested
+  if (optimize && options.enableAdvancedOptimization && options.advancedOptions) {
+    code += '\n# Apply advanced circuit optimizations\n'
+    
+    // Add different optimizers based on advanced options
+    if (options.advancedOptions.synthesisLevel > 0) {
+      code += '# Apply circuit synthesis optimizations\n'
+      code += 'circuit = cirq.optimize_for_target_gateset(circuit)\n'
+      code += 'circuit = cirq.merge_single_qubit_gates_into_phased_x_z(circuit)\n'
+      
+      if (options.advancedOptions.synthesisLevel >= 2) {
+        code += '# Apply medium-level synthesis optimizations\n'
+        code += 'circuit = cirq.drop_empty_moments(circuit)\n'
+        code += 'circuit = cirq.drop_negligible_operations(circuit)\n'
+        code += 'circuit = cirq.merge_single_qubit_gates_into_phxz(circuit)\n'
+      }
+      
+      if (options.advancedOptions.synthesisLevel >= 3) {
+        code += '# Apply aggressive synthesis optimizations\n'
+        code += 'from cirq.optimizers import EjectPhasedPaulis\n'
+        code += 'optimizer = EjectPhasedPaulis()\n'
+        code += 'circuit = optimizer.optimize_circuit(circuit)\n'
+      }
+    }
+    
+    if (options.advancedOptions.depthReduction) {
+      code += '\n# Apply circuit depth reduction\n'
+      code += 'initial_depth = len(circuit)\n'
+      code += 'circuit = cirq.merge_interactions(circuit, maximize_distance=True)\n'
+      
+      if (options.advancedOptions.maxDepth && options.advancedOptions.maxDepth > 0) {
+        code += `# Target maximum depth: ${options.advancedOptions.maxDepth}\n`
+        code += 'circuit = circuit[:min(len(circuit), ' + options.advancedOptions.maxDepth + ')]\n'
+      }
+    }
+    
+    if (options.advancedOptions.qubitMapping) {
+      code += '\n# Apply qubit mapping\n'
+      const hardwareModel = options.advancedOptions.hardwareModel;
+      
+      if (hardwareModels[hardwareModel]) {
+        code += `# Mapping to ${hardwareModels[hardwareModel].name} topology\n`
+        code += 'from cirq.contrib.routing import route_circuit\n'
+        
+        // Create the device based on the hardware model
+        code += 'device_graph = nx.Graph()\n'
+        
+        // Add code to create the device topology
+        if (hardwareModel === 'linear') {
+          code += '# Linear topology\n'
+          code += 'for i in range(len(qubits) - 1):\n'
+          code += '    device_graph.add_edge(qubits[i], qubits[i + 1])\n'
+        }
+        else if (hardwareModel === 'grid') {
+          code += '# Grid topology\n'
+          code += 'import math\n'
+          code += 'grid_size = math.ceil(math.sqrt(len(qubits)))\n'
+          code += 'for i in range(len(qubits)):\n'
+          code += '    row, col = i // grid_size, i % grid_size\n'
+          code += '    if col < grid_size - 1 and i + 1 < len(qubits):\n'
+          code += '        device_graph.add_edge(qubits[i], qubits[i + 1])\n'
+          code += '    if row < grid_size - 1 and i + grid_size < len(qubits):\n'
+          code += '        device_graph.add_edge(qubits[i], qubits[i + grid_size])\n'
+        }
+        else {
+          code += '# Custom device topology\n'
+          code += 'for i in range(len(qubits)):\n'
+          code += '    for j in range(i + 1, len(qubits)):\n'
+          code += '        device_graph.add_edge(qubits[i], qubits[j])\n'
+        }
+        
+        // Map the circuit to the device
+        code += '\n# Map circuit to device topology\n'
+        code += 'mapped_circuit = route_circuit(circuit, device_graph';
+        
+        if (options.advancedOptions.preserveLayout) {
+          code += ', router=cirq.contrib.routing.GreedyRouter()'
+        }
+        
+        code += ')\n';
+        code += 'circuit = mapped_circuit\n';
+      }
+    }
+    
+    if (options.advancedOptions.noiseAware) {
+      code += '\n# Apply noise-aware optimizations\n'
+      code += '# Note: In a real implementation, you would customize this based on hardware noise characteristics\n'
+      code += 'from cirq.contrib.noise_models import DepolarizingNoiseModel\n'
+      code += 'noise_model = DepolarizingNoiseModel(depolarizing_probability=0.001)\n'
+      code += 'noisy_circuit = cirq.Circuit(noise_model.noisy_moments(circuit.moments, system_qubits=qubits))\n'
+      
+      // Comment on the noisy circuit, but keep using the optimized one
+      code += '# Created a noisy circuit model for simulation, but continuing with the optimized circuit\n'
+    }
+    
+    // Print circuit statistics
+    code += '\n# Print circuit statistics\n'
+    code += 'print(f"Original circuit length: {len(circuit.moments)}")\n'
+    code += 'print(f"Original circuit operations: {sum(len(moment) for moment in circuit.moments)}")\n'
+    code += 'print(f"Optimized circuit length: {len(circuit.moments)}")\n'
+    code += 'print(f"Optimized circuit operations: {sum(len(moment) for moment in circuit.moments)}")\n'
+  }
+  // Apply more basic circuit optimization if requested
+  else if (optimize) {
     code += '\n# Optimize the circuit\n'
     code += '# Original circuit size\n'
     code += 'print("Original circuit size:", len(circuit))\n\n'

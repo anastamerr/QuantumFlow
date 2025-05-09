@@ -7,6 +7,8 @@ import { useState, useCallback } from 'react'
 import { InfoIcon } from '@chakra-ui/icons'
 import { gateLibrary } from '../../utils/gateLibrary'
 import { Gate as CircuitGate } from '../../types/circuit'
+import AdvancedOptimizationPanel from './AdvancedOptimizationPanel'
+import { defaultAdvancedOptions } from '../../utils/circuitOptimizer'
 
 const CodePanel = () => {
   const dispatch = useDispatch()
@@ -21,7 +23,9 @@ const CodePanel = () => {
     cancelAdjacentGates: true,
     convertGateSequences: false,
     transpileToBackend: false,
-    backendName: 'qasm_simulator'
+    backendName: 'qasm_simulator',
+    enableAdvancedOptimization: false,
+    advancedOptions: defaultAdvancedOptions
   })
   
   const codeBg = useColorModeValue('gray.50', 'gray.800')
@@ -94,6 +98,14 @@ const CodePanel = () => {
     })
   }
   
+  // Handle advanced optimization options change
+  const handleAdvancedOptionsChange = (advancedOptions: typeof defaultAdvancedOptions) => {
+    setOptimizationOptions({
+      ...optimizationOptions,
+      advancedOptions
+    });
+  };
+  
   const getGeneratedCode = () => {
     if (codeFormat === 'qiskit' || codeFormat === 'cirq') {
       // Transform the gates to match expected type
@@ -164,7 +176,7 @@ const CodePanel = () => {
                 </Tooltip>
               </HStack>
               
-              {optimize && (
+              {optimize && !optimizationOptions.enableAdvancedOptimization && (
                 <Text fontSize="xs" color="blue.500">
                   {gates.length} gates → ~{Math.max(Math.floor(gates.length * 0.7), 1)} gates (est.)
                 </Text>
@@ -249,6 +261,41 @@ const CodePanel = () => {
                   </FormControl>
                 )}
                 
+                {/* Advanced Optimization Toggle */}
+                <Divider my={2} />
+                
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel 
+                    htmlFor="advanced-optimization" 
+                    mb="0" 
+                    fontSize="sm"
+                    fontWeight="medium"
+                  >
+                    Advanced Optimization
+                    <Tooltip 
+                      label="Enable sophisticated optimization techniques like circuit synthesis, noise-aware optimization, and qubit mapping" 
+                      placement="top"
+                      hasArrow
+                    >
+                      <Icon as={InfoIcon} ml={1} color="blue.500" boxSize={3} />
+                    </Tooltip>
+                  </FormLabel>
+                  <Switch 
+                    id="advanced-optimization" 
+                    isChecked={optimizationOptions.enableAdvancedOptimization} 
+                    onChange={(e) => handleOptimizationChange('enableAdvancedOptimization', e.target.checked)}
+                    size="sm"
+                    colorScheme="purple"
+                  />
+                </FormControl>
+                
+                {/* Advanced Optimization Panel */}
+                <AdvancedOptimizationPanel
+                  isEnabled={optimize && (optimizationOptions.enableAdvancedOptimization ?? false)}
+                  options={optimizationOptions.advancedOptions || defaultAdvancedOptions}
+                  onChange={handleAdvancedOptionsChange}
+                />
+                
                 <Text fontSize="xs" color="blue.600" mt={1}>
                   Note: Optimization may alter circuit behavior in some edge cases
                 </Text>
@@ -300,6 +347,38 @@ const CodePanel = () => {
                   <strong>Transpile to Backend:</strong> Optimizes circuit for specific quantum hardware or simulator.
                 </Text>
               )}
+              
+              {optimizationOptions.enableAdvancedOptimization && (
+                <>
+                  <Divider my={2} />
+                  <Heading size="xs" mb={1} color="purple.500">Advanced Optimization Features</Heading>
+                  
+                  {optimizationOptions.advancedOptions?.synthesisLevel !== 0 && (
+                    <Text>
+                      <strong>Circuit Synthesis:</strong> Auto-discovers efficient implementations using mathematical equivalence.
+                    </Text>
+                  )}
+                  
+                  {optimizationOptions.advancedOptions?.noiseAware && (
+                    <Text>
+                      <strong>Noise-Aware Optimization:</strong> Tailors circuits to reduce errors on specific quantum hardware.
+                    </Text>
+                  )}
+                  
+                  {optimizationOptions.advancedOptions?.depthReduction && (
+                    <Text>
+                      <strong>Depth Reduction:</strong> Parallelizes operations to minimize circuit runtime.
+                    </Text>
+                  )}
+                  
+                  {optimizationOptions.advancedOptions?.qubitMapping && (
+                    <Text>
+                      <strong>Qubit Mapping:</strong> Optimally arranges logical qubits on physical hardware topology.
+                    </Text>
+                  )}
+                </>
+              )}
+              
               <Text fontSize="xs" color="gray.500" mt={1}>
                 The generated code includes both optimized and unoptimized circuits for comparison.
               </Text>

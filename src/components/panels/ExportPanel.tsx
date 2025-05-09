@@ -36,6 +36,8 @@ import { InfoIcon, WarningIcon } from '@chakra-ui/icons'
 import { renderCircuitSvg } from '../../utils/circuitRenderer'
 import { gateLibrary } from '../../utils/gateLibrary'
 import { Gate as CircuitGate } from '../../types/circuit'
+import AdvancedOptimizationPanel from './AdvancedOptimizationPanel'
+import { defaultAdvancedOptions, estimateOptimizationImpact } from '../../utils/circuitOptimizer'
 
 const ExportPanel = () => {
   const qubits = useSelector(selectQubits)
@@ -57,7 +59,9 @@ const ExportPanel = () => {
     cancelAdjacentGates: true,
     convertGateSequences: false,
     transpileToBackend: false,
-    backendName: 'qasm_simulator'
+    backendName: 'qasm_simulator',
+    enableAdvancedOptimization: false,
+    advancedOptions: defaultAdvancedOptions
   })
   
   // State for custom backend
@@ -104,6 +108,14 @@ const ExportPanel = () => {
       [option]: value
     })
   }
+  
+  // Handle advanced optimization options change
+  const handleAdvancedOptionsChange = (advancedOptions: typeof defaultAdvancedOptions) => {
+    setOptimizationOptions({
+      ...optimizationOptions,
+      advancedOptions
+    });
+  };
   
   // Generate the export data based on the selected format
   const getExportData = useCallback((): string => {
@@ -205,10 +217,16 @@ const ExportPanel = () => {
     }
   }
   
-  // Calculate estimated gate reduction - now memoized
+  // Calculate estimated gate reduction - using the estimator from circuitOptimizer for advanced options
   const reductionInfo = useMemo(() => {
     if (!optimize || gates.length === 0) return null
     
+    if (optimizationOptions.enableAdvancedOptimization && optimizationOptions.advancedOptions) {
+      const circuitGates = transformStoreGatesToCircuitGates(gates);
+      return estimateOptimizationImpact(circuitGates, qubits, optimizationOptions.advancedOptions);
+    }
+    
+    // For basic optimization, use the existing calculation
     // Map of gate types for smarter analysis
     const gateTypes = gates.reduce((acc, gate) => {
       acc[gate.type] = (acc[gate.type] || 0) + 1
@@ -251,9 +269,11 @@ const ExportPanel = () => {
     return {
       original: gates.length,
       optimized: estimatedGates,
-      reductionPercent: Math.round((1 - reductionFactor) * 100)
+      reductionPercent: Math.round((1 - reductionFactor) * 100),
+      originalDepth: 0, // Not calculated for basic optimization
+      estimatedDepth: 0
     }
-  }, [gates, optimize, optimizationOptions])
+  }, [gates, qubits, optimize, optimizationOptions])
   
   return (
     <Box>
@@ -311,7 +331,9 @@ const ExportPanel = () => {
               
               {reductionInfo && (
                 <Badge colorScheme="green" variant="subtle" px={2} py={1}>
-                  {reductionInfo.reductionPercent}% fewer gates
+                  {('reductionPercent' in reductionInfo 
+                    ? reductionInfo.reductionPercent 
+                    : reductionInfo.reductionPercentage)}% fewer gates
                 </Badge>
               )}
             </HStack>
@@ -421,11 +443,55 @@ const ExportPanel = () => {
                   </FormControl>
                 )}
                 
+                {/* Advanced Optimization Toggle */}
+                <Divider my={2} />
+                
+                <FormControl display="flex" alignItems="center">
+                  <FormLabel 
+                    htmlFor="advanced-optimization-export" 
+                    mb="0" 
+                    fontSize="sm"
+                    fontWeight="medium"
+                  >
+                    Advanced Optimization
+                    <Tooltip 
+                      label="Enable sophisticated optimization techniques like circuit synthesis, noise-aware optimization, and qubit mapping" 
+                      placement="top"
+                      hasArrow
+                    >
+                      <Icon as={InfoIcon} ml={1} color="blue.500" boxSize={3} />
+                    </Tooltip>
+                  </FormLabel>
+                  <Switch 
+                    id="advanced-optimization-export" 
+                    isChecked={optimizationOptions.enableAdvancedOptimization} 
+                    onChange={(e) => handleOptimizationChange('enableAdvancedOptimization', e.target.checked)}
+                    size="sm"
+                    colorScheme="purple"
+                  />
+                </FormControl>
+                
+                {/* Advanced Optimization Panel */}
+                <AdvancedOptimizationPanel
+                  isEnabled={optimize && (optimizationOptions.enableAdvancedOptimization || false)}
+                  options={optimizationOptions.advancedOptions || defaultAdvancedOptions}
+                  onChange={handleAdvancedOptionsChange}
+                />
+                
                 {reductionInfo && (
                   <Box fontSize="xs" mt={1}>
                     <Text color="blue.600">
-                      Estimated gate count: {reductionInfo.original} → {reductionInfo.optimized}
+                      Estimated gate count: {
+                        'original' in reductionInfo 
+                          ? `${reductionInfo.original} → ${reductionInfo.optimized}` 
+                          : `${reductionInfo.originalGateCount} → ${reductionInfo.estimatedGateCount}`
+                      }
                     </Text>
+                    {optimizationOptions.enableAdvancedOptimization && reductionInfo.originalDepth > 0 && (
+                      <Text color="blue.600">
+                        Estimated circuit depth: {reductionInfo.originalDepth} → {reductionInfo.estimatedDepth}
+                      </Text>
+                    )}
                     <Text color="gray.500" fontSize="xs" mt={1}>
                       Actual results may vary based on specific circuit structure
                     </Text>
@@ -453,10 +519,24 @@ const ExportPanel = () => {
           <Text><strong>Qubits:</strong> {qubits.length}</Text>
           <Text><strong>Gates:</strong> {gates.length}</Text>
           
-          {reductionInfo && optimize && (exportFormat === 'qiskit' || exportFormat === 'cirq') && (
-            <Text color="green.500" fontSize="sm" mt={1}>
-              <strong>Optimized Gates:</strong> ~{reductionInfo.optimized} (estimated)
-            </Text>
+          {optimize && (exportFormat === 'qiskit' || exportFormat === 'cirq') && (
+            <Box mt={3} p={2} borderRadius="md" bg={optimizationBg}>
+              {optimizationOptions.enableAdvancedOptimization ? (
+                <>
+                  <Heading size="xs" mb={1}>Advanced Optimization Applied</Heading>
+                  <Text fontSize="sm">
+                    {optimizationOptions.advancedOptions?.synthesisLevel !== 0 && '• Circuit Synthesis '}
+                    {optimizationOptions.advancedOptions?.noiseAware && '• Noise-Aware Optimization '}
+                    {optimizationOptions.advancedOptions?.depthReduction && '• Depth Reduction '}
+                    {optimizationOptions.advancedOptions?.qubitMapping && '• Qubit Mapping'}
+                  </Text>
+                </>
+              ) : (
+                <Text color="green.500" fontSize="sm">
+                  <strong>Optimized Gates:</strong> ~{reductionInfo ? ('optimized' in reductionInfo ? reductionInfo.optimized : reductionInfo.estimatedGateCount) : ''} (estimated)
+                </Text>
+              )}
+            </Box>
           )}
         </Box>
         
