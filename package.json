@@ -15,6 +15,7 @@
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@reduxjs/toolkit": "^1.9.5",
+    "@types/three": "^0.176.0",
     "d3": "^7.8.5",
     "framer-motion": "^10.15.0",
     "react": "^18.2.0",
@@ -22,7 +23,8 @@
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.2.0",
     "react-redux": "^8.1.2",
-    "slices": "^0.1.4"
+    "slices": "^0.1.4",
+    "three": "^0.176.0"
   },
   "devDependencies": {
     "@types/d3": "^7.4.0",
