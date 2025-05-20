@@ -1,0 +1,302 @@
+import { Gate, Qubit } from '../../../types/circuit';
+import { OptimizationOptions, defaultOptimizationOptions } from '../types/optimizationTypes';
+import { prepareGatesForCodeGeneration, validateCircuitInput } from './codeGeneratorUtils';
+import { hardwareModels } from '../../../utils/circuitOptimizer';
+
+/**
+ * Generates Qiskit Python code from the circuit representation
+ * @param qubits Array of qubits in the circuit
+ * @param gates Array of gates in the circuit
+ * @param optimize Whether to optimize the circuit before generating code
+ * @param optimizationOptions Options for circuit optimization
+ * @returns Qiskit Python code as a string
+ */
+export const generateQiskitCode = (
+  qubits: Qubit[], 
+  gates: Gate[], 
+  optimize: boolean = false,
+  optimizationOptions: Partial<OptimizationOptions> = {}
+): string => {
+  // Validate input
+  if (!validateCircuitInput(qubits, gates)) {
+    return '# Empty circuit - add gates to generate code';
+  }
+
+  // Prepare gates and imports
+  const { processedGates, imports } = prepareGatesForCodeGeneration(
+    qubits, gates, optimize, optimizationOptions, defaultOptimizationOptions
+  );
+
+  // Combine basic Qiskit imports with additional ones
+  const basicImports = [
+    'from qiskit import QuantumCircuit, Aer, execute',
+    'from qiskit.visualization import plot_histogram'
+  ];
+
+  const allImports = [...new Set([...basicImports, ...imports])].join('\n');
+
+  let code = '# Generated Qiskit code\n';
+  code += allImports + '\n\n';
+
+  // Create the quantum circuit
+  code += `# Create a quantum circuit with ${qubits.length} qubits\n`;
+  code += `qc = QuantumCircuit(${qubits.length}, ${qubits.length})\n\n`;
+
+  // Add gate section
+  code += generateGateSection(processedGates);
+  
+  // Add measurement section
+  code += generateMeasurementSection(processedGates, qubits);
+  
+  // Add optimization section if requested
+  if (optimize && optimizationOptions.enableAdvancedOptimization) {
+    code += generateAdvancedOptimizationSection(optimizationOptions);
+  }
+  
+  // Add transpilation section if requested
+  const options = { ...defaultOptimizationOptions, ...optimizationOptions };
+  if (optimize && options.transpileToBackend) {
+    code += generateTranspilationSection(options);
+  } else {
+    // Add code to run the simulation with the original circuit
+    code += generateSimulationSection();
+  }
+  
+  // Add visualization section
+  code += generateVisualizationSection(optimize, options);
+
+  return code;
+};
+
+/**
+ * Generate the gate section of the code
+ */
+function generateGateSection(gates: Gate[]): string {
+  let gateSection = '# Add gates to the circuit\n';
+  
+  gates.forEach(gate => {
+    switch (gate.type) {
+      case 'h':
+        gateSection += `qc.h(${gate.qubit})\n`;
+        break;
+      case 'x':
+        gateSection += `qc.x(${gate.qubit})\n`;
+        break;
+      case 'y':
+        gateSection += `qc.y(${gate.qubit})\n`;
+        break;
+      case 'z':
+        gateSection += `qc.z(${gate.qubit})\n`;
+        break;
+      case 's':
+        gateSection += `qc.s(${gate.qubit})\n`;
+        break;
+      case 't':
+        gateSection += `qc.t(${gate.qubit})\n`;
+        break;
+      case 'rx':
+        // Check all possible parameter names for backwards compatibility
+        const theta = gate.params?.theta || gate.params?.angle || 0;
+        gateSection += `qc.rx(${theta} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        break;
+      case 'ry':
+        const phi = gate.params?.phi || gate.params?.theta || gate.params?.angle || 0;
+        gateSection += `qc.ry(${phi} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        break;
+      case 'rz':
+        const lambda = gate.params?.lambda || gate.params?.phi || gate.params?.angle || 0;
+        gateSection += `qc.rz(${lambda} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        break;
+      case 'p':
+        const phase = gate.params?.phi || gate.params?.phase || 0;
+        gateSection += `qc.p(${phase} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        break;
+      case 'cnot':
+        if (gate.controls && gate.controls.length > 0 && gate.targets && gate.targets.length > 0) {
+          gateSection += `qc.cx(${gate.controls[0]}, ${gate.targets[0]})\n`;
+        } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
+          gateSection += `qc.cx(${gate.qubit}, ${gate.targets[0]})\n`;
+        }
+        break;
+      case 'cz':
+        if (gate.controls && gate.controls.length > 0 && gate.targets && gate.targets.length > 0) {
+          gateSection += `qc.cz(${gate.controls[0]}, ${gate.targets[0]})\n`;
+        } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
+          gateSection += `qc.cz(${gate.qubit}, ${gate.targets[0]})\n`;
+        }
+        break;
+      case 'swap':
+        if (gate.targets && gate.targets.length >= 2) {
+          gateSection += `qc.swap(${gate.targets[0]}, ${gate.targets[1]})\n`;
+        } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
+          gateSection += `qc.swap(${gate.qubit}, ${gate.targets[0]})\n`;
+        }
+        break;
+      case 'toffoli':
+        if (gate.controls && gate.controls.length >= 2 && gate.targets && gate.targets.length > 0) {
+          gateSection += `qc.ccx(${gate.controls[0]}, ${gate.controls[1]}, ${gate.targets[0]})\n`;
+        } else if (gate.qubit !== undefined && gate.controls && gate.controls.length > 0 && gate.targets && gate.targets.length > 0) {
+          gateSection += `qc.ccx(${gate.qubit}, ${gate.controls[0]}, ${gate.targets[0]})\n`;
+        }
+        break;
+      case 'measure':
+        gateSection += `qc.measure(${gate.qubit}, ${gate.qubit})\n`;
+        break;
+      default:
+        // Handle custom or unknown gates
+        gateSection += `# Unsupported gate: ${gate.type}\n`;
+    }
+  });
+  
+  return gateSection + '\n';
+}
+
+/**
+ * Generate the measurement section of the code
+ */
+function generateMeasurementSection(gates: Gate[], qubits: Qubit[]): string {
+  // Only add measurements if none are already in the circuit
+  if (gates.some(gate => gate.type === 'measure')) {
+    return '';
+  }
+  
+  let measurementSection = '# Measure all qubits\n';
+  qubits.forEach(qubit => {
+    measurementSection += `qc.measure(${qubit.id}, ${qubit.id})\n`;
+  });
+  
+  return measurementSection + '\n';
+}
+
+/**
+ * Generate the advanced optimization section of the code
+ */
+function generateAdvancedOptimizationSection(optimizationOptions: Partial<OptimizationOptions>): string {
+  const options = { ...defaultOptimizationOptions, ...optimizationOptions };
+  
+  let optimizationSection = '# Apply advanced circuit optimizations\n';
+  optimizationSection += 'pass_manager = PassManager()\n';
+  
+  // Add passes based on optimization options
+  if (options.advancedOptions?.synthesisLevel) {
+    optimizationSection += '# Synthesis optimization passes\n';
+    optimizationSection += 'pass_manager.append(Unroller())\n';
+    optimizationSection += 'pass_manager.append(Optimize1qGates())\n';
+    
+    if (options.advancedOptions.synthesisLevel >= 2) {
+      optimizationSection += 'pass_manager.append(CommutativeCancellation())\n';
+    }
+    
+    if (options.advancedOptions.synthesisLevel >= 3) {
+      optimizationSection += 'pass_manager.append(OptimizeSwap())\n';
+      optimizationSection += 'pass_manager.append(RemoveResetInZeroState())\n';
+    }
+  }
+  
+  if (options.advancedOptions?.depthReduction) {
+    optimizationSection += '\n# Depth reduction passes\n';
+    optimizationSection += 'pass_manager.append(Depth())\n';
+    optimizationSection += 'pass_manager.append(FixedPoint("depth"))\n';
+    
+    if (options.advancedOptions.maxDepth) {
+      optimizationSection += `# Target maximum depth: ${options.advancedOptions.maxDepth}\n`;
+    }
+  }
+  
+  if (options.advancedOptions?.noiseAware) {
+    optimizationSection += '\n# Noise-aware optimization passes\n';
+    optimizationSection += 'pass_manager.append(NoiseAdaptiveLayout())\n';
+    const hardwareModelName = options.advancedOptions.hardwareModel || 'linear';
+    if (hardwareModels[hardwareModelName]) {
+      optimizationSection += `# Optimizing for ${hardwareModels[hardwareModelName].name} topology\n`;
+    }
+  }
+  
+  if (options.advancedOptions?.qubitMapping) {
+    optimizationSection += '\n# Qubit mapping passes\n';
+    if (options.advancedOptions.preserveLayout) {
+      optimizationSection += 'pass_manager.append(TrivialLayout())\n';
+    } else {
+      optimizationSection += 'pass_manager.append(DenseLayout())\n';
+    }
+    optimizationSection += 'pass_manager.append(FullAncillaAllocation())\n';
+    optimizationSection += 'pass_manager.append(EnlargeWithAncilla())\n';
+  }
+  
+  // Apply pass manager to circuit
+  optimizationSection += '\n# Apply the custom pass manager\n';
+  optimizationSection += 'optimized_qc = pass_manager.run(qc)\n';
+  optimizationSection += '\n# Print circuit statistics before and after optimization\n';
+  optimizationSection += 'print(f"Original circuit depth: {qc.depth()}")\n';
+  optimizationSection += 'print(f"Original circuit gates: {len(qc.data)}")\n';
+  optimizationSection += 'print(f"Optimized circuit depth: {optimized_qc.depth()}")\n';
+  optimizationSection += 'print(f"Optimized circuit gates: {len(optimized_qc.data)}")\n\n';
+  
+  // Use the optimized circuit
+  optimizationSection += '# Use the optimized circuit for execution\n';
+  optimizationSection += 'qc = optimized_qc\n\n';
+  
+  return optimizationSection;
+}
+
+/**
+ * Generate the transpilation section of the code
+ */
+function generateTranspilationSection(options: OptimizationOptions): string {
+  let simulationSection = '# Transpile the circuit for the target backend\n';
+  simulationSection += `backend = Aer.get_backend('${options.backendName}')\n`;
+  
+  const optimizationLevel = options.enableAdvancedOptimization ? 3 : 2;
+  simulationSection += `transpiled_qc = transpile(qc, backend=backend, optimization_level=${optimizationLevel})\n\n`;
+  
+  // Add a comment about what transpiling does
+  simulationSection += '# Note: transpiling optimizes the circuit for the specific backend\n';
+  simulationSection += '# It can reduce gate count and circuit depth\n\n';
+  
+  // Switch to using the transpiled circuit
+  simulationSection += '# Run the simulation using the transpiled circuit\n';
+  simulationSection += 'job = execute(transpiled_qc, backend, shots=1024)\n';
+  simulationSection += 'result = job.result()\n';
+  
+  // FIX: Use the transpiled circuit for getting counts
+  simulationSection += 'counts = result.get_counts(transpiled_qc)\n';
+  simulationSection += 'print("Measurement results:", counts)\n\n';
+  
+  return simulationSection;
+}
+
+/**
+ * Generate the simulation section of the code
+ */
+function generateSimulationSection(): string {
+  let simulationSection = '# Run the simulation\n';
+  simulationSection += 'simulator = Aer.get_backend(\'qasm_simulator\')\n';
+  simulationSection += 'job = execute(qc, simulator, shots=1024)\n';
+  simulationSection += 'result = job.result()\n';
+  simulationSection += 'counts = result.get_counts(qc)\n';
+  simulationSection += 'print("Measurement results:", counts)\n\n';
+  
+  return simulationSection;
+}
+
+/**
+ * Generate the visualization section of the code
+ */
+function generateVisualizationSection(optimize: boolean, options: OptimizationOptions): string {
+  let visualizationSection = '# Draw the circuit\n';
+  
+  if (optimize && options.transpileToBackend) {
+    visualizationSection += 'print("Original Circuit:")\n';
+    visualizationSection += 'print(qc.draw())\n';
+    visualizationSection += 'print("\\nTranspiled Circuit:")\n';
+    visualizationSection += 'print(transpiled_qc.draw())\n\n';
+  } else {
+    visualizationSection += 'print(qc.draw())\n\n';
+  }
+
+  // Add code to plot the histogram
+  visualizationSection += '# Plot the results\n';
+  visualizationSection += 'plot_histogram(counts)\n';
+  
+  return visualizationSection;
+}
