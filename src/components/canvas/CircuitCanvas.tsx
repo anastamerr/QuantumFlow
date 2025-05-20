@@ -123,7 +123,8 @@ const CircuitCanvas: React.FC = () => {
   }, [dispatch]);
   
   /**
-   * Handle dropping a gate onto the circuit
+   * Handle dropping a gate onto the circuit - Fixed to ensure valid multi-qubit gate configurations
+   * with special handling for two-qubit scenarios
    */
   const handleDrop = useCallback((item: DroppedGate, position: CircuitPosition): void => {
     try {
@@ -134,8 +135,21 @@ const CircuitCanvas: React.FC = () => {
         return;
       }
       
+      const isMultiQubitGate = (gateDefinition.targets && gateDefinition.targets > 0) || 
+                               (gateDefinition.controls && gateDefinition.controls > 0);
+
+      if (isMultiQubitGate && qubits.length < 2) {
+        toast({
+          title: "Not enough qubits",
+          description: "Add more qubits to use multi-qubit gates.",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      
       // Create a new gate instance with required properties and proper typing
-      // Use Omit<Gate, "id"> to match the expected type for addGate action
       const newGate: Omit<Gate, "id"> = {
         type: gateDefinition.id,
         qubit: position.qubit,
@@ -152,15 +166,69 @@ const CircuitCanvas: React.FC = () => {
       
       // For multi-qubit gates, set targets and controls
       if (gateDefinition.targets && gateDefinition.targets > 0) {
-        // Set default target to the next qubit (or wrap around)
-        const targetQubit = (position.qubit + 1) % qubits.length;
-        newGate.targets = [targetQubit];
+        // Two-qubit special case: If we have exactly 2 qubits, set the other one as target
+        if (qubits.length === 2) {
+          // The target should be the qubit that is not the current one
+          const targetQubit = position.qubit === 0 ? 1 : 0;
+          newGate.targets = [targetQubit];
+        } else {
+          // For more qubits, find the first available qubit that's not the current one
+          const availableQubits = qubits
+            .filter(q => q.id !== position.qubit)
+            .map(q => q.id);
+          
+          if (availableQubits.length < gateDefinition.targets) { // Check against required targets
+            toast({
+              title: "No available target qubits",
+              description: `This gate requires ${gateDefinition.targets} target qubit(s). Add more qubits or adjust gate placement.`,
+              status: "warning",
+              duration: 3000,
+              isClosable: true,
+            });
+            return;
+          }
+          
+          // Set default target to the first available qubit(s)
+          newGate.targets = availableQubits.slice(0, gateDefinition.targets);
+        }
       }
       
       if (gateDefinition.controls && gateDefinition.controls > 0) {
-        // For controls, we need to figure out sensible defaults
-        const controlQubit = position.qubit > 0 ? position.qubit - 1 : qubits.length - 1;
-        newGate.controls = [controlQubit];
+        const mainQubit = position.qubit;
+        const targetQubits = newGate.targets || [];
+        
+        // For CNOT and CZ, the control is implicitly the qubit the gate is dropped on,
+        // and the target is set in the previous block. We don't need to find additional control qubits.
+        if (gateDefinition.id === 'cnot' || gateDefinition.id === 'cz') {
+          // Ensure the target is different from the control for CNOT/CZ
+          if (targetQubits.includes(mainQubit)) {
+             toast({
+                title: "Invalid CNOT/CZ placement",
+                description: "Control and target qubits cannot be the same.",
+                status: "warning",
+                duration: 3000,
+                isClosable: true,
+              });
+              return;
+          }
+        } else {
+          // For other multi-control gates (e.g., Toffoli)
+          const availableControlQubits = qubits
+            .filter(q => q.id !== mainQubit && !targetQubits.includes(q.id))
+            .map(q => q.id);
+            
+          if (gateDefinition.controls > availableControlQubits.length) {
+            toast({
+              title: "Not enough qubits for controls",
+              description: `This gate requires ${gateDefinition.controls} control qubit(s).`,
+              status: "warning",
+              duration: 3000,
+              isClosable: true,
+            });
+            return;
+          }
+          newGate.controls = availableControlQubits.slice(0, gateDefinition.controls);
+        }
       }
       
       // Add the gate to the circuit
@@ -185,7 +253,7 @@ const CircuitCanvas: React.FC = () => {
         isClosable: true,
       });
     }
-  }, [dispatch, qubits.length, toast]);
+  }, [dispatch, qubits, toast]);
   
   /**
    * Handle clicking on a gate in the circuit
