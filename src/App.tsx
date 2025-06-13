@@ -11,6 +11,7 @@ import { selectActivePanel } from './store/slices/uiSlice'
 import SimulationPanel from './components/panels/SimulationPanel'
 import ExportPanel from './components/panels/ExportPanel'
 import GateParamsPanel from './components/panels/GateParamsPanel'
+import TutorialPanel from './components/panels/TutorialPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
 
 function App() {
@@ -141,10 +142,12 @@ function App() {
               </ResizablePanel>
             </Flex>
           </Box>
-          
-          {/* Gate parameters panel - will only render when a gate is selected */}
+            {/* Gate parameters panel - will only render when a gate is selected */}
           <GateParamsPanel />
         </Flex>
+        
+        {/* Tutorial panel - modal overlay */}
+        <TutorialPanel />
       </VStack>
     </DndProvider>
   )

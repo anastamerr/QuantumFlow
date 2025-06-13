@@ -83,7 +83,7 @@ const Header = () => {
           </Button>
           <IconButton
             aria-label="Toggle color mode"
-            icon={colorMode === 'light' ? '🌙' : '☀️'}
+            // icon={colorMode === 'light' ? '🌙' : '☀️'}
             size="sm"
             onClick={toggleColorMode}
             variant="ghost"
