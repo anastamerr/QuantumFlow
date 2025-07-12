@@ -30,7 +30,8 @@ export const generateQiskitCode = (
   // Combine basic Qiskit imports with additional ones
   const basicImports = [
     'from qiskit import QuantumCircuit, Aer, execute',
-    'from qiskit.visualization import plot_histogram'
+    'from qiskit.visualization import plot_histogram',
+    'import numpy as np'
   ];
 
   const allImports = [...new Set([...basicImports, ...imports])].join('\n');
@@ -95,21 +96,29 @@ function generateGateSection(gates: Gate[]): string {
         gateSection += `qc.t(${gate.qubit})\n`;
         break;
       case 'rx':
-        // Check all possible parameter names for backwards compatibility
-        const theta = gate.params?.theta || gate.params?.angle || 0;
-        gateSection += `qc.rx(${theta} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        // RX gate uses theta parameter (rotation around X-axis)
+        const rxTheta = gate.params?.theta || gate.params?.angle || 0;
+        // Check if value is already in radians (between -2π and 2π) or degrees  
+        const rxAngle = Math.abs(rxTheta) <= 2 * Math.PI ? rxTheta : rxTheta * Math.PI / 180;
+        gateSection += `qc.rx(${rxAngle}, ${gate.qubit})\n`;
         break;
       case 'ry':
-        const phi = gate.params?.phi || gate.params?.theta || gate.params?.angle || 0;
-        gateSection += `qc.ry(${phi} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        // RY gate uses theta parameter (rotation around Y-axis)
+        const ryTheta = gate.params?.theta || gate.params?.angle || 0;
+        const ryAngle = Math.abs(ryTheta) <= 2 * Math.PI ? ryTheta : ryTheta * Math.PI / 180;
+        gateSection += `qc.ry(${ryAngle}, ${gate.qubit})\n`;
         break;
       case 'rz':
-        const lambda = gate.params?.lambda || gate.params?.phi || gate.params?.angle || 0;
-        gateSection += `qc.rz(${lambda} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        // RZ gate uses phi parameter (rotation around Z-axis)
+        const rzPhi = gate.params?.phi || gate.params?.angle || 0;
+        const rzAngle = Math.abs(rzPhi) <= 2 * Math.PI ? rzPhi : rzPhi * Math.PI / 180;
+        gateSection += `qc.rz(${rzAngle}, ${gate.qubit})\n`;
         break;
       case 'p':
-        const phase = gate.params?.phi || gate.params?.phase || 0;
-        gateSection += `qc.p(${phase} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        // Phase gate uses phi parameter
+        const phasePhi = gate.params?.phi || gate.params?.phase || 0;
+        const phaseAngle = Math.abs(phasePhi) <= 2 * Math.PI ? phasePhi : phasePhi * Math.PI / 180;
+        gateSection += `qc.p(${phaseAngle}, ${gate.qubit})\n`;
         break;
       case 'cnot':
         if (gate.controls && gate.controls.length > 0 && gate.targets && gate.targets.length > 0) {

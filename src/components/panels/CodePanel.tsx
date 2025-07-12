@@ -314,9 +314,18 @@ const CodePanel = () => {
           fontFamily="monospace"
           fontSize="sm"
           whiteSpace="pre"
-          h="100%"
           minH="300px"
+          maxH="800px"
           position="relative"
+          resize="vertical"
+          overflow="auto"
+          sx={{
+            resize: 'vertical',
+            '&::-webkit-resizer': {
+              background: codeBorder,
+              borderRadius: '2px'
+            }
+          }}
         >
           {gates.length === 0 ? (
             <Text color="gray.500" fontStyle="italic">
