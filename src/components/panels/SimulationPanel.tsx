@@ -507,9 +507,18 @@ const SimulationPanel = () => {
                   boxShadow="md" 
                   bg={cardBg}
                   minH="350px"
+                  maxH="800px"
                   borderWidth="1px"
                   borderColor={borderColor}
-                  overflow="hidden"
+                  overflow="auto"
+                  resize="vertical"
+                  sx={{
+                    resize: 'vertical',
+                    '&::-webkit-resizer': {
+                      background: borderColor,
+                      borderRadius: '2px'
+                    }
+                  }}
                 >
                   {isSimulating && showRealTimeVisualization ? (
                     <CardBody>
@@ -644,9 +653,18 @@ const SimulationPanel = () => {
                   boxShadow="md" 
                   bg={cardBg}
                   minH="350px"
+                  maxH="800px"
                   borderWidth="1px"
                   borderColor={borderColor}
-                  overflow="hidden"
+                  overflow="auto"
+                  resize="vertical"
+                  sx={{
+                    resize: 'vertical',
+                    '&::-webkit-resizer': {
+                      background: borderColor,
+                      borderRadius: '2px'
+                    }
+                  }}
                 >
                   <CardBody>
                     {!simulationComplete || !results ? (
@@ -706,9 +724,18 @@ const SimulationPanel = () => {
                   boxShadow="md" 
                   bg={cardBg}
                   minH="350px"
+                  maxH="800px"
                   borderWidth="1px"
                   borderColor={borderColor}
-                  overflow="hidden"
+                  overflow="auto"
+                  resize="vertical"
+                  sx={{
+                    resize: 'vertical',
+                    '&::-webkit-resizer': {
+                      background: borderColor,
+                      borderRadius: '2px'
+                    }
+                  }}
                 >
                   <CardBody>
                     {!simulationComplete || !results ? (
@@ -961,9 +988,18 @@ const SimulationPanel = () => {
                   boxShadow="md" 
                   bg={cardBg}
                   minH="350px"
+                  maxH="800px"
                   borderWidth="1px"
                   borderColor={borderColor}
-                  overflow="hidden"
+                  overflow="auto"
+                  resize="vertical"
+                  sx={{
+                    resize: 'vertical',
+                    '&::-webkit-resizer': {
+                      background: borderColor,
+                      borderRadius: '2px'
+                    }
+                  }}
                 >
                   <CardBody>
                     {!simulationComplete || !results ? (
