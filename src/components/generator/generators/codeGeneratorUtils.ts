@@ -25,8 +25,8 @@ export const prepareGatesForCodeGeneration = (
     return (a.position || 0) - (b.position || 0);
   });
 
-  // Determine necessary imports for optimizations
-  const imports: string[] = ['import numpy as np'];
+  // Determine necessary imports for optimizations  
+  const imports: string[] = [];
 
   if (optimize) {
     if (options.transpileToBackend) {
