@@ -235,14 +235,13 @@ export const findOptimizableSequences = (gates: Gate[]): [number, number][] => {
         optimizablePairs.push([gates.indexOf(g1), gates.indexOf(g2)]);
       }
       
-      // 6. H-Z-H can be replaced with X
-      else if (g1.type === 'h' && g2.type === 'z' && i + 2 < qubitGates.length && qubitGates[i + 2].type === 'h') {
-        optimizablePairs.push([gates.indexOf(g1), gates.indexOf(qubitGates[i + 2])]);
-      }
-      
-      // 7. H-X-H can be replaced with Z
-      else if (g1.type === 'h' && g2.type === 'x' && i + 2 < qubitGates.length && qubitGates[i + 2].type === 'h') {
-        optimizablePairs.push([gates.indexOf(g1), gates.indexOf(qubitGates[i + 2])]);
+      // 6. Look for H-*-H patterns (will be handled in synthesis based on middle gate)
+      else if (g1.type === 'h' && i + 2 < qubitGates.length && qubitGates[i + 2].type === 'h') {
+        // Only add if there's exactly one gate between the H gates
+        const middleGate = qubitGates[i + 1];
+        if (middleGate.type === 'x' || middleGate.type === 'z') {
+          optimizablePairs.push([gates.indexOf(g1), gates.indexOf(qubitGates[i + 2])]);
+        }
       }
     }
   }
@@ -294,73 +293,94 @@ export const synthesizeCircuit = (gates: Gate[], level: 0 | 1 | 2 | 3): Gate[] =
           gatesToRemove.add(i1);
           gatesToRemove.add(i2);
           
-          // Get parameter names based on gate type
-          let paramName = 'theta';
-          if (g1.type === 'rz') paramName = 'phi';
+          // Get parameter names based on gate type (use standard quantum computing conventions)
+          let paramName: string;
+          switch (g1.type) {
+            case 'rx':
+              paramName = 'theta'; // RX rotation angle around X-axis
+              break;
+            case 'ry':
+              paramName = 'theta'; // RY rotation angle around Y-axis  
+              break;
+            case 'rz':
+              paramName = 'phi';   // RZ rotation angle around Z-axis
+              break;
+            default:
+              paramName = 'theta'; // fallback
+          }
           
-          // Add a combined rotation gate
+          // Add a combined rotation gate with proper angle handling
           const angle1 = Number(g1.params[paramName] || 0);
           const angle2 = Number(g2.params[paramName] || 0);
-          const combinedAngle = (angle1 + angle2) % 360;  // Normalize to [0, 360)
+          const combinedAngle = ((angle1 + angle2) % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);  // Normalize to [0, 2π), handling negatives
           
           // Only add if the combined angle is non-zero
           if (combinedAngle !== 0) {
             gatesToAdd.push({
               ...g1,
-              id: `gate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              id: `gate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
               params: { ...g1.params, [paramName]: combinedAngle }
             });
           }
         }
         
-        // 3. H-Z-H can be replaced with X (if we have a 3-gate sequence)
-        else if (g1.type === 'h' && g2.type === 'z' && i2 - i1 === 1 && i2 + 1 < synthesized.length && 
-                synthesized[i2 + 1].type === 'h' && synthesized[i2 + 1].qubit === g1.qubit) {
-          gatesToRemove.add(i1);
-          gatesToRemove.add(i2);
-          gatesToRemove.add(i2 + 1);
+        // 3. Handle H-*-H patterns by checking what's between the H gates
+        if (g1.type === 'h' && g2.type === 'h' && g1.qubit === g2.qubit) {
+          // Find what gate is between these two H gates
+          const pos1 = g1.position || 0;
+          const pos2 = g2.position || 0;
           
-          // Find the gate definition for X gates
-          const xGateDef = gateLibrary.find(g => g.id === 'x');
+          // Look for the middle gate between these two H gates
+          let middleGate: Gate | null = null;
+          for (const gate of synthesized) {
+            const gatePos = gate.position || 0;
+            if (gatePos > pos1 && gatePos < pos2 && gate.qubit === g1.qubit) {
+              if (!middleGate || gatePos < (middleGate.position || 0)) {
+                middleGate = gate;
+              }
+            }
+          }
           
-          // Add an X gate instead
-          gatesToAdd.push({
-            id: `gate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            type: 'x',
-            qubit: g1.qubit,
-            position: g1.position,
-            // Add the required properties to satisfy the Gate type
-            name: xGateDef?.name || 'Pauli-X',
-            symbol: xGateDef?.symbol || 'X',
-            description: xGateDef?.description || 'X gate',
-            category: xGateDef?.category || 'Single-Qubit Gates',
-            color: xGateDef?.color || 'red'
-          });
-        }
-        
-        // 4. H-X-H can be replaced with Z (if we have a 3-gate sequence)
-        else if (g1.type === 'h' && g2.type === 'x' && i2 - i1 === 1 && i2 + 1 < synthesized.length && 
-                synthesized[i2 + 1].type === 'h' && synthesized[i2 + 1].qubit === g1.qubit) {
-          gatesToRemove.add(i1);
-          gatesToRemove.add(i2);
-          gatesToRemove.add(i2 + 1);
-          
-          // Find the gate definition for Z gates
-          const zGateDef = gateLibrary.find(g => g.id === 'z');
-          
-          // Add a Z gate instead
-          gatesToAdd.push({
-            id: `gate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            type: 'z',
-            qubit: g1.qubit,
-            position: g1.position,
-            // Add the required properties to satisfy the Gate type
-            name: zGateDef?.name || 'Pauli-Z',
-            symbol: zGateDef?.symbol || 'Z',
-            description: zGateDef?.description || 'Z gate',
-            category: zGateDef?.category || 'Single-Qubit Gates',
-            color: zGateDef?.color || 'purple'
-          });
+          if (middleGate) {
+            // H-X-H = Z
+            if (middleGate.type === 'x') {
+              gatesToRemove.add(i1);  // First H
+              gatesToRemove.add(i2);  // Second H
+              gatesToRemove.add(synthesized.indexOf(middleGate)); // Middle X
+              
+              const zGateDef = gateLibrary.find(g => g.id === 'z');
+              gatesToAdd.push({
+                id: `gate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+                type: 'z',
+                qubit: g1.qubit,
+                position: g1.position,
+                name: zGateDef?.name || 'Pauli-Z',
+                symbol: zGateDef?.symbol || 'Z',
+                description: zGateDef?.description || 'Z gate',
+                category: zGateDef?.category || 'Single-Qubit Gates',
+                color: zGateDef?.color || 'purple'
+              });
+            }
+            // H-Z-H = X  
+            else if (middleGate.type === 'z') {
+              gatesToRemove.add(i1);  // First H
+              gatesToRemove.add(i2);  // Second H
+              gatesToRemove.add(synthesized.indexOf(middleGate)); // Middle Z
+              
+              const xGateDef = gateLibrary.find(g => g.id === 'x');
+              gatesToAdd.push({
+                id: `gate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+                type: 'x',
+                qubit: g1.qubit,
+                position: g1.position,
+                name: xGateDef?.name || 'Pauli-X',
+                symbol: xGateDef?.symbol || 'X',
+                description: xGateDef?.description || 'X gate',
+                category: xGateDef?.category || 'Single-Qubit Gates',
+                color: xGateDef?.color || 'red'
+              });
+            }
+          }
         }
       }
       
@@ -419,45 +439,37 @@ export const reduceCircuitDepth = (gates: Gate[], maxDepth?: number): Gate[] => 
     dependencies.set(gate.id, new Set<string>());
   });
   
+  // Create a helper function to get all qubits used by a gate
+  const getGateQubits = (gate: Gate): Set<number> => {
+    const qubits = new Set<number>();
+    if (gate.qubit !== undefined) qubits.add(gate.qubit);
+    if (gate.targets) gate.targets.forEach(q => qubits.add(q));
+    if (gate.controls) gate.controls.forEach(q => qubits.add(q));
+    return qubits;
+  };
+
   // For each gate, determine which gates must execute before it
   for (let i = 0; i < optimizedGates.length; i++) {
     const gate1 = optimizedGates[i];
+    const qubits1 = getGateQubits(gate1);
     
-    // Create a set of qubits used by gate1
-    const qubits1 = new Set<number>();
-    qubits1.add(gate1.qubit || 0);
-    if (gate1.targets) gate1.targets.forEach(q => qubits1.add(q));
-    if (gate1.controls) gate1.controls.forEach(q => qubits1.add(q));
-    
-    for (let j = 0; j < optimizedGates.length; j++) {
-      if (i === j) continue;
-      
+    for (let j = i + 1; j < optimizedGates.length; j++) {
       const gate2 = optimizedGates[j];
       const pos1 = gate1.position || 0;
       const pos2 = gate2.position || 0;
       
-      // Skip if gate2 is already later in the circuit
-      if (pos2 > pos1) continue;
+      const qubits2 = getGateQubits(gate2);
       
-      // Create a set of qubits used by gate2
-      const qubits2 = new Set<number>();
-      qubits2.add(gate2.qubit || 0);
-      if (gate2.targets) gate2.targets.forEach(q => qubits2.add(q));
-      if (gate2.controls) gate2.controls.forEach(q => qubits2.add(q));
+      // Check if gates share any qubits (have a dependency)
+      const hasOverlap = [...qubits1].some(q => qubits2.has(q));
       
-      // Check if gates share any qubits
-      let hasOverlap = false;
-      for (const q of qubits1) {
-        if (qubits2.has(q)) {
-          hasOverlap = true;
-          break;
+      // If gates share qubits, the later gate depends on the earlier one
+      if (hasOverlap) {
+        if (pos1 <= pos2) {
+          dependencies.get(gate2.id)?.add(gate1.id);
+        } else {
+          dependencies.get(gate1.id)?.add(gate2.id);
         }
-      }
-      
-      // If gates share qubits and gate2 is currently before gate1,
-      // add a dependency from gate2 to gate1
-      if (hasOverlap && pos2 < pos1) {
-        dependencies.get(gate1.id)?.add(gate2.id);
       }
     }
   }
@@ -501,14 +513,11 @@ export const reduceCircuitDepth = (gates: Gate[], maxDepth?: number): Gate[] => 
     if (!gate) continue;
     
     // Find the earliest position this gate can be placed
-    const qubits = new Set<number>();
-    qubits.add(gate.qubit || 0);
-    if (gate.targets) gate.targets.forEach(q => qubits.add(q));
-    if (gate.controls) gate.controls.forEach(q => qubits.add(q));
+    const gateQubits = getGateQubits(gate);
     
     // Find the earliest time step where all needed qubits are available
     let earliestPos = 0;
-    for (const q of qubits) {
+    for (const q of gateQubits) {
       earliestPos = Math.max(earliestPos, qubitLastPos.get(q) || 0);
     }
     
@@ -516,7 +525,7 @@ export const reduceCircuitDepth = (gates: Gate[], maxDepth?: number): Gate[] => 
     gate.position = earliestPos;
     
     // Update the last position for all qubits used by this gate
-    for (const q of qubits) {
+    for (const q of gateQubits) {
       qubitLastPos.set(q, earliestPos + 1);
     }
   }
@@ -608,15 +617,32 @@ export const mapQubitToHardware = (
     }
   });
   
-  // Sort qubit pairs by count (most important first)
+  // Sort qubit pairs by count (most important first) and validate connectivity
   const sortedPairs = [...pairCounts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([pairKey]) => pairKey.split('-').map(Number));
+    .map(([pairKey]) => pairKey.split('-').map(Number))
+    .filter(([, ]) => {
+      // Only include pairs that can potentially be mapped to hardware
+      return physicalQubits.length >= 2;
+    });
   
-  // Greedy assignment: place most important pairs first
+  // Greedy assignment: place most important pairs first with connectivity validation
   for (const [q1, q2] of sortedPairs) {
     // Skip if both qubits are already assigned
-    if (logicalToPhysical.has(q1) && logicalToPhysical.has(q2)) continue;
+    if (logicalToPhysical.has(q1) && logicalToPhysical.has(q2)) {
+      // Verify the existing mapping maintains connectivity
+      const p1 = logicalToPhysical.get(q1)!;
+      const p2 = logicalToPhysical.get(q2)!;
+      if (!hardwareModel.connectivity[p1]?.includes(p2)) {
+        // Invalid mapping, need to reassign
+        logicalToPhysical.delete(q1);
+        logicalToPhysical.delete(q2);
+        physicalToLogical.delete(p1);
+        physicalToLogical.delete(p2);
+      } else {
+        continue; // Valid mapping exists
+      }
+    }
     
     // If one qubit is assigned, try to find a compatible match
     if (logicalToPhysical.has(q1)) {
@@ -650,13 +676,16 @@ export const mapQubitToHardware = (
         const connectedQubits = hardwareModel.connectivity[p1] || [];
         for (const p2 of connectedQubits) {
           if (!physicalToLogical.has(p2)) {
-            // Assign both qubits
-            logicalToPhysical.set(q1, p1);
-            physicalToLogical.set(p1, q1);
-            logicalToPhysical.set(q2, p2);
-            physicalToLogical.set(p2, q2);
-            found = true;
-            break;
+            // Verify this is a valid bidirectional connection
+            if (hardwareModel.connectivity[p2]?.includes(p1)) {
+              // Assign both qubits
+              logicalToPhysical.set(q1, p1);
+              physicalToLogical.set(p1, q1);
+              logicalToPhysical.set(q2, p2);
+              physicalToLogical.set(p2, q2);
+              found = true;
+              break;
+            }
           }
         }
       }
@@ -710,8 +739,8 @@ export const mapQubitToHardware = (
  */
 export const optimizeForNoiseAware = (
   gates: Gate[], 
-  qubits: Qubit[], 
-  hardwareModel: HardwareModel
+  _qubits: Qubit[], 
+  _hardwareModel: HardwareModel
 ): Gate[] => {
   if (gates.length === 0) return [];
   
@@ -750,20 +779,29 @@ export const optimizeForNoiseAware = (
         
         // Mark gates for removal if they appear in adjacent pairs
         const gatesToRemove = new Set<string>();
-        for (let i = 0; i < pairGates.length - 1; i += 2) {
+        let i = 0;
+        while (i < pairGates.length - 1) {
           // Check if there are no gates between these CNOTs
           const pos1 = pairGates[i].position || 0;
           const pos2 = pairGates[i + 1].position || 0;
+          
+          // Get all qubits involved in this CNOT operation
+          const controlQubit = pairGates[i].qubit;
+          const targetQubit = pairGates[i].targets?.[0];
           
           // Check if there are no gates in between on these qubits
           let hasGatesBetween = false;
           for (const g of optimizedGates) {
             const gPos = g.position || 0;
             if (gPos > pos1 && gPos < pos2) {
-              if (g.qubit === pairGates[i].qubit || 
-                  g.qubit === pairGates[i].targets?.[0] ||
-                  g.targets?.includes(pairGates[i].qubit || 0) ||
-                  g.targets?.includes(pairGates[i].targets?.[0] || 0)) {
+              // Check if this gate affects either the control or target qubit
+              const gateQubits = new Set<number>();
+              if (g.qubit !== undefined) gateQubits.add(g.qubit);
+              if (g.targets) g.targets.forEach(q => gateQubits.add(q));
+              if (g.controls) g.controls.forEach(q => gateQubits.add(q));
+              
+              if ((controlQubit !== undefined && gateQubits.has(controlQubit)) ||
+                  (targetQubit !== undefined && gateQubits.has(targetQubit))) {
                 hasGatesBetween = true;
                 break;
               }
@@ -773,7 +811,9 @@ export const optimizeForNoiseAware = (
           if (!hasGatesBetween) {
             gatesToRemove.add(pairGates[i].id);
             gatesToRemove.add(pairGates[i + 1].id);
-            i++; // Skip the next gate since we've processed it
+            i += 2; // Skip both gates since we've processed them
+          } else {
+            i += 1; // Move to next gate
           }
         }
         
@@ -850,7 +890,7 @@ export const applyAdvancedOptimization = (
  */
 export const estimateOptimizationImpact = (
   gates: Gate[],
-  qubits: Qubit[],
+  _qubits: Qubit[],
   options: AdvancedOptimizationOptions
 ): { 
   originalGateCount: number;
@@ -862,48 +902,56 @@ export const estimateOptimizationImpact = (
   const originalGateCount = gates.length;
   const originalDepth = calculateCircuitDepth(gates);
   
-  // Factors for each optimization type
+  // Dynamic estimation based on circuit characteristics
   let gateReductionFactor = 1.0;
   let depthReductionFactor = 1.0;
   
-  // Circuit synthesis has a significant impact on gate count
-  if (options.synthesisLevel > 0) {
-    // Reduction factors depend on synthesis level
+  // Analyze circuit for optimization potential
+  const twoQubitGates = gates.filter(g => ['cnot', 'cz', 'swap'].includes(g.type)).length;
+  const adjacentPairs = findOptimizableSequences(gates).length;
+  
+  // Circuit synthesis impact based on actual optimizable sequences
+  if (options.synthesisLevel > 0 && adjacentPairs > 0) {
+    const optimizationPotential = Math.min(adjacentPairs / gates.length, 0.5);
     switch (options.synthesisLevel) {
       case 1:
-        gateReductionFactor *= 0.85;  // ~15% reduction
+        gateReductionFactor *= (1 - optimizationPotential * 0.3);
         break;
       case 2:
-        gateReductionFactor *= 0.75;  // ~25% reduction
+        gateReductionFactor *= (1 - optimizationPotential * 0.5);
         break;
       case 3:
-        gateReductionFactor *= 0.65;  // ~35% reduction
+        gateReductionFactor *= (1 - optimizationPotential * 0.7);
         break;
     }
   }
   
-  // Noise-aware optimization typically reduces gates by focusing on error-prone operations
-  if (options.noiseAware) {
-    gateReductionFactor *= 0.9;  // ~10% reduction
+  // Noise-aware optimization impact based on two-qubit gate count
+  if (options.noiseAware && twoQubitGates > 0) {
+    const noisePotential = Math.min(twoQubitGates / gates.length, 0.3);
+    gateReductionFactor *= (1 - noisePotential * 0.2);
   }
   
-  // Circuit depth reduction can increase gate count slightly but reduces depth
+  // Circuit depth reduction impact based on parallelization potential
   if (options.depthReduction) {
-    depthReductionFactor *= 0.7;  // ~30% depth reduction
-    gateReductionFactor *= 1.05;  // Slight increase in gate count
+    const parallelPotential = Math.min(1 - (originalDepth / gates.length), 0.5);
+    depthReductionFactor *= (1 - parallelPotential * 0.6);
+    gateReductionFactor *= (1 + parallelPotential * 0.1); // Slight increase for parallelization overhead
   }
   
-  // Qubit mapping can add SWAP gates if the layout doesn't match hardware
-  if (options.qubitMapping && !options.preserveLayout) {
-    gateReductionFactor *= 1.1;  // ~10% increase due to added SWAPs
+  // Qubit mapping impact based on connectivity requirements
+  if (options.qubitMapping && twoQubitGates > 0) {
+    const connectivityOverhead = options.preserveLayout ? 0.05 : 0.15;
+    gateReductionFactor *= (1 + connectivityOverhead);
   }
   
-  // Calculate estimated counts
-  const estimatedGateCount = Math.max(1, Math.floor(originalGateCount * gateReductionFactor));
-  const estimatedDepth = Math.max(1, Math.floor(originalDepth * depthReductionFactor));
+  // Calculate estimated counts with bounds checking
+  const estimatedGateCount = Math.max(1, Math.min(originalGateCount * 2, Math.floor(originalGateCount * gateReductionFactor)));
+  const estimatedDepth = Math.max(1, Math.min(originalDepth * 2, Math.floor(originalDepth * depthReductionFactor)));
   
   // Calculate reduction percentage (negative if increased)
-  const reductionPercentage = Math.round((1 - estimatedGateCount / originalGateCount) * 100);
+  const reductionPercentage = originalGateCount > 0 ? 
+    Math.round((1 - estimatedGateCount / originalGateCount) * 100) : 0;
   
   return {
     originalGateCount,
