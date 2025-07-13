@@ -97,26 +97,27 @@ function generateGateSection(gates: Gate[]): string {
         break;
       case 'rx':
         // RX gate uses theta parameter (rotation around X-axis)
-        const rxTheta = gate.params?.theta || gate.params?.angle || 0;
+
+        const rxTheta = Number(gate.params?.theta || gate.params?.angle || 0);
         // Check if value is already in radians (between -2π and 2π) or degrees  
         const rxAngle = Math.abs(rxTheta) <= 2 * Math.PI ? rxTheta : rxTheta * Math.PI / 180;
         gateSection += `qc.rx(${rxAngle}, ${gate.qubit})\n`;
         break;
       case 'ry':
         // RY gate uses theta parameter (rotation around Y-axis)
-        const ryTheta = gate.params?.theta || gate.params?.angle || 0;
+        const ryTheta = Number(gate.params?.theta || gate.params?.angle || 0);
         const ryAngle = Math.abs(ryTheta) <= 2 * Math.PI ? ryTheta : ryTheta * Math.PI / 180;
         gateSection += `qc.ry(${ryAngle}, ${gate.qubit})\n`;
         break;
       case 'rz':
         // RZ gate uses phi parameter (rotation around Z-axis)
-        const rzPhi = gate.params?.phi || gate.params?.angle || 0;
+        const rzPhi = Number(gate.params?.phi || gate.params?.theta || gate.params?.angle || 0);
         const rzAngle = Math.abs(rzPhi) <= 2 * Math.PI ? rzPhi : rzPhi * Math.PI / 180;
         gateSection += `qc.rz(${rzAngle}, ${gate.qubit})\n`;
         break;
       case 'p':
         // Phase gate uses phi parameter
-        const phasePhi = gate.params?.phi || gate.params?.phase || 0;
+        const phasePhi = Number(gate.params?.phi || gate.params?.phase || 0);
         const phaseAngle = Math.abs(phasePhi) <= 2 * Math.PI ? phasePhi : phasePhi * Math.PI / 180;
         gateSection += `qc.p(${phaseAngle}, ${gate.qubit})\n`;
         break;
