@@ -52,13 +52,38 @@ export const circuitSlice = createSlice({
     },
     removeQubit: (state, action: PayloadAction<number>) => {
       const qubitId = action.payload
+      
+      // Remove the qubit
       state.qubits = state.qubits.filter((qubit) => qubit.id !== qubitId)
+      
+      // Remove gates that involve this qubit
       state.gates = state.gates.filter(
         (gate) => 
           gate.qubit !== qubitId && 
           !gate.targets?.includes(qubitId) && 
           !gate.controls?.includes(qubitId)
       )
+      
+      // Reindex remaining qubits and update gates accordingly
+      const oldToNewIdMap: { [oldId: number]: number } = {}
+      state.qubits.forEach((qubit, index) => {
+        oldToNewIdMap[qubit.id] = index
+        qubit.id = index
+        qubit.name = `q${index}`
+      })
+      
+      // Update gate references to use new qubit IDs
+      state.gates.forEach(gate => {
+        if (gate.qubit in oldToNewIdMap) {
+          gate.qubit = oldToNewIdMap[gate.qubit]
+        }
+        if (gate.targets) {
+          gate.targets = gate.targets.map(target => oldToNewIdMap[target]).filter(id => id !== undefined)
+        }
+        if (gate.controls) {
+          gate.controls = gate.controls.map(control => oldToNewIdMap[control]).filter(id => id !== undefined)
+        }
+      })
     },
     addGate: (state, action: PayloadAction<Omit<Gate, 'id'>>) => {
       const newGate = {
@@ -85,6 +110,13 @@ export const circuitSlice = createSlice({
     },
     clearCircuit: (state) => {
       state.gates = []
+      state.qubits = [
+        { id: 0, name: 'q0' },
+        { id: 1, name: 'q1' },
+      ]
+      state.maxPosition = 10
+      state.name = 'New Circuit'
+      state.description = ''
     },
     setCircuitName: (state, action: PayloadAction<string>) => {
       state.name = action.payload
