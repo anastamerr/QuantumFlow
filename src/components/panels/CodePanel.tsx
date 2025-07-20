@@ -9,6 +9,7 @@ import { gateLibrary } from '../../utils/gateLibrary'
 import { Gate as CircuitGate } from '../../types/circuit'
 import AdvancedOptimizationPanel from './AdvancedOptimizationPanel'
 import { defaultAdvancedOptions } from '../../utils/circuitOptimizer'
+import FullViewToggle from '../common/FullViewToggle'
 
 const CodePanel = () => {
   const dispatch = useDispatch()
@@ -131,6 +132,7 @@ const CodePanel = () => {
         <HStack justify="space-between" mb={2}>
           <Heading size="md">Generated Code</Heading>
           <HStack>
+            <FullViewToggle />
             <Select size="sm" value={codeFormat} onChange={handleFormatChange} w="120px">
               <option value="qiskit">Qiskit</option>
               <option value="cirq">Cirq</option>

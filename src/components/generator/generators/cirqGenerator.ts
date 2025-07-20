@@ -1,5 +1,5 @@
 import { Gate, Qubit } from '../../../types/circuit';
-import { OptimizationOptions, defaultOptimizationOptions } from '../../../types/optimizationTypes';
+import { OptimizationOptions, defaultOptimizationOptions } from '../types/optimizationTypes';
 import { prepareGatesForCodeGeneration, validateCircuitInput, groupGatesByPosition } from './codeGeneratorUtils';
 import { hardwareModels } from '../../../utils/circuitOptimizer';
 
@@ -30,6 +30,7 @@ export const generateCirqCode = (
   // Add Cirq-specific imports
   const cirqImports = [
     'import cirq',
+    'import numpy as np',
     ...imports
   ];
 
@@ -105,26 +106,54 @@ function generateGateSection(gates: Gate[]): string {
           gateSection += `circuit.append(cirq.T(qubits[${gate.qubit}]))\n`;
           break;
         case 'rx':
-          const theta = gate.params?.theta || gate.params?.angle || 0;
-          gateSection += `circuit.append(cirq.rx(${theta} * np.pi / 180)(qubits[${gate.qubit}]))  # Convert degrees to radians\n`;
+          const theta = Number(gate.params?.theta || gate.params?.angle || 0);
+          if (isNaN(theta)) {
+            gateSection += `# Warning: Invalid parameter for RX gate, using 0\n`;
+            gateSection += `circuit.append(cirq.rx(0)(qubits[${gate.qubit}]))\n`;
+          } else {
+            // Check if value is already in radians or degrees
+            const rxAngle = Math.abs(theta) <= 2 * Math.PI ? theta : theta * Math.PI / 180;
+            gateSection += `circuit.append(cirq.rx(${rxAngle})(qubits[${gate.qubit}]))\n`;
+          }
           break;
         case 'ry':
-          const phi = gate.params?.phi || gate.params?.theta || gate.params?.angle || 0;
-          gateSection += `circuit.append(cirq.ry(${phi} * np.pi / 180)(qubits[${gate.qubit}]))  # Convert degrees to radians\n`;
+          const phi = Number(gate.params?.phi || gate.params?.theta || gate.params?.angle || 0);
+          if (isNaN(phi)) {
+            gateSection += `# Warning: Invalid parameter for RY gate, using 0\n`;
+            gateSection += `circuit.append(cirq.ry(0)(qubits[${gate.qubit}]))\n`;
+          } else {
+            const ryAngle = Math.abs(phi) <= 2 * Math.PI ? phi : phi * Math.PI / 180;
+            gateSection += `circuit.append(cirq.ry(${ryAngle})(qubits[${gate.qubit}]))\n`;
+          }
           break;
         case 'rz':
-          const lambda = gate.params?.lambda || gate.params?.phi || gate.params?.angle || 0;
-          gateSection += `circuit.append(cirq.rz(${lambda} * np.pi / 180)(qubits[${gate.qubit}]))  # Convert degrees to radians\n`;
+          const lambda = Number(gate.params?.lambda || gate.params?.phi || gate.params?.angle || 0);
+          if (isNaN(lambda)) {
+            gateSection += `# Warning: Invalid parameter for RZ gate, using 0\n`;
+            gateSection += `circuit.append(cirq.rz(0)(qubits[${gate.qubit}]))\n`;
+          } else {
+            const rzAngle = Math.abs(lambda) <= 2 * Math.PI ? lambda : lambda * Math.PI / 180;
+            gateSection += `circuit.append(cirq.rz(${rzAngle})(qubits[${gate.qubit}]))\n`;
+          }
           break;
         case 'p':
-          const phase = gate.params?.phi || gate.params?.phase || 0;
-          gateSection += `circuit.append(cirq.ZPowGate(exponent=${phase}/360)(qubits[${gate.qubit}]))  # Convert degrees to turns\n`;
+          const phase = Number(gate.params?.phi || gate.params?.phase || 0);
+          if (isNaN(phase)) {
+            gateSection += `# Warning: Invalid parameter for P gate, using 0\n`;
+            gateSection += `circuit.append(cirq.ZPowGate(exponent=0)(qubits[${gate.qubit}]))\n`;
+          } else {
+            // Convert to exponent for ZPowGate (phase in radians / π)
+            const phaseExponent = Math.abs(phase) <= 2 * Math.PI ? phase / Math.PI : phase / 180;
+            gateSection += `circuit.append(cirq.ZPowGate(exponent=${phaseExponent})(qubits[${gate.qubit}]))\n`;
+          }
           break;
         case 'cnot':
           if (gate.controls && gate.controls.length > 0 && gate.targets && gate.targets.length > 0) {
             gateSection += `circuit.append(cirq.CNOT(qubits[${gate.controls[0]}], qubits[${gate.targets[0]}]))\n`;
           } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
             gateSection += `circuit.append(cirq.CNOT(qubits[${gate.qubit}], qubits[${gate.targets[0]}]))\n`;
+          } else {
+            gateSection += `# Warning: CNOT gate missing control or target qubit\n`;
           }
           break;
         case 'cz':
@@ -132,6 +161,8 @@ function generateGateSection(gates: Gate[]): string {
             gateSection += `circuit.append(cirq.CZ(qubits[${gate.controls[0]}], qubits[${gate.targets[0]}]))\n`;
           } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
             gateSection += `circuit.append(cirq.CZ(qubits[${gate.qubit}], qubits[${gate.targets[0]}]))\n`;
+          } else {
+            gateSection += `# Warning: CZ gate missing control or target qubit\n`;
           }
           break;
         case 'swap':
@@ -139,6 +170,8 @@ function generateGateSection(gates: Gate[]): string {
             gateSection += `circuit.append(cirq.SWAP(qubits[${gate.targets[0]}], qubits[${gate.targets[1]}]))\n`;
           } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
             gateSection += `circuit.append(cirq.SWAP(qubits[${gate.qubit}], qubits[${gate.targets[0]}]))\n`;
+          } else {
+            gateSection += `# Warning: SWAP gate needs two qubits\n`;
           }
           break;
         case 'toffoli':
@@ -146,6 +179,8 @@ function generateGateSection(gates: Gate[]): string {
             gateSection += `circuit.append(cirq.TOFFOLI(qubits[${gate.controls[0]}], qubits[${gate.controls[1]}], qubits[${gate.targets[0]}]))\n`;
           } else if (gate.qubit !== undefined && gate.controls && gate.controls.length > 0 && gate.targets && gate.targets.length > 0) {
             gateSection += `circuit.append(cirq.TOFFOLI(qubits[${gate.qubit}], qubits[${gate.controls[0]}], qubits[${gate.targets[0]}]))\n`;
+          } else {
+            gateSection += `# Warning: Toffoli gate needs 2 control qubits and 1 target qubit\n`;
           }
           break;
         case 'measure':
@@ -190,14 +225,15 @@ function generateOptimizationSection(options: OptimizationOptions): string {
     // Add different optimizers based on advanced options
     if (options.advancedOptions.synthesisLevel > 0) {
       optimizationSection += '# Apply circuit synthesis optimizations\n';
-      optimizationSection += 'circuit = cirq.optimize_for_target_gateset(circuit)\n';
-      optimizationSection += 'circuit = cirq.merge_single_qubit_gates_into_phased_x_z(circuit)\n';
+      optimizationSection += 'from cirq.transformers import optimize_for_target_gateset, merge_single_qubit_gates_into_phased_x_z\n';
+      optimizationSection += 'circuit = optimize_for_target_gateset(circuit, gateset=cirq.SqrtIswapTargetGateset())\n';
+      optimizationSection += 'circuit = merge_single_qubit_gates_into_phased_x_z(circuit)\n';
       
       if (options.advancedOptions.synthesisLevel >= 2) {
         optimizationSection += '# Apply medium-level synthesis optimizations\n';
-        optimizationSection += 'circuit = cirq.drop_empty_moments(circuit)\n';
-        optimizationSection += 'circuit = cirq.drop_negligible_operations(circuit)\n';
-        optimizationSection += 'circuit = cirq.merge_single_qubit_gates_into_phxz(circuit)\n';
+        optimizationSection += 'from cirq.transformers import drop_empty_moments, drop_negligible_operations\n';
+        optimizationSection += 'circuit = drop_empty_moments(circuit)\n';
+        optimizationSection += 'circuit = drop_negligible_operations(circuit)\n';
       }
       
       if (options.advancedOptions.synthesisLevel >= 3) {
@@ -210,7 +246,7 @@ function generateOptimizationSection(options: OptimizationOptions): string {
     if (options.advancedOptions.depthReduction) {
       optimizationSection += '\n# Apply circuit depth reduction\n';
       optimizationSection += 'initial_depth = len(circuit)\n';
-      optimizationSection += 'circuit = cirq.merge_interactions(circuit, maximize_distance=True)\n';
+      optimizationSection += '# Note: Manual optimization may be needed for depth reduction in current Cirq versions\n';
       
       if (options.advancedOptions.maxDepth && options.advancedOptions.maxDepth > 0) {
         optimizationSection += `# Target maximum depth: ${options.advancedOptions.maxDepth}\n`;
@@ -308,7 +344,7 @@ function generateOptimizationSection(options: OptimizationOptions): string {
       
       optimizationSection += '\n# Apply each optimizer to the circuit\n';
       optimizationSection += 'for optimizer in optimizers:\n';
-      optimizationSection += '    optimizer.optimize_circuit(circuit)\n\n';
+      optimizationSection += '    circuit = optimizer.optimize_circuit(circuit)\n\n';
       
       optimizationSection += '# Optimized circuit size\n';
       optimizationSection += 'print("Optimized circuit size:", len(circuit))\n';

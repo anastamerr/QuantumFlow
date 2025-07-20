@@ -199,8 +199,8 @@ export const calculateProbabilities = (state: QuantumState): Record<string, numb
     totalProb += prob;
   });
   
-  // Normalize probabilities if needed
-  if (Math.abs(totalProb - 1.0) > 1e-10) {
+  // Normalize probabilities if needed (use appropriate tolerance for floating point)
+  if (Math.abs(totalProb - 1.0) > 1e-6) {
     Object.keys(probabilities).forEach(basisState => {
       probabilities[basisState] /= totalProb;
     });
@@ -359,20 +359,36 @@ const applyRotationX = (
   const cos = Math.cos(angle / 2);
   const sin = Math.sin(angle / 2);
   
-  // Calculate new amplitudes
-  const newAmplitude1: Complex = [
-    amplitude[0] * cos,
-    amplitude[1] * cos
-  ];
+  // For |0⟩ state (targetBit = '0'), new amplitude = cos(θ/2) * |0⟩ + (-i*sin(θ/2)) * |1⟩
+  // For |1⟩ state (targetBit = '1'), new amplitude = (-i*sin(θ/2)) * |0⟩ + cos(θ/2) * |1⟩
   
-  const newAmplitude2: Complex = [
-    -amplitude[1] * sin,
-    amplitude[0] * sin
-  ];
-  
-  // Add contributions to both output states
-  addToState(newState, basisState, newAmplitude1);
-  addToState(newState, otherState, newAmplitude2);
+  if (targetBit === '0') {
+    // Original state |0⟩ contributes cos(θ/2) to |0⟩ and -i*sin(θ/2) to |1⟩
+    const newAmplitude0: Complex = [
+      amplitude[0] * cos,
+      amplitude[1] * cos
+    ];
+    const newAmplitude1: Complex = [
+      amplitude[1] * sin,    // -i * (a + bi) = b - ai
+      -amplitude[0] * sin
+    ];
+    
+    addToState(newState, basisState, newAmplitude0);
+    addToState(newState, otherState, newAmplitude1);
+  } else {
+    // Original state |1⟩ contributes -i*sin(θ/2) to |0⟩ and cos(θ/2) to |1⟩
+    const newAmplitude0: Complex = [
+      amplitude[1] * sin,    // -i * (a + bi) = b - ai
+      -amplitude[0] * sin
+    ];
+    const newAmplitude1: Complex = [
+      amplitude[0] * cos,
+      amplitude[1] * cos
+    ];
+    
+    addToState(newState, otherState, newAmplitude0);
+    addToState(newState, basisState, newAmplitude1);
+  }
 };
 
 /**
@@ -396,21 +412,36 @@ const applyRotationY = (
   const cos = Math.cos(angle / 2);
   const sin = Math.sin(angle / 2);
   
-  // Calculate new amplitudes
-  const newAmplitude1: Complex = [
-    amplitude[0] * cos,
-    amplitude[1] * cos
-  ];
+  // For |0⟩ state (targetBit = '0'), new amplitude = cos(θ/2) * |0⟩ + (-sin(θ/2)) * |1⟩
+  // For |1⟩ state (targetBit = '1'), new amplitude = sin(θ/2) * |0⟩ + cos(θ/2) * |1⟩
   
-  const sign = targetBit === '0' ? 1 : -1;
-  const newAmplitude2: Complex = [
-    amplitude[0] * sin * sign,
-    amplitude[1] * sin * sign
-  ];
-  
-  // Add contributions to both output states
-  addToState(newState, basisState, newAmplitude1);
-  addToState(newState, otherState, newAmplitude2);
+  if (targetBit === '0') {
+    // Original state |0⟩ contributes cos(θ/2) to |0⟩ and -sin(θ/2) to |1⟩
+    const newAmplitude0: Complex = [
+      amplitude[0] * cos,
+      amplitude[1] * cos
+    ];
+    const newAmplitude1: Complex = [
+      -amplitude[0] * sin,
+      -amplitude[1] * sin
+    ];
+    
+    addToState(newState, basisState, newAmplitude0);
+    addToState(newState, otherState, newAmplitude1);
+  } else {
+    // Original state |1⟩ contributes sin(θ/2) to |0⟩ and cos(θ/2) to |1⟩
+    const newAmplitude0: Complex = [
+      amplitude[0] * sin,
+      amplitude[1] * sin
+    ];
+    const newAmplitude1: Complex = [
+      amplitude[0] * cos,
+      amplitude[1] * cos
+    ];
+    
+    addToState(newState, otherState, newAmplitude0);
+    addToState(newState, basisState, newAmplitude1);
+  }
 };
 
 /**

@@ -38,6 +38,7 @@ import { gateLibrary } from '../../utils/gateLibrary'
 import { Gate as CircuitGate } from '../../types/circuit'
 import AdvancedOptimizationPanel from './AdvancedOptimizationPanel'
 import { defaultAdvancedOptions, estimateOptimizationImpact } from '../../utils/circuitOptimizer'
+import FullViewToggle from '../common/FullViewToggle'
 
 const ExportPanel = () => {
   const qubits = useSelector(selectQubits)
@@ -277,7 +278,10 @@ const ExportPanel = () => {
   
   return (
     <Box>
-      <Heading size="md" mb={4}>Export Circuit</Heading>
+      <HStack justify="space-between" mb={4}>
+        <Heading size="md">Export Circuit</Heading>
+        <FullViewToggle />
+      </HStack>
       
       <VStack spacing={4} align="stretch">
         <Box 
