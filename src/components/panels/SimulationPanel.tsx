@@ -46,6 +46,7 @@ import { simulateCircuit } from '../../utils/stateEvolution';
 import { transformStoreGatesToCircuitGates } from '../../utils/circuitUtils';
 import { stateVectorToBloch } from '../../utils/blochSphereUtils';
 import { InfoIcon, RepeatIcon, ChevronRightIcon, StarIcon } from '@chakra-ui/icons';
+import FullViewToggle from '../common/FullViewToggle';
 
 const SimulationPanel = () => {
   const qubits = useSelector(selectQubits);
@@ -311,17 +312,20 @@ const SimulationPanel = () => {
               )}
             </HStack>
             
-            <Button 
-              colorScheme="blue" 
-              onClick={runSimulation} 
-              isLoading={isSimulating}
-              loadingText="Simulating"
-              isDisabled={gates.length === 0}
+            <HStack>
+              <FullViewToggle />
+              <Button 
+                colorScheme="blue" 
+                onClick={runSimulation} 
+                isLoading={isSimulating}
+                loadingText="Simulating"
+                isDisabled={gates.length === 0}
               rightIcon={<ChevronRightIcon />}
               boxShadow="sm"
             >
               Run Simulation
             </Button>
+            </HStack>
           </Flex>
         </CardHeader>
         
