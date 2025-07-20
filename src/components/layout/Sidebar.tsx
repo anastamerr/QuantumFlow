@@ -1,6 +1,6 @@
 import { Box, VStack, Heading, Divider, Text, useColorModeValue, InputGroup, Input, InputLeftElement, Icon } from '@chakra-ui/react'
-import { useDispatch } from 'react-redux'
-import { addQubit, removeQubit } from '../../store/slices/circuitSlice'
+import { useDispatch, useSelector } from 'react-redux'
+import { addQubit, removeQubit, selectQubits } from '../../store/slices/circuitSlice'
 import GateItem from '../gates/GateItem'
 import { gateLibrary } from '../../utils/gateLibrary'
 import { SearchIcon } from '@chakra-ui/icons'
@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo } from 'react'
 
 const Sidebar = () => {
   const dispatch = useDispatch()
+  const qubits = useSelector(selectQubits)
   const bg = useColorModeValue('gray.50', 'gray.700')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const searchBg = useColorModeValue('white', 'gray.800')
@@ -22,7 +23,11 @@ const Sidebar = () => {
   }
 
   const handleRemoveQubit = () => {
-    dispatch(removeQubit(0))
+    if (qubits.length > 0) {
+      // Remove the last qubit (highest ID)
+      const lastQubitId = Math.max(...qubits.map(q => q.id))
+      dispatch(removeQubit(lastQubitId))
+    }
   }
 
   // Filter gates based on search query

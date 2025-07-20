@@ -43,3 +43,5 @@ logs/
 # Project specific
 .quantum-flow/
 quantum-cache/
+
+settings.local.json
