@@ -178,15 +178,15 @@ export const findOptimizableSequences = (gates: Gate[]): [number, number][] => {
   const optimizablePairs: [number, number][] = [];
   const gatesByQubit: Record<number, Gate[]> = {};
   
-  // Group gates by qubit
+  // Group gates by qubit (including control/target qubits for multi-qubit gates)
   gates.forEach(gate => {
-    const qubit = gate.qubit;
-    if (qubit === undefined) return;
-    
-    if (!gatesByQubit[qubit]) {
-      gatesByQubit[qubit] = [];
-    }
-    gatesByQubit[qubit].push(gate);
+    const qubits = getGateQubits(gate);
+    qubits.forEach(qubit => {
+      if (!gatesByQubit[qubit]) {
+        gatesByQubit[qubit] = [];
+      }
+      gatesByQubit[qubit].push(gate);
+    });
   });
   
   // Sort gates for each qubit by position
@@ -202,44 +202,49 @@ export const findOptimizableSequences = (gates: Gate[]): [number, number][] => {
       const g1 = qubitGates[i];
       const g2 = qubitGates[i + 1];
       
+      // Skip if gates don't operate on the same qubits
+      if (!gatesOperateOnSameQubits(g1, g2)) continue;
+      
+      // Check if there are any gates between these two that would prevent optimization
+      if (hasIntermediateGatesOnSameQubits(gates, g1, g2)) continue;
+      
       // Look for specific patterns that can be optimized
       
-      // 1. Two Hadamard gates cancel out
-      if (g1.type === 'h' && g2.type === 'h') {
+      // 1. Two identical Pauli gates cancel out (X-X, Y-Y, Z-Z)
+      if (g1.type === g2.type && ['x', 'y', 'z'].includes(g1.type) && 
+          !hasParameters(g1) && !hasParameters(g2) && 
+          !isControlledGate(g1) && !isControlledGate(g2)) {
         optimizablePairs.push([gates.indexOf(g1), gates.indexOf(g2)]);
       }
       
-      // 2. Two X gates cancel out
-      else if (g1.type === 'x' && g2.type === 'x') {
+      // 2. Two Hadamard gates cancel out
+      else if (g1.type === 'h' && g2.type === 'h' && 
+               !hasParameters(g1) && !hasParameters(g2) &&
+               !isControlledGate(g1) && !isControlledGate(g2)) {
         optimizablePairs.push([gates.indexOf(g1), gates.indexOf(g2)]);
       }
       
-      // 3. Two Z gates cancel out
-      else if (g1.type === 'z' && g2.type === 'z') {
+      // 3. Rotation gates of the same type can be combined
+      else if (g1.type === g2.type && ['rx', 'ry', 'rz'].includes(g1.type) && 
+               g1.params && g2.params && 
+               !isControlledGate(g1) && !isControlledGate(g2)) {
         optimizablePairs.push([gates.indexOf(g1), gates.indexOf(g2)]);
       }
       
-      // 4. Two Y gates cancel out
-      else if (g1.type === 'y' && g2.type === 'y') {
+      // 4. CNOT gates on same control-target pair cancel out
+      else if (g1.type === 'cnot' && g2.type === 'cnot' &&
+               g1.qubit === g2.qubit && 
+               arraysEqual(g1.targets || [], g2.targets || [])) {
         optimizablePairs.push([gates.indexOf(g1), gates.indexOf(g2)]);
       }
       
-      // 5. Rotation gates of the same type can be combined
-      else if (g1.type === 'rx' && g2.type === 'rx' && g1.params && g2.params) {
-        optimizablePairs.push([gates.indexOf(g1), gates.indexOf(g2)]);
-      }
-      else if (g1.type === 'ry' && g2.type === 'ry' && g1.params && g2.params) {
-        optimizablePairs.push([gates.indexOf(g1), gates.indexOf(g2)]);
-      }
-      else if (g1.type === 'rz' && g2.type === 'rz' && g1.params && g2.params) {
-        optimizablePairs.push([gates.indexOf(g1), gates.indexOf(g2)]);
-      }
-      
-      // 6. Look for H-*-H patterns (will be handled in synthesis based on middle gate)
+      // 5. Look for H-*-H patterns (check for exactly one gate between)
       else if (g1.type === 'h' && i + 2 < qubitGates.length && qubitGates[i + 2].type === 'h') {
-        // Only add if there's exactly one gate between the H gates
         const middleGate = qubitGates[i + 1];
-        if (middleGate.type === 'x' || middleGate.type === 'z') {
+        if ((middleGate.type === 'x' || middleGate.type === 'z') && 
+            gatesOperateOnSameQubits(g1, middleGate) &&
+            gatesOperateOnSameQubits(middleGate, qubitGates[i + 2]) &&
+            !hasIntermediateGatesOnSameQubits(gates, g1, qubitGates[i + 2])) {
           optimizablePairs.push([gates.indexOf(g1), gates.indexOf(qubitGates[i + 2])]);
         }
       }
@@ -250,8 +255,76 @@ export const findOptimizableSequences = (gates: Gate[]): [number, number][] => {
 };
 
 /**
- * Circuit synthesis: convert the circuit to an equivalent form with fewer gates
+ * Helper function to get all qubits a gate operates on
  */
+const getGateQubits = (gate: Gate): Set<number> => {
+  const qubits = new Set<number>();
+  if (gate.qubit !== undefined) qubits.add(gate.qubit);
+  if (gate.targets) gate.targets.forEach(q => qubits.add(q));
+  if (gate.controls) gate.controls.forEach(q => qubits.add(q));
+  return qubits;
+};
+
+/**
+ * Check if two gates operate on the exact same set of qubits
+ */
+const gatesOperateOnSameQubits = (g1: Gate, g2: Gate): boolean => {
+  const qubits1 = getGateQubits(g1);
+  const qubits2 = getGateQubits(g2);
+  
+  if (qubits1.size !== qubits2.size) return false;
+  
+  for (const qubit of qubits1) {
+    if (!qubits2.has(qubit)) return false;
+  }
+  
+  return true;
+};
+
+/**
+ * Check if there are gates between g1 and g2 that operate on the same qubits
+ */
+const hasIntermediateGatesOnSameQubits = (allGates: Gate[], g1: Gate, g2: Gate): boolean => {
+  const pos1 = g1.position || 0;
+  const pos2 = g2.position || 0;
+  const targetQubits = getGateQubits(g1);
+  
+  return allGates.some(gate => {
+    const gatePos = gate.position || 0;
+    if (gatePos > pos1 && gatePos < pos2) {
+      const gateQubits = getGateQubits(gate);
+      // Check if this intermediate gate shares any qubits with our target gates
+      for (const qubit of gateQubits) {
+        if (targetQubits.has(qubit)) return true;
+      }
+    }
+    return false;
+  });
+};
+
+/**
+ * Check if a gate has parameters
+ */
+const hasParameters = (gate: Gate): boolean => {
+  return !!gate.params && Object.keys(gate.params).length > 0;
+};
+
+/**
+ * Check if a gate is a controlled gate
+ */
+const isControlledGate = (gate: Gate): boolean => {
+  return ['cnot', 'cz', 'toffoli'].includes(gate.type) || 
+         (!!gate.controls && gate.controls.length > 0);
+};
+
+/**
+ * Check if two arrays are equal
+ */
+const arraysEqual = (a: number[], b: number[]): boolean => {
+  if (a.length !== b.length) return false;
+  return a.every((val, index) => val === b[index]);
+};
+
 /**
  * Circuit synthesis: convert the circuit to an equivalent form with fewer gates
  */
@@ -260,14 +333,20 @@ export const synthesizeCircuit = (gates: Gate[], level: 0 | 1 | 2 | 3): Gate[] =
     
     // Clone gates to avoid modifying the original
     let synthesized = [...gates];
+    let optimizationsMade = true;
     
-    // Apply optimization level
-    for (let iteration = 0; iteration < level; iteration++) {
+    // Apply optimization iterations until no more optimizations can be made
+    for (let iteration = 0; iteration < level && optimizationsMade; iteration++) {
+      const initialGateCount = synthesized.length;
+      
       // Find sequences that can be optimized
       const optimizablePairs = findOptimizableSequences(synthesized);
       
       // Skip if no more optimizations found
-      if (optimizablePairs.length === 0) break;
+      if (optimizablePairs.length === 0) {
+        optimizationsMade = false;
+        break;
+      }
       
       // Mark gates to remove (we'll do this instead of removing immediately to avoid index changes)
       const gatesToRemove = new Set<number>();
@@ -283,39 +362,51 @@ export const synthesizeCircuit = (gates: Gate[], level: 0 | 1 | 2 | 3): Gate[] =
         // Handle different optimization patterns
         
         // 1. Two gates of same type that cancel (H-H, X-X, Z-Z, Y-Y)
-        if ((g1.type === g2.type) && ['h', 'x', 'z', 'y'].includes(g1.type)) {
+        if ((g1.type === g2.type) && ['h', 'x', 'z', 'y'].includes(g1.type) &&
+            !hasParameters(g1) && !hasParameters(g2) &&
+            !isControlledGate(g1) && !isControlledGate(g2)) {
           gatesToRemove.add(i1);
           gatesToRemove.add(i2);
         }
         
-        // 2. Combine rotation gates of same type
-        else if (g1.type === g2.type && ['rx', 'ry', 'rz'].includes(g1.type) && g1.params && g2.params) {
+        // 2. CNOT gates cancel out
+        else if (g1.type === 'cnot' && g2.type === 'cnot' &&
+                 g1.qubit === g2.qubit && 
+                 arraysEqual(g1.targets || [], g2.targets || [])) {
+          gatesToRemove.add(i1);
+          gatesToRemove.add(i2);
+        }
+        
+        // 3. Combine rotation gates of same type
+        else if (g1.type === g2.type && ['rx', 'ry', 'rz'].includes(g1.type) && 
+                 g1.params && g2.params &&
+                 !isControlledGate(g1) && !isControlledGate(g2)) {
           gatesToRemove.add(i1);
           gatesToRemove.add(i2);
           
-          // Get parameter names based on gate type (use standard quantum computing conventions)
+          // Get parameter names based on gate type
           let paramName: string;
           switch (g1.type) {
             case 'rx':
-              paramName = 'theta'; // RX rotation angle around X-axis
+              paramName = 'theta';
               break;
             case 'ry':
-              paramName = 'theta'; // RY rotation angle around Y-axis  
+              paramName = 'theta';
               break;
             case 'rz':
-              paramName = 'phi';   // RZ rotation angle around Z-axis
+              paramName = 'phi';
               break;
             default:
-              paramName = 'theta'; // fallback
+              paramName = 'theta';
           }
           
           // Add a combined rotation gate with proper angle handling
           const angle1 = Number(g1.params[paramName] || 0);
           const angle2 = Number(g2.params[paramName] || 0);
-          const combinedAngle = ((angle1 + angle2) % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);  // Normalize to [0, 2π), handling negatives
+          const combinedAngle = (angle1 + angle2) % (2 * Math.PI);
           
-          // Only add if the combined angle is non-zero
-          if (combinedAngle !== 0) {
+          // Only add if the combined angle is not effectively zero
+          if (Math.abs(combinedAngle) > 1e-10 && Math.abs(combinedAngle - 2 * Math.PI) > 1e-10) {
             gatesToAdd.push({
               ...g1,
               id: `gate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
@@ -324,60 +415,48 @@ export const synthesizeCircuit = (gates: Gate[], level: 0 | 1 | 2 | 3): Gate[] =
           }
         }
         
-        // 3. Handle H-*-H patterns by checking what's between the H gates
-        if (g1.type === 'h' && g2.type === 'h' && g1.qubit === g2.qubit) {
+        // 4. Handle H-*-H patterns 
+        else if (g1.type === 'h' && g2.type === 'h' && g1.qubit === g2.qubit) {
           // Find what gate is between these two H gates
           const pos1 = g1.position || 0;
           const pos2 = g2.position || 0;
           
-          // Look for the middle gate between these two H gates
+          // Look for the middle gate between these two H gates on the same qubit
           let middleGate: Gate | null = null;
           for (const gate of synthesized) {
             const gatePos = gate.position || 0;
-            if (gatePos > pos1 && gatePos < pos2 && gate.qubit === g1.qubit) {
+            if (gatePos > pos1 && gatePos < pos2 && gate.qubit === g1.qubit &&
+                !gatesToRemove.has(synthesized.indexOf(gate))) {
               if (!middleGate || gatePos < (middleGate.position || 0)) {
                 middleGate = gate;
               }
             }
           }
           
-          if (middleGate) {
-            // H-X-H = Z
-            if (middleGate.type === 'x') {
+          if (middleGate && (middleGate.type === 'x' || middleGate.type === 'z') &&
+              !hasParameters(middleGate) && !isControlledGate(middleGate)) {
+            const middleIndex = synthesized.indexOf(middleGate);
+            
+            // Only proceed if middleGate isn't already marked for removal
+            if (!gatesToRemove.has(middleIndex)) {
               gatesToRemove.add(i1);  // First H
               gatesToRemove.add(i2);  // Second H
-              gatesToRemove.add(synthesized.indexOf(middleGate)); // Middle X
+              gatesToRemove.add(middleIndex); // Middle gate
               
-              const zGateDef = gateLibrary.find(g => g.id === 'z');
+              // H-X-H = Z, H-Z-H = X
+              const newGateType = middleGate.type === 'x' ? 'z' : 'x';
+              const gateDef = gateLibrary.find(g => g.id === newGateType);
+              
               gatesToAdd.push({
                 id: `gate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-                type: 'z',
+                type: newGateType,
                 qubit: g1.qubit,
                 position: g1.position,
-                name: zGateDef?.name || 'Pauli-Z',
-                symbol: zGateDef?.symbol || 'Z',
-                description: zGateDef?.description || 'Z gate',
-                category: zGateDef?.category || 'Single-Qubit Gates',
-                color: zGateDef?.color || 'purple'
-              });
-            }
-            // H-Z-H = X  
-            else if (middleGate.type === 'z') {
-              gatesToRemove.add(i1);  // First H
-              gatesToRemove.add(i2);  // Second H
-              gatesToRemove.add(synthesized.indexOf(middleGate)); // Middle Z
-              
-              const xGateDef = gateLibrary.find(g => g.id === 'x');
-              gatesToAdd.push({
-                id: `gate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-                type: 'x',
-                qubit: g1.qubit,
-                position: g1.position,
-                name: xGateDef?.name || 'Pauli-X',
-                symbol: xGateDef?.symbol || 'X',
-                description: xGateDef?.description || 'X gate',
-                category: xGateDef?.category || 'Single-Qubit Gates',
-                color: xGateDef?.color || 'red'
+                name: gateDef?.name || `Pauli-${newGateType.toUpperCase()}`,
+                symbol: gateDef?.symbol || newGateType.toUpperCase(),
+                description: gateDef?.description || `${newGateType} gate`,
+                category: gateDef?.category || 'Single-Qubit Gates',
+                color: gateDef?.color || (newGateType === 'x' ? 'red' : 'purple')
               });
             }
           }
@@ -397,30 +476,32 @@ export const synthesizeCircuit = (gates: Gate[], level: 0 | 1 | 2 | 3): Gate[] =
         if (posA !== posB) return posA - posB;
         return (a.qubit || 0) - (b.qubit || 0);
       });
+      
+      // Check if we made any progress
+      optimizationsMade = synthesized.length < initialGateCount || gatesToAdd.length > 0;
     }
     
     return synthesized;
   };
   
-  // Fix the same issue in optimizeForNoiseAware function where new gates might be created
-  // Add a helper function to create fully typed gates
-  export const createGate = (type: string, qubit: number, position: number): Gate => {
-    // Find the gate definition from the library
-    const gateDef = gateLibrary.find(g => g.id === type);
-    
-    return {
-      id: `gate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      qubit,
-      position,
-      // Add required Gate properties with defaults if gateDef not found
-      name: gateDef?.name || `${type.toUpperCase()} Gate`,
-      symbol: gateDef?.symbol || type.toUpperCase(),
-      description: gateDef?.description || `${type} gate`,
-      category: gateDef?.category || 'Gates',
-      color: gateDef?.color || 'gray'
-    };
+// Add a helper function to create fully typed gates
+export const createGate = (type: string, qubit: number, position: number): Gate => {
+  // Find the gate definition from the library
+  const gateDef = gateLibrary.find(g => g.id === type);
+  
+  return {
+    id: `gate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type,
+    qubit,
+    position,
+    // Add required Gate properties with defaults if gateDef not found
+    name: gateDef?.name || `${type.toUpperCase()} Gate`,
+    symbol: gateDef?.symbol || type.toUpperCase(),
+    description: gateDef?.description || `${type} gate`,
+    category: gateDef?.category || 'Gates',
+    color: gateDef?.color || 'gray'
   };
+};
 
 /**
  * Reduce circuit depth by parallelizing gates when possible
@@ -888,9 +969,149 @@ export const applyAdvancedOptimization = (
  * @param options Advanced optimization options
  * @returns Estimated gate count after optimization
  */
+/**
+ * Calculate actual optimization results by applying optimizations and comparing
+ */
+export const calculateActualOptimizationImpact = (
+  gates: Gate[],
+  qubits: Qubit[],
+  options: AdvancedOptimizationOptions
+): {
+  originalGateCount: number;
+  optimizedGateCount: number;
+  originalDepth: number;
+  optimizedDepth: number;
+  reductionPercentage: number;
+  gatesRemoved: number;
+  gatesAdded: number;
+  optimizationDetails: {
+    cancelledPairs: number;
+    combinedRotations: number;
+    hxhToZ: number;
+    hzhToX: number;
+    removedCnots: number;
+  };
+} => {
+  const originalGateCount = gates.length;
+  const originalDepth = calculateCircuitDepth(gates);
+  
+  if (originalGateCount === 0) {
+    return {
+      originalGateCount: 0,
+      optimizedGateCount: 0,
+      originalDepth: 0,
+      optimizedDepth: 0,
+      reductionPercentage: 0,
+      gatesRemoved: 0,
+      gatesAdded: 0,
+      optimizationDetails: {
+        cancelledPairs: 0,
+        combinedRotations: 0,
+        hxhToZ: 0,
+        hzhToX: 0,
+        removedCnots: 0
+      }
+    };
+  }
+  
+  // Apply actual optimizations and track what happens
+  const optimizedGates = applyAdvancedOptimization(gates, qubits, options);
+  const optimizedGateCount = optimizedGates.length;
+  const optimizedDepth = calculateCircuitDepth(optimizedGates);
+  
+  // Calculate detailed optimization metrics
+  const gatesRemoved = Math.max(0, originalGateCount - optimizedGateCount);
+  const gatesAdded = Math.max(0, optimizedGateCount - originalGateCount);
+  const reductionPercentage = originalGateCount > 0 ? 
+    Math.round(((originalGateCount - optimizedGateCount) / originalGateCount) * 100) : 0;
+  
+  // Analyze what optimizations were applied
+  const optimizationDetails = analyzeOptimizationDetails(gates, optimizedGates);
+  
+  return {
+    originalGateCount,
+    optimizedGateCount,
+    originalDepth,
+    optimizedDepth,
+    reductionPercentage,
+    gatesRemoved,
+    gatesAdded,
+    optimizationDetails
+  };
+};
+
+/**
+ * Analyze what specific optimizations were applied
+ */
+export const analyzeOptimizationDetails = (
+  originalGates: Gate[],
+  optimizedGates: Gate[]
+): {
+  cancelledPairs: number;
+  combinedRotations: number;
+  hxhToZ: number;
+  hzhToX: number;
+  removedCnots: number;
+} => {
+  // Count original gate types
+  const originalCounts = countGateTypes(originalGates);
+  const optimizedCounts = countGateTypes(optimizedGates);
+  
+  // Calculate specific optimizations
+  const cancelledPairs = Math.max(0, 
+    (originalCounts.x - optimizedCounts.x) / 2 +
+    (originalCounts.y - optimizedCounts.y) / 2 +
+    (originalCounts.z - optimizedCounts.z) / 2 +
+    (originalCounts.h - optimizedCounts.h) / 2
+  );
+  
+  const combinedRotations = Math.max(0,
+    (originalCounts.rx - optimizedCounts.rx) / 2 +
+    (originalCounts.ry - optimizedCounts.ry) / 2 +
+    (originalCounts.rz - optimizedCounts.rz) / 2
+  );
+  
+  const removedCnots = Math.max(0, originalCounts.cnot - optimizedCounts.cnot);
+  
+  // For H-X-H and H-Z-H patterns, we need to estimate based on gate changes
+  const hxhToZ = Math.max(0, (originalCounts.h - optimizedCounts.h) / 2 - 
+    (optimizedCounts.z - originalCounts.z));
+  const hzhToX = Math.max(0, (originalCounts.h - optimizedCounts.h) / 2 - 
+    (optimizedCounts.x - originalCounts.x));
+  
+  return {
+    cancelledPairs: Math.floor(cancelledPairs),
+    combinedRotations: Math.floor(combinedRotations),
+    hxhToZ: Math.floor(Math.max(0, hxhToZ)),
+    hzhToX: Math.floor(Math.max(0, hzhToX)),
+    removedCnots: Math.floor(removedCnots)
+  };
+};
+
+/**
+ * Count gates by type
+ */
+const countGateTypes = (gates: Gate[]): Record<string, number> => {
+  const counts: Record<string, number> = {
+    x: 0, y: 0, z: 0, h: 0, rx: 0, ry: 0, rz: 0, cnot: 0, cz: 0, swap: 0
+  };
+  
+  gates.forEach(gate => {
+    if (counts.hasOwnProperty(gate.type)) {
+      counts[gate.type]++;
+    }
+  });
+  
+  return counts;
+};
+
+/**
+ * Legacy function maintained for backward compatibility
+ * @deprecated Use calculateActualOptimizationImpact instead
+ */
 export const estimateOptimizationImpact = (
   gates: Gate[],
-  _qubits: Qubit[],
+  qubits: Qubit[],
   options: AdvancedOptimizationOptions
 ): { 
   originalGateCount: number;
@@ -899,65 +1120,12 @@ export const estimateOptimizationImpact = (
   estimatedDepth: number;
   reductionPercentage: number;
 } => {
-  const originalGateCount = gates.length;
-  const originalDepth = calculateCircuitDepth(gates);
-  
-  // Dynamic estimation based on circuit characteristics
-  let gateReductionFactor = 1.0;
-  let depthReductionFactor = 1.0;
-  
-  // Analyze circuit for optimization potential
-  const twoQubitGates = gates.filter(g => ['cnot', 'cz', 'swap'].includes(g.type)).length;
-  const adjacentPairs = findOptimizableSequences(gates).length;
-  
-  // Circuit synthesis impact based on actual optimizable sequences
-  if (options.synthesisLevel > 0 && adjacentPairs > 0) {
-    const optimizationPotential = Math.min(adjacentPairs / gates.length, 0.5);
-    switch (options.synthesisLevel) {
-      case 1:
-        gateReductionFactor *= (1 - optimizationPotential * 0.3);
-        break;
-      case 2:
-        gateReductionFactor *= (1 - optimizationPotential * 0.5);
-        break;
-      case 3:
-        gateReductionFactor *= (1 - optimizationPotential * 0.7);
-        break;
-    }
-  }
-  
-  // Noise-aware optimization impact based on two-qubit gate count
-  if (options.noiseAware && twoQubitGates > 0) {
-    const noisePotential = Math.min(twoQubitGates / gates.length, 0.3);
-    gateReductionFactor *= (1 - noisePotential * 0.2);
-  }
-  
-  // Circuit depth reduction impact based on parallelization potential
-  if (options.depthReduction) {
-    const parallelPotential = Math.min(1 - (originalDepth / gates.length), 0.5);
-    depthReductionFactor *= (1 - parallelPotential * 0.6);
-    gateReductionFactor *= (1 + parallelPotential * 0.1); // Slight increase for parallelization overhead
-  }
-  
-  // Qubit mapping impact based on connectivity requirements
-  if (options.qubitMapping && twoQubitGates > 0) {
-    const connectivityOverhead = options.preserveLayout ? 0.05 : 0.15;
-    gateReductionFactor *= (1 + connectivityOverhead);
-  }
-  
-  // Calculate estimated counts with bounds checking
-  const estimatedGateCount = Math.max(1, Math.min(originalGateCount * 2, Math.floor(originalGateCount * gateReductionFactor)));
-  const estimatedDepth = Math.max(1, Math.min(originalDepth * 2, Math.floor(originalDepth * depthReductionFactor)));
-  
-  // Calculate reduction percentage (negative if increased)
-  const reductionPercentage = originalGateCount > 0 ? 
-    Math.round((1 - estimatedGateCount / originalGateCount) * 100) : 0;
-  
+  const actual = calculateActualOptimizationImpact(gates, qubits, options);
   return {
-    originalGateCount,
-    estimatedGateCount,
-    originalDepth,
-    estimatedDepth,
-    reductionPercentage
+    originalGateCount: actual.originalGateCount,
+    estimatedGateCount: actual.optimizedGateCount,
+    originalDepth: actual.originalDepth,
+    estimatedDepth: actual.optimizedDepth,
+    reductionPercentage: actual.reductionPercentage
   };
 };

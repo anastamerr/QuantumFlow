@@ -52,13 +52,38 @@ export const circuitSlice = createSlice({
     },
     removeQubit: (state, action: PayloadAction<number>) => {
       const qubitId = action.payload
+      
+      // Remove the qubit
       state.qubits = state.qubits.filter((qubit) => qubit.id !== qubitId)
+      
+      // Remove gates that involve this qubit
       state.gates = state.gates.filter(
         (gate) => 
           gate.qubit !== qubitId && 
           !gate.targets?.includes(qubitId) && 
           !gate.controls?.includes(qubitId)
       )
+      
+      // Reindex remaining qubits and update gates accordingly
+      const oldToNewIdMap: { [oldId: number]: number } = {}
+      state.qubits.forEach((qubit, index) => {
+        oldToNewIdMap[qubit.id] = index
+        qubit.id = index
+        qubit.name = `q${index}`
+      })
+      
+      // Update gate references to use new qubit IDs
+      state.gates.forEach(gate => {
+        if (gate.qubit in oldToNewIdMap) {
+          gate.qubit = oldToNewIdMap[gate.qubit]
+        }
+        if (gate.targets) {
+          gate.targets = gate.targets.map(target => oldToNewIdMap[target]).filter(id => id !== undefined)
+        }
+        if (gate.controls) {
+          gate.controls = gate.controls.map(control => oldToNewIdMap[control]).filter(id => id !== undefined)
+        }
+      })
     },
     addGate: (state, action: PayloadAction<Omit<Gate, 'id'>>) => {
       const newGate = {
@@ -85,6 +110,13 @@ export const circuitSlice = createSlice({
     },
     clearCircuit: (state) => {
       state.gates = []
+      state.qubits = [
+        { id: 0, name: 'q0' },
+        { id: 1, name: 'q1' },
+      ]
+      state.maxPosition = 10
+      state.name = 'New Circuit'
+      state.description = ''
     },
     setCircuitName: (state, action: PayloadAction<string>) => {
       state.name = action.payload
@@ -97,6 +129,42 @@ export const circuitSlice = createSlice({
     },
     extendCircuit: (state, action: PayloadAction<number>) => {
       state.maxPosition = action.payload
+    },
+    addGates: (state, action: PayloadAction<Omit<Gate, 'id'>[]>) => {
+      const newGates = action.payload.map((gate, index) => ({
+        ...gate,
+        id: `gate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        position: typeof gate.position === 'number' ? gate.position : index,
+        qubit: gate.qubit ?? 0
+      }))
+      
+      // Clear existing gates and add new ones
+      state.gates = []
+      state.gates.push(...newGates)
+      
+      // Ensure we have enough qubits for the algorithm
+      const allQubits = newGates.flatMap(gate => {
+        const qubits = [gate.qubit];
+        if (gate.targets) qubits.push(...gate.targets);
+        if (gate.controls) qubits.push(...gate.controls);
+        return qubits.filter(q => typeof q === 'number' && q >= 0);
+      });
+      
+      const maxQubit = allQubits.length > 0 ? Math.max(...allQubits) : 0;
+      
+      // Add qubits if needed
+      while (state.qubits.length <= maxQubit) {
+        const newId = state.qubits.length;
+        state.qubits.push({
+          id: newId,
+          name: `q${newId}`,
+        });
+      }
+      
+      // Update maxPosition based on gate positions
+      const positions = newGates.map(gate => gate.position).filter(p => typeof p === 'number');
+      const maxPosition = positions.length > 0 ? Math.max(...positions) : 0;
+      state.maxPosition = Math.max(maxPosition + 5, state.maxPosition);
     },
   },
 })
@@ -113,6 +181,7 @@ export const {
   setCircuitDescription,
   importCircuit,
   extendCircuit,
+  addGates,
 } = circuitSlice.actions
 
 // Export selectors

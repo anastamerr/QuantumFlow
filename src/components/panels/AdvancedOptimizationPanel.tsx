@@ -33,7 +33,7 @@ import {
     AdvancedOptimizationOptions, 
     defaultAdvancedOptions,
     hardwareModels,
-    estimateOptimizationImpact,
+    calculateActualOptimizationImpact,
     calculateCircuitDepth
   } from '../../utils/circuitOptimizer';
   import { gateLibrary } from '../../utils/gateLibrary';
@@ -103,8 +103,8 @@ import {
       onChange(newOptions);
     };
     
-    // Calculate optimization impact using the properly transformed gates
-    const impactEstimation = estimateOptimizationImpact(gates, qubits, currentOptions);
+    // Calculate actual optimization impact using the properly transformed gates
+    const impactEstimation = calculateActualOptimizationImpact(gates, qubits, currentOptions);
     
     // Effect to reset options when isEnabled changes
     useEffect(() => {
@@ -305,43 +305,77 @@ import {
               
               <Divider />
               
-              {/* Optimization Impact Estimate */}
+              {/* Optimization Impact Results */}
               <Box 
                 p={2} 
                 borderRadius="md" 
                 bg={highlightBg}
               >
-                <Heading size="xs" mb={2}>Estimated Optimization Impact</Heading>
-                <HStack spacing={4} justify="space-between">
-                  <VStack align="start" spacing={0}>
-                    <Text fontSize="xs" color="gray.500">GATES</Text>
-                    <HStack>
-                      <Text fontSize="sm" fontWeight="medium">{impactEstimation.originalGateCount}</Text>
-                      <Text fontSize="sm">→</Text>
-                      <Text fontSize="sm" fontWeight="medium">{impactEstimation.estimatedGateCount}</Text>
-                    </HStack>
-                  </VStack>
+                <Heading size="xs" mb={2}>Actual Optimization Results</Heading>
+                <VStack spacing={2} align="stretch">
+                  <HStack spacing={4} justify="space-between">
+                    <VStack align="start" spacing={0}>
+                      <Text fontSize="xs" color="gray.500">GATES</Text>
+                      <HStack>
+                        <Text fontSize="sm" fontWeight="medium">{impactEstimation.originalGateCount}</Text>
+                        <Text fontSize="sm">→</Text>
+                        <Text fontSize="sm" fontWeight="medium" color={impactEstimation.optimizedGateCount < impactEstimation.originalGateCount ? "green.500" : "red.500"}>
+                          {impactEstimation.optimizedGateCount}
+                        </Text>
+                      </HStack>
+                    </VStack>
+                    
+                    <VStack align="start" spacing={0}>
+                      <Text fontSize="xs" color="gray.500">DEPTH</Text>
+                      <HStack>
+                        <Text fontSize="sm" fontWeight="medium">{impactEstimation.originalDepth}</Text>
+                        <Text fontSize="sm">→</Text>
+                        <Text fontSize="sm" fontWeight="medium" color={impactEstimation.optimizedDepth < impactEstimation.originalDepth ? "green.500" : "red.500"}>
+                          {impactEstimation.optimizedDepth}
+                        </Text>
+                      </HStack>
+                    </VStack>
+                    
+                    <Badge 
+                      colorScheme={impactEstimation.reductionPercentage > 0 ? "green" : impactEstimation.reductionPercentage < 0 ? "red" : "gray"} 
+                      variant="solid" 
+                      borderRadius="md"
+                      px={2}
+                      py={1}
+                    >
+                      {impactEstimation.reductionPercentage > 0 ? "-" : impactEstimation.reductionPercentage < 0 ? "+" : ""}
+                      {Math.abs(impactEstimation.reductionPercentage)}% Gates
+                    </Badge>
+                  </HStack>
                   
-                  <VStack align="start" spacing={0}>
-                    <Text fontSize="xs" color="gray.500">DEPTH</Text>
-                    <HStack>
-                      <Text fontSize="sm" fontWeight="medium">{impactEstimation.originalDepth}</Text>
-                      <Text fontSize="sm">→</Text>
-                      <Text fontSize="sm" fontWeight="medium">{impactEstimation.estimatedDepth}</Text>
-                    </HStack>
-                  </VStack>
-                  
-                  <Badge 
-                    colorScheme={impactEstimation.reductionPercentage > 0 ? "green" : "red"} 
-                    variant="solid" 
-                    borderRadius="md"
-                    px={2}
-                    py={1}
-                  >
-                    {impactEstimation.reductionPercentage > 0 ? "-" : "+"}
-                    {Math.abs(impactEstimation.reductionPercentage)}% Gates
-                  </Badge>
-                </HStack>
+                  {/* Detailed optimization breakdown */}
+                  {(impactEstimation.gatesRemoved > 0 || impactEstimation.gatesAdded > 0) && (
+                    <VStack spacing={1} align="stretch" mt={2} p={2} bg={useColorModeValue('gray.50', 'gray.800')} borderRadius="sm">
+                      <Text fontSize="xs" fontWeight="medium" color="gray.600">Optimization Details:</Text>
+                      {impactEstimation.optimizationDetails.cancelledPairs > 0 && (
+                        <Text fontSize="xs">• {impactEstimation.optimizationDetails.cancelledPairs} gate pairs cancelled (X-X, Y-Y, Z-Z, H-H)</Text>
+                      )}
+                      {impactEstimation.optimizationDetails.combinedRotations > 0 && (
+                        <Text fontSize="xs">• {impactEstimation.optimizationDetails.combinedRotations} rotation gates combined</Text>
+                      )}
+                      {impactEstimation.optimizationDetails.hxhToZ > 0 && (
+                        <Text fontSize="xs">• {impactEstimation.optimizationDetails.hxhToZ} H-X-H sequences converted to Z</Text>
+                      )}
+                      {impactEstimation.optimizationDetails.hzhToX > 0 && (
+                        <Text fontSize="xs">• {impactEstimation.optimizationDetails.hzhToX} H-Z-H sequences converted to X</Text>
+                      )}
+                      {impactEstimation.optimizationDetails.removedCnots > 0 && (
+                        <Text fontSize="xs">• {impactEstimation.optimizationDetails.removedCnots} CNOT gates cancelled</Text>
+                      )}
+                      {impactEstimation.gatesRemoved > 0 && (
+                        <Text fontSize="xs" color="green.600">• {impactEstimation.gatesRemoved} gates removed total</Text>
+                      )}
+                      {impactEstimation.gatesAdded > 0 && (
+                        <Text fontSize="xs" color="blue.600">• {impactEstimation.gatesAdded} gates added total</Text>
+                      )}
+                    </VStack>
+                  )}
+                </VStack>
               </Box>
               
               <Button 
