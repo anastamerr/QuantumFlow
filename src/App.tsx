@@ -12,6 +12,7 @@ import SimulationPanel from './components/panels/SimulationPanel'
 import ExportPanel from './components/panels/ExportPanel'
 import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
+import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
 
 function App() {
@@ -144,6 +145,7 @@ function App() {
                 {activePanel === 'code' && <CodePanel />}
                 {activePanel === 'simulation' && <SimulationPanel />}
                 {activePanel === 'export' && <ExportPanel />}
+                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
               </ResizablePanel>
             </Flex>
           </Box>
