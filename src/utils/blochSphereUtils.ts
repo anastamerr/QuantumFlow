@@ -45,7 +45,16 @@ export const amplitudesToBloch = (alpha: Complex, beta: Complex): BlochCoordinat
   
   // Extract phase information
   // Theta is the polar angle (from Z axis)
-  let theta = 2 * Math.acos(Math.sqrt(alpha_mag_squared / (alpha_mag_squared + beta_mag_squared)));
+  // For normalized state |ψ⟩ = α|0⟩ + β|1⟩, theta = 2*arccos(|α|)
+  let theta = 0;
+  const totalNorm = alpha_mag_squared + beta_mag_squared;
+  
+  if (totalNorm > 1e-15) {
+    const alphaProb = alpha_mag_squared / totalNorm;
+    // Ensure alphaProb is in valid range [0,1] to avoid NaN from acos
+    const clampedAlphaProb = Math.min(Math.max(alphaProb, 0), 1);
+    theta = 2 * Math.acos(Math.sqrt(clampedAlphaProb));
+  }
   
   // Handle NaN in calculation
   if (isNaN(theta)) {
@@ -56,13 +65,18 @@ export const amplitudesToBloch = (alpha: Complex, beta: Complex): BlochCoordinat
   // This requires the relative phase between alpha and beta
   let phi = 0;
   
-  if (Math.abs(normBeta[0]) > 1e-10 || Math.abs(normBeta[1]) > 1e-10) {
-    // Calculate relative phase
-    const phaseAlpha = Math.atan2(normAlpha[1], normAlpha[0]);
-    const phaseBeta = Math.atan2(normBeta[1], normBeta[0]);
+  // Only calculate phase if beta has significant magnitude
+  if (Math.sqrt(beta_mag_squared) > 1e-10) {
+    // For normalized amplitudes, calculate relative phase
+    // Remove global phase by making alpha real and positive
+    const globalPhase = Math.atan2(normAlpha[1], normAlpha[0]);
     
-    // Relative phase
-    phi = phaseBeta - phaseAlpha;
+    // Apply phase correction to beta
+    const correctedBetaReal = normBeta[0] * Math.cos(-globalPhase) - normBeta[1] * Math.sin(-globalPhase);
+    const correctedBetaImag = normBeta[0] * Math.sin(-globalPhase) + normBeta[1] * Math.cos(-globalPhase);
+    
+    // The relative phase is now just the phase of the corrected beta
+    phi = Math.atan2(correctedBetaImag, correctedBetaReal);
     
     // Normalize to [0, 2π)
     if (phi < 0) phi += 2 * Math.PI;
