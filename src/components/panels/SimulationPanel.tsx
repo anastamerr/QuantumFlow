@@ -46,6 +46,7 @@ import { simulateCircuit } from '../../utils/stateEvolution';
 import { transformStoreGatesToCircuitGates } from '../../utils/circuitUtils';
 import { stateVectorToBloch } from '../../utils/blochSphereUtils';
 import { InfoIcon, RepeatIcon, ChevronRightIcon, StarIcon } from '@chakra-ui/icons';
+import FullViewToggle from '../common/FullViewToggle';
 
 const SimulationPanel = () => {
   const qubits = useSelector(selectQubits);
@@ -288,7 +289,13 @@ const SimulationPanel = () => {
   // Calculate circuit depth - safely handle undefined positions
   const calculateCircuitDepth = () => {
     if (gates.length === 0) return 0;
-    return Math.max(...gates.map(g => g.position !== undefined ? g.position : 0)) + 1;
+    // Filter out undefined positions and ensure we have valid numbers
+    const validPositions = gates
+      .map(g => g.position)
+      .filter(p => p !== undefined && p !== null && !isNaN(p)) as number[];
+    
+    if (validPositions.length === 0) return 1; // If no valid positions, depth is 1
+    return Math.max(...validPositions) + 1;
   };
   
   return (
@@ -305,17 +312,20 @@ const SimulationPanel = () => {
               )}
             </HStack>
             
-            <Button 
-              colorScheme="blue" 
-              onClick={runSimulation} 
-              isLoading={isSimulating}
-              loadingText="Simulating"
-              isDisabled={gates.length === 0}
+            <HStack>
+              <FullViewToggle />
+              <Button 
+                colorScheme="blue" 
+                onClick={runSimulation} 
+                isLoading={isSimulating}
+                loadingText="Simulating"
+                isDisabled={gates.length === 0}
               rightIcon={<ChevronRightIcon />}
               boxShadow="sm"
             >
               Run Simulation
             </Button>
+            </HStack>
           </Flex>
         </CardHeader>
         
@@ -507,9 +517,18 @@ const SimulationPanel = () => {
                   boxShadow="md" 
                   bg={cardBg}
                   minH="350px"
+                  maxH="800px"
                   borderWidth="1px"
                   borderColor={borderColor}
-                  overflow="hidden"
+                  overflow="auto"
+                  resize="vertical"
+                  sx={{
+                    resize: 'vertical',
+                    '&::-webkit-resizer': {
+                      background: borderColor,
+                      borderRadius: '2px'
+                    }
+                  }}
                 >
                   {isSimulating && showRealTimeVisualization ? (
                     <CardBody>
@@ -644,9 +663,18 @@ const SimulationPanel = () => {
                   boxShadow="md" 
                   bg={cardBg}
                   minH="350px"
+                  maxH="800px"
                   borderWidth="1px"
                   borderColor={borderColor}
-                  overflow="hidden"
+                  overflow="auto"
+                  resize="vertical"
+                  sx={{
+                    resize: 'vertical',
+                    '&::-webkit-resizer': {
+                      background: borderColor,
+                      borderRadius: '2px'
+                    }
+                  }}
                 >
                   <CardBody>
                     {!simulationComplete || !results ? (
@@ -706,9 +734,18 @@ const SimulationPanel = () => {
                   boxShadow="md" 
                   bg={cardBg}
                   minH="350px"
+                  maxH="800px"
                   borderWidth="1px"
                   borderColor={borderColor}
-                  overflow="hidden"
+                  overflow="auto"
+                  resize="vertical"
+                  sx={{
+                    resize: 'vertical',
+                    '&::-webkit-resizer': {
+                      background: borderColor,
+                      borderRadius: '2px'
+                    }
+                  }}
                 >
                   <CardBody>
                     {!simulationComplete || !results ? (
@@ -873,9 +910,14 @@ const SimulationPanel = () => {
                               </Text>
                             </CardHeader>
                             <CardBody py={3} px={4}>
-                              {stateVectorToBloch(Object.fromEntries(
-                                Object.entries(results || {}).map(([key, value]) => [key, [value, 0]])
-                              ), 0) && (
+                              {(() => {
+                                // Convert probability results to complex amplitude format for Bloch calculation
+                                const stateVector = Object.fromEntries(
+                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                );
+                                const blochCoords = stateVectorToBloch(stateVector, 0);
+                                return blochCoords;
+                              })() && (
                                 <Grid 
                                   templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} 
                                   gap={4}
@@ -889,9 +931,12 @@ const SimulationPanel = () => {
                                       fontFamily="monospace"
                                       color="red.500"
                                     >
-                                      {stateVectorToBloch(Object.fromEntries(
-                                        Object.entries(results || {}).map(([key, value]) => [key, [value, 0]])
-                                      ), 0)?.x.toFixed(4)}
+                                      {(() => {
+                                        const stateVector = Object.fromEntries(
+                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                        );
+                                        return stateVectorToBloch(stateVector, 0)?.x.toFixed(4);
+                                      })()}
                                     </Text>
                                   </Box>
                                   <Box>
@@ -902,9 +947,12 @@ const SimulationPanel = () => {
                                       fontFamily="monospace"
                                       color="green.500"
                                     >
-                                      {stateVectorToBloch(Object.fromEntries(
-                                        Object.entries(results || {}).map(([key, value]) => [key, [value, 0]])
-                                      ), 0)?.y.toFixed(4)}
+                                      {(() => {
+                                        const stateVector = Object.fromEntries(
+                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                        );
+                                        return stateVectorToBloch(stateVector, 0)?.y.toFixed(4);
+                                      })()}
                                     </Text>
                                   </Box>
                                   <Box>
@@ -915,9 +963,12 @@ const SimulationPanel = () => {
                                       fontFamily="monospace"
                                       color="blue.500"
                                     >
-                                      {stateVectorToBloch(Object.fromEntries(
-                                        Object.entries(results || {}).map(([key, value]) => [key, [value, 0]])
-                                      ), 0)?.z.toFixed(4)}
+                                      {(() => {
+                                        const stateVector = Object.fromEntries(
+                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                        );
+                                        return stateVectorToBloch(stateVector, 0)?.z.toFixed(4);
+                                      })()}
                                     </Text>
                                   </Box>
                                 </Grid>
@@ -961,9 +1012,18 @@ const SimulationPanel = () => {
                   boxShadow="md" 
                   bg={cardBg}
                   minH="350px"
+                  maxH="800px"
                   borderWidth="1px"
                   borderColor={borderColor}
-                  overflow="hidden"
+                  overflow="auto"
+                  resize="vertical"
+                  sx={{
+                    resize: 'vertical',
+                    '&::-webkit-resizer': {
+                      background: borderColor,
+                      borderRadius: '2px'
+                    }
+                  }}
                 >
                   <CardBody>
                     {!simulationComplete || !results ? (
@@ -982,7 +1042,7 @@ const SimulationPanel = () => {
                             <Box flex="1">
                               <BlochSphereVisualization 
                                 stateVector={Object.fromEntries(
-                                  Object.entries(results || {}).map(([key, value]) => [key, [value, 0]])
+                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
                                 )}
                                 width={isMobile ? 300 : 400}
                                 height={isMobile ? 300 : 400}
@@ -1049,7 +1109,7 @@ const SimulationPanel = () => {
                           // Multi-qubit case - Show the full QubitVisualization component
                           <QubitVisualization 
                             stateVector={Object.fromEntries(
-                              Object.entries(results).map(([key, value]) => [key, [value, 0]])
+                              Object.entries(results).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
                             )}
                             numQubits={qubits.length}
                             title="Qubit State Visualization"

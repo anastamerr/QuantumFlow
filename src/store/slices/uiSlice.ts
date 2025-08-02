@@ -4,13 +4,14 @@ import { RootState } from '../index'
 // Define types for UI state
 export interface UiState {
   selectedGateId: string | null
-  activePanel: 'circuit' | 'code' | 'simulation' | 'export'
+  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms'
   showGateParams: boolean
   codeFormat: 'qiskit' | 'cirq' | 'json'
   isDragging: boolean
   showGrid: boolean
   zoomLevel: number
   showTutorial: boolean
+  isFullView: boolean
 }
 
 // Define the initial state
@@ -23,6 +24,7 @@ const initialState: UiState = {
   showGrid: true,
   zoomLevel: 1,
   showTutorial: false,
+  isFullView: false,
 }
 
 export const uiSlice = createSlice({
@@ -54,6 +56,9 @@ export const uiSlice = createSlice({
     toggleTutorial: (state) => {
       state.showTutorial = !state.showTutorial
     },
+    toggleFullView: (state) => {
+      state.isFullView = !state.isFullView
+    },
     resetUi: () => initialState,
   },
 })
@@ -68,6 +73,7 @@ export const {
   toggleGrid,
   setZoomLevel,
   toggleTutorial,
+  toggleFullView,
   resetUi,
 } = uiSlice.actions
 
@@ -80,6 +86,7 @@ export const selectIsDragging = (state: RootState) => state.ui.isDragging
 export const selectShowGrid = (state: RootState) => state.ui.showGrid
 export const selectZoomLevel = (state: RootState) => state.ui.zoomLevel
 export const selectShowTutorial = (state: RootState) => state.ui.showTutorial
+export const selectIsFullView = (state: RootState) => state.ui.isFullView
 
 // Export the reducer
 export default uiSlice.reducer

@@ -2,6 +2,9 @@
 
 A modern, interactive quantum circuit design and simulation platform built with React, TypeScript, and Chakra UI. QuantumFlow provides an intuitive drag-and-drop interface for building quantum circuits with real-time visualization and simulation capabilities.
 
+
+
+
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
 ![React](https://img.shields.io/badge/React-18.x-61dafb)
 ![Chakra UI](https://img.shields.io/badge/Chakra%20UI-2.x-319795)

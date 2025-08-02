@@ -29,9 +29,19 @@ export const generateQiskitCode = (
 
   // Combine basic Qiskit imports with additional ones
   const basicImports = [
-    'from qiskit import QuantumCircuit, Aer, execute',
-    'from qiskit.visualization import plot_histogram'
+    'from qiskit import QuantumCircuit, Aer, execute, transpile',
+    'from qiskit.visualization import plot_histogram',
+    'import numpy as np'
   ];
+
+  // Add optimization imports if needed
+  if (optimize && optimizationOptions.enableAdvancedOptimization) {
+    basicImports.push(
+      'from qiskit.transpiler import PassManager',
+      'from qiskit.transpiler.passes import *',
+      'from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager'
+    );
+  }
 
   const allImports = [...new Set([...basicImports, ...imports])].join('\n');
 
@@ -95,27 +105,57 @@ function generateGateSection(gates: Gate[]): string {
         gateSection += `qc.t(${gate.qubit})\n`;
         break;
       case 'rx':
-        // Check all possible parameter names for backwards compatibility
-        const theta = gate.params?.theta || gate.params?.angle || 0;
-        gateSection += `qc.rx(${theta} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        // RX gate uses theta parameter (rotation around X-axis)
+        const rxTheta = Number(gate.params?.theta || gate.params?.angle || 0);
+        if (isNaN(rxTheta)) {
+          gateSection += `# Warning: Invalid parameter for RX gate, using 0\n`;
+          gateSection += `qc.rx(0, ${gate.qubit})\n`;
+        } else {
+          // Check if value is already in radians (between -2π and 2π) or degrees  
+          const rxAngle = Math.abs(rxTheta) <= 2 * Math.PI ? rxTheta : rxTheta * Math.PI / 180;
+          gateSection += `qc.rx(${rxAngle}, ${gate.qubit})\n`;
+        }
         break;
       case 'ry':
-        const phi = gate.params?.phi || gate.params?.theta || gate.params?.angle || 0;
-        gateSection += `qc.ry(${phi} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        // RY gate uses theta parameter (rotation around Y-axis)
+        const ryTheta = Number(gate.params?.theta || gate.params?.angle || 0);
+        if (isNaN(ryTheta)) {
+          gateSection += `# Warning: Invalid parameter for RY gate, using 0\n`;
+          gateSection += `qc.ry(0, ${gate.qubit})\n`;
+        } else {
+          const ryAngle = Math.abs(ryTheta) <= 2 * Math.PI ? ryTheta : ryTheta * Math.PI / 180;
+          gateSection += `qc.ry(${ryAngle}, ${gate.qubit})\n`;
+        }
         break;
       case 'rz':
-        const lambda = gate.params?.lambda || gate.params?.phi || gate.params?.angle || 0;
-        gateSection += `qc.rz(${lambda} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        // RZ gate uses phi parameter (rotation around Z-axis)
+        const rzPhi = Number(gate.params?.phi || gate.params?.theta || gate.params?.angle || 0);
+        if (isNaN(rzPhi)) {
+          gateSection += `# Warning: Invalid parameter for RZ gate, using 0\n`;
+          gateSection += `qc.rz(0, ${gate.qubit})\n`;
+        } else {
+          const rzAngle = Math.abs(rzPhi) <= 2 * Math.PI ? rzPhi : rzPhi * Math.PI / 180;
+          gateSection += `qc.rz(${rzAngle}, ${gate.qubit})\n`;
+        }
         break;
       case 'p':
-        const phase = gate.params?.phi || gate.params?.phase || 0;
-        gateSection += `qc.p(${phase} * np.pi / 180, ${gate.qubit})  # Convert degrees to radians\n`;
+        // Phase gate uses phi parameter
+        const phasePhi = Number(gate.params?.phi || gate.params?.phase || 0);
+        if (isNaN(phasePhi)) {
+          gateSection += `# Warning: Invalid parameter for P gate, using 0\n`;
+          gateSection += `qc.p(0, ${gate.qubit})\n`;
+        } else {
+          const phaseAngle = Math.abs(phasePhi) <= 2 * Math.PI ? phasePhi : phasePhi * Math.PI / 180;
+          gateSection += `qc.p(${phaseAngle}, ${gate.qubit})\n`;
+        }
         break;
       case 'cnot':
         if (gate.controls && gate.controls.length > 0 && gate.targets && gate.targets.length > 0) {
           gateSection += `qc.cx(${gate.controls[0]}, ${gate.targets[0]})\n`;
         } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
           gateSection += `qc.cx(${gate.qubit}, ${gate.targets[0]})\n`;
+        } else {
+          gateSection += `# Warning: CNOT gate missing control or target qubit\n`;
         }
         break;
       case 'cz':
@@ -123,6 +163,8 @@ function generateGateSection(gates: Gate[]): string {
           gateSection += `qc.cz(${gate.controls[0]}, ${gate.targets[0]})\n`;
         } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
           gateSection += `qc.cz(${gate.qubit}, ${gate.targets[0]})\n`;
+        } else {
+          gateSection += `# Warning: CZ gate missing control or target qubit\n`;
         }
         break;
       case 'swap':
@@ -130,6 +172,8 @@ function generateGateSection(gates: Gate[]): string {
           gateSection += `qc.swap(${gate.targets[0]}, ${gate.targets[1]})\n`;
         } else if (gate.qubit !== undefined && gate.targets && gate.targets.length > 0) {
           gateSection += `qc.swap(${gate.qubit}, ${gate.targets[0]})\n`;
+        } else {
+          gateSection += `# Warning: SWAP gate needs two qubits\n`;
         }
         break;
       case 'toffoli':
@@ -137,6 +181,8 @@ function generateGateSection(gates: Gate[]): string {
           gateSection += `qc.ccx(${gate.controls[0]}, ${gate.controls[1]}, ${gate.targets[0]})\n`;
         } else if (gate.qubit !== undefined && gate.controls && gate.controls.length > 0 && gate.targets && gate.targets.length > 0) {
           gateSection += `qc.ccx(${gate.qubit}, ${gate.controls[0]}, ${gate.targets[0]})\n`;
+        } else {
+          gateSection += `# Warning: Toffoli gate needs 2 control qubits and 1 target qubit\n`;
         }
         break;
       case 'measure':

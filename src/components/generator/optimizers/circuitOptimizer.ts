@@ -54,7 +54,11 @@ export const optimizeCircuit = (gates: Gate[], options: OptimizationOptions): Ga
         }
         
         // Check for cancellable gates (e.g., adjacent X gates cancel out)
-        if (currentGate.type === nextGate.type && !hasParameters(currentGate) && !isControlledGate(currentGate)) {
+        if (currentGate.type === nextGate.type && 
+            !hasParameters(currentGate) && !hasParameters(nextGate) &&
+            !isControlledGate(currentGate) && !isControlledGate(nextGate) &&
+            gatesOperateOnSameQubits(currentGate, nextGate) &&
+            !hasIntermediateGatesOnSameQubits(optimizedGates, currentGate, nextGate)) {
           // These gate types cancel out when applied twice
           if (['x', 'y', 'z', 'h'].includes(currentGate.type)) {
             gatesToRemove.add(currentGate.id);
@@ -89,6 +93,55 @@ export const optimizeCircuit = (gates: Gate[], options: OptimizationOptions): Ga
   
   // Return the optimized gate list
   return optimizedGates;
+};
+
+/**
+ * Helper function to get all qubits a gate operates on
+ */
+const getGateQubits = (gate: Gate): Set<number> => {
+  const qubits = new Set<number>();
+  if (gate.qubit !== undefined) qubits.add(gate.qubit);
+  if (gate.targets) gate.targets.forEach(q => qubits.add(q));
+  if (gate.controls) gate.controls.forEach(q => qubits.add(q));
+  return qubits;
+};
+
+/**
+ * Check if two gates operate on the exact same set of qubits
+ */
+const gatesOperateOnSameQubits = (g1: Gate, g2: Gate): boolean => {
+  const qubits1 = getGateQubits(g1);
+  const qubits2 = getGateQubits(g2);
+  
+  if (qubits1.size !== qubits2.size) return false;
+  
+  for (const qubit of qubits1) {
+    if (!qubits2.has(qubit)) return false;
+  }
+  
+  return true;
+};
+
+/**
+ * Check if there are gates between g1 and g2 that operate on the same qubits
+ */
+const hasIntermediateGatesOnSameQubits = (allGates: Gate[], g1: Gate, g2: Gate): boolean => {
+  const pos1 = g1.position || 0;
+  const pos2 = g2.position || 0;
+  const targetQubits = getGateQubits(g1);
+  
+  return allGates.some(gate => {
+    if (gate.id === g1.id || gate.id === g2.id) return false;
+    const gatePos = gate.position || 0;
+    if (gatePos > pos1 && gatePos < pos2) {
+      const gateQubits = getGateQubits(gate);
+      // Check if this intermediate gate shares any qubits with our target gates
+      for (const qubit of gateQubits) {
+        if (targetQubits.has(qubit)) return true;
+      }
+    }
+    return false;
+  });
 };
 
 /**
