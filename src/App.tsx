@@ -7,17 +7,15 @@ import Sidebar from './components/layout/Sidebar'
 import CircuitCanvas from './components/canvas/CircuitCanvas'
 import CodePanel from './components/panels/CodePanel'
 import { useSelector } from 'react-redux'
-import { selectActivePanel, selectIsFullView } from './store/slices/uiSlice'
+import { selectActivePanel } from './store/slices/uiSlice'
 import SimulationPanel from './components/panels/SimulationPanel'
 import ExportPanel from './components/panels/ExportPanel'
 import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
-import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
-  const isFullView = useSelector(selectIsFullView)
   const toast = useToast()
   const panelBg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
@@ -124,28 +122,23 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {!isFullView && (
-                <Box flex={1} mb={4}>
-                  <CircuitCanvas />
-                </Box>
-              )}
+              <Box flex={1} mb={4}>
+                <CircuitCanvas />
+              </Box>
               <ResizablePanel 
                 direction="vertical" 
-                defaultSize={isFullView ? 600 : 300} 
+                defaultSize={300} 
                 minSize={150} 
-                maxSize={isFullView ? 800 : 500}
+                maxSize={500}
                 borderWidth={1} 
                 borderRadius="md" 
                 bg={panelBg}
                 borderColor={borderColor}
                 p={4}
-                flex={isFullView ? 1 : undefined}
-                height={isFullView ? "calc(100vh - 120px)" : undefined}
               >
                 {activePanel === 'code' && <CodePanel />}
                 {activePanel === 'simulation' && <SimulationPanel />}
                 {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
               </ResizablePanel>
             </Flex>
           </Box>
