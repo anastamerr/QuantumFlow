@@ -73,7 +73,6 @@ const SimulationPanel = () => {
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const barBg = useColorModeValue('gray.100', 'gray.700');
-  const successColor = useColorModeValue('blue.500', 'blue.300');
   const accentBg = useColorModeValue('blue.50', 'blue.900');
   const accentColor = useColorModeValue('blue.600', 'blue.300');
   const warningBg = useColorModeValue('orange.50', 'orange.900');
@@ -913,7 +912,7 @@ const SimulationPanel = () => {
                               {(() => {
                                 // Convert probability results to complex amplitude format for Bloch calculation
                                 const stateVector = Object.fromEntries(
-                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
                                 );
                                 const blochCoords = stateVectorToBloch(stateVector, 0);
                                 return blochCoords;
@@ -933,7 +932,7 @@ const SimulationPanel = () => {
                                     >
                                       {(() => {
                                         const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
                                         );
                                         return stateVectorToBloch(stateVector, 0)?.x.toFixed(4);
                                       })()}
@@ -949,7 +948,7 @@ const SimulationPanel = () => {
                                     >
                                       {(() => {
                                         const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
                                         );
                                         return stateVectorToBloch(stateVector, 0)?.y.toFixed(4);
                                       })()}
@@ -965,7 +964,7 @@ const SimulationPanel = () => {
                                     >
                                       {(() => {
                                         const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
                                         );
                                         return stateVectorToBloch(stateVector, 0)?.z.toFixed(4);
                                       })()}
@@ -1040,9 +1039,9 @@ const SimulationPanel = () => {
                           <Flex direction={isMobile ? "column" : "row"} align="center" justify="center">
                             {/* Single qubit case - Show just the Bloch sphere */}
                             <Box flex="1">
-                              <BlochSphereVisualization 
+                              <BlochSphereVisualization
                                 stateVector={Object.fromEntries(
-                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
                                 )}
                                 width={isMobile ? 300 : 400}
                                 height={isMobile ? 300 : 400}
@@ -1107,9 +1106,9 @@ const SimulationPanel = () => {
                           </Flex>
                         ) : (
                           // Multi-qubit case - Show the full QubitVisualization component
-                          <QubitVisualization 
+                          <QubitVisualization
                             stateVector={Object.fromEntries(
-                              Object.entries(results).map(([key, prob]) => [key, [Math.sqrt(prob), 0]])
+                              Object.entries(results).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
                             )}
                             numQubits={qubits.length}
                             title="Qubit State Visualization"
