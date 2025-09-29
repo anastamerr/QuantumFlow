@@ -29,7 +29,8 @@ export const generateQiskitCode = (
 
   // Combine basic Qiskit imports with additional ones
   const basicImports = [
-    'from qiskit import QuantumCircuit, Aer, execute, transpile',
+    'from qiskit import QuantumCircuit, transpile',
+    'from qiskit_aer import AerSimulator',
     'from qiskit.visualization import plot_histogram',
     'import numpy as np'
   ];
@@ -290,24 +291,24 @@ function generateAdvancedOptimizationSection(optimizationOptions: Partial<Optimi
  */
 function generateTranspilationSection(options: OptimizationOptions): string {
   let simulationSection = '# Transpile the circuit for the target backend\n';
-  simulationSection += `backend = Aer.get_backend('${options.backendName}')\n`;
-  
+  simulationSection += `backend = AerSimulator(method='${options.backendName || 'qasm_simulator'}')\n`;
+
   const optimizationLevel = options.enableAdvancedOptimization ? 3 : 2;
   simulationSection += `transpiled_qc = transpile(qc, backend=backend, optimization_level=${optimizationLevel})\n\n`;
-  
+
   // Add a comment about what transpiling does
   simulationSection += '# Note: transpiling optimizes the circuit for the specific backend\n';
   simulationSection += '# It can reduce gate count and circuit depth\n\n';
-  
+
   // Switch to using the transpiled circuit
   simulationSection += '# Run the simulation using the transpiled circuit\n';
-  simulationSection += 'job = execute(transpiled_qc, backend, shots=1024)\n';
+  simulationSection += 'job = backend.run(transpiled_qc, shots=1024)\n';
   simulationSection += 'result = job.result()\n';
-  
-  // FIX: Use the transpiled circuit for getting counts
-  simulationSection += 'counts = result.get_counts(transpiled_qc)\n';
+
+  // Get counts from the result
+  simulationSection += 'counts = result.get_counts()\n';
   simulationSection += 'print("Measurement results:", counts)\n\n';
-  
+
   return simulationSection;
 }
 
@@ -316,12 +317,12 @@ function generateTranspilationSection(options: OptimizationOptions): string {
  */
 function generateSimulationSection(): string {
   let simulationSection = '# Run the simulation\n';
-  simulationSection += 'simulator = Aer.get_backend(\'qasm_simulator\')\n';
-  simulationSection += 'job = execute(qc, simulator, shots=1024)\n';
+  simulationSection += 'simulator = AerSimulator()\n';
+  simulationSection += 'job = simulator.run(qc, shots=1024)\n';
   simulationSection += 'result = job.result()\n';
-  simulationSection += 'counts = result.get_counts(qc)\n';
+  simulationSection += 'counts = result.get_counts()\n';
   simulationSection += 'print("Measurement results:", counts)\n\n';
-  
+
   return simulationSection;
 }
 
