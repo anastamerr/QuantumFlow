@@ -17,11 +17,6 @@ import {
   TabPanel, 
   TabPanels, 
   Tabs, 
-  Switch, 
-  Slider, 
-  SliderTrack, 
-  SliderFilledTrack, 
-  SliderThumb, 
   Divider,
   Badge,
   Icon,
@@ -38,11 +33,12 @@ import {
 } from '@chakra-ui/react';
 import { useSelector } from 'react-redux';
 import { selectQubits, selectGates } from '../../store/slices/circuitSlice';
-import { useState, useCallback, useEffect, useRef } from 'react';
-import QuantumStateVisualizer from '../visualization/QuantumStateVisualizer';
+import { useState, useCallback, useEffect } from 'react';
+// import QuantumStateVisualizer from '../visualization/QuantumStateVisualizer'; // removed
 import QubitVisualization from '../visualization/QubitVisualizer';
 import BlochSphereVisualization from '../visualization/BlochSphereVisualizer';
-import { simulateCircuit } from '../../utils/stateEvolution';
+// Local mock measurement removed in favor of backend
+import { executeCircuit, checkHealth } from '@/lib/quantumApi';
 import { transformStoreGatesToCircuitGates } from '../../utils/circuitUtils';
 import { stateVectorToBloch } from '../../utils/blochSphereUtils';
 import { InfoIcon, RepeatIcon, ChevronRightIcon, StarIcon } from '@chakra-ui/icons';
@@ -57,14 +53,16 @@ const SimulationPanel = () => {
   const [error, setError] = useState<string | null>(null);
   const [shots, setShots] = useState<number>(1024);
   const [method, setMethod] = useState<string>('statevector');
-  const [showRealTimeVisualization, setShowRealTimeVisualization] = useState<boolean>(true);
+  const [serverConnected, setServerConnected] = useState<boolean | null>(null);
+  // Real-time visualization removed: backend-only measurements
+  // const [showRealTimeVisualization, setShowRealTimeVisualization] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<number>(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
-  const [autoPlay, setAutoPlay] = useState<boolean>(false);
+  // const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  // const [autoPlay, setAutoPlay] = useState<boolean>(false);
   const [simulationComplete, setSimulationComplete] = useState<boolean>(false);
   
   // Store visualization instance reference
-  const visualizerRef = useRef<any>(null);
+  // const visualizerRef = useRef<any>(null);
   
   // Transform store gates to circuit gates for visualization
   const gates = transformStoreGatesToCircuitGates(storeGates);
@@ -81,7 +79,7 @@ const SimulationPanel = () => {
   // Responsive design
   const isMobile = useBreakpointValue({ base: true, md: false });
   const tabSize = useBreakpointValue({ base: "sm", md: "md" });
-  
+
   // Reset simulation results when circuit changes
   useEffect(() => {
     if (results !== null || simulationComplete) {
@@ -90,6 +88,18 @@ const SimulationPanel = () => {
       setActiveTab(0); // Reset to simulation tab when circuit changes
     }
   }, [qubits, storeGates]);
+
+  // Check server connectivity on mount and periodically
+  useEffect(() => {
+    let timer: any;
+    const ping = async () => {
+      const ok = await checkHealth();
+      setServerConnected(ok);
+    };
+    ping();
+    timer = setInterval(ping, 15000);
+    return () => clearInterval(timer);
+  }, []);
   
   // Check if circuit has a Hadamard gate (creates superposition)
   const hasHadamard = gates.some(gate => gate.type === 'h');
@@ -123,32 +133,33 @@ const SimulationPanel = () => {
         throw new Error('Cannot simulate an empty circuit. Add gates to the circuit first.');
       }
       
-      // If real-time visualization is not enabled, perform the full simulation immediately
-      if (!showRealTimeVisualization) {
-        // In a real implementation, this would call a quantum simulator API
-        // For now, we'll simulate a simple result based on the circuit
-        
-        // Simulate API call delay (longer for more complex circuits)
-        const complexity = Math.min(500 + (gates.length * 100), 3000);
-        await new Promise(resolve => setTimeout(resolve, complexity));
-        
-        // Use our local simulator or API call
-        try {
-          // Use the stateEvolution utility to simulate the circuit
-          const simulationResults = simulateCircuit(gates, qubits.length);
-          setResults(simulationResults);
-          setSimulationComplete(true);
-          
-          // Automatically switch to results tab
-          setActiveTab(1);
-        } catch (err) {
-          console.error('Simulation calculation error:', err);
-          throw new Error('An error occurred during quantum simulation calculations.');
-        }
-      } else {
-        // With real-time visualization, the QuantumStateVisualizer component will handle the simulation
-        // Just set isSimulating to true to trigger the visualization
-        // We'll stay on the simulation tab
+      // Execute on backend (Qiskit) for measurement probabilities
+      try {
+        const response = await executeCircuit({
+          num_qubits: qubits.length,
+          gates: storeGates,
+          shots,
+          memory: false,
+        });
+        setServerConnected(true);
+        setResults(response.probabilities);
+        setSimulationComplete(true);
+        setActiveTab(1);
+      } catch (err) {
+        console.error('Backend execution error:', err);
+        setServerConnected(false);
+        setError('Server issue: failed to retrieve measurements');
+        setSimulationComplete(false);
+        toast({
+          title: 'Server issue',
+          description: 'Unable to reach measurement backend',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+          position: 'top-right',
+        });
+      } finally {
+        setIsSimulating(false);
       }
       
       // Log simulation details to help with debugging
@@ -168,29 +179,7 @@ const SimulationPanel = () => {
     }
   };
   
-  // Handle completion of the real-time visualization
-  const handleVisualizationComplete = useCallback((finalResults: Record<string, number>) => {
-    console.log("Simulation completed with results:", finalResults);
-    
-    setResults(finalResults);
-    setIsSimulating(false);
-    setSimulationComplete(true);
-    
-    // Auto-switch to Results tab when complete if auto-play was on
-    if (autoPlay) {
-      setTimeout(() => setActiveTab(1), 500);
-    }
-    
-    // Show success toast
-    toast({
-      title: "Simulation complete",
-      description: "You can now explore the results and analysis",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-      position: "top-right"
-    });
-  }, [autoPlay, toast]);
+  // Real-time visualization removed; measurements must come from backend
   
   // Make sure tabs are enabled after simulation completes
   useEffect(() => {
@@ -270,10 +259,7 @@ const SimulationPanel = () => {
     );
   };
   
-  // Function to get visualizer state for test/debug
-  const getVisualizer = (instance: any) => {
-    visualizerRef.current = instance;
-  };
+  // Visualization ref removed
   
   // Manual switch to results tab
   const goToResults = () => {
@@ -300,16 +286,19 @@ const SimulationPanel = () => {
   return (
     <Box>
       <Card mb={4} borderRadius="lg" boxShadow="sm" bg={cardBg}>
-        <CardHeader pb={0}>
-          <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
-            <HStack>
-              <Heading size="md">Quantum Simulation</Heading>
-              {simulationComplete && (
-                <Badge colorScheme="green" variant="solid" borderRadius="full" px={2}>
-                  Complete
-                </Badge>
-              )}
-            </HStack>
+      <CardHeader pb={0}>
+        <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
+          <HStack>
+            <Heading size="md">Quantum Simulation</Heading>
+            {simulationComplete && (
+              <Badge colorScheme="green" variant="solid" borderRadius="full" px={2}>
+                Complete
+              </Badge>
+            )}
+            <Tag colorScheme={serverConnected === null ? 'gray' : (serverConnected ? 'green' : 'red')} variant="subtle" borderRadius="full" px={2}>
+              Server: {serverConnected === null ? 'Checking…' : (serverConnected ? 'Connected' : 'Not Connected')}
+            </Tag>
+          </HStack>
             
             <HStack>
               <FullViewToggle />
@@ -380,66 +369,7 @@ const SimulationPanel = () => {
                 </FormControl>
               </GridItem>
               
-              <GridItem>
-                <FormControl display="flex" flexDirection="column">
-                  <FormLabel htmlFor="real-time-viz" mb="0" fontSize="sm" fontWeight="medium">
-                    Real-time Visualization
-                  </FormLabel>
-                  <Switch 
-                    id="real-time-viz" 
-                    isChecked={showRealTimeVisualization} 
-                    onChange={(e) => setShowRealTimeVisualization(e.target.checked)}
-                    colorScheme="blue"
-                    isDisabled={isSimulating}
-                    mb={2}
-                    size="md"
-                  />
-                  
-                  {showRealTimeVisualization && (
-                    <>
-                      <FormControl display="flex" alignItems="center" mt={2}>
-                        <FormLabel htmlFor="auto-play" mb="0" fontSize="xs">
-                          Auto-Play
-                        </FormLabel>
-                        <Switch 
-                          id="auto-play" 
-                          isChecked={autoPlay} 
-                          onChange={(e) => setAutoPlay(e.target.checked)}
-                          colorScheme="green"
-                          size="sm"
-                          isDisabled={isSimulating}
-                        />
-                      </FormControl>
-                      
-                      <FormControl mt={2}>
-                        <FormLabel fontSize="xs" mb={1}>Playback Speed</FormLabel>
-                        <Flex align="center">
-                          <Text fontSize="xs" mr={2}>Slow</Text>
-                          <Slider
-                            aria-label="playback-speed"
-                            min={0.2}
-                            max={3}
-                            step={0.2}
-                            value={playbackSpeed}
-                            onChange={setPlaybackSpeed}
-                            isDisabled={isSimulating}
-                            size="sm"
-                            w="100px"
-                            colorScheme="blue"
-                          >
-                            <SliderTrack>
-                              <SliderFilledTrack />
-                            </SliderTrack>
-                            <SliderThumb boxShadow="md" />
-                          </Slider>
-                          <Text fontSize="xs" ml={2}>Fast</Text>
-                          <Text fontSize="xs" fontWeight="bold" ml={3}>{playbackSpeed.toFixed(1)}x</Text>
-                        </Flex>
-                      </FormControl>
-                    </>
-                  )}
-                </FormControl>
-              </GridItem>
+              {/* Real-time Visualization controls removed: backend-only measurements */}
             </Grid>
             
             {gates.length === 0 && (
@@ -529,22 +459,7 @@ const SimulationPanel = () => {
                     }
                   }}
                 >
-                  {isSimulating && showRealTimeVisualization ? (
-                    <CardBody>
-                      <VStack spacing={4}>
-                        <QuantumStateVisualizer 
-                          key={`sim-${gates.length}-${qubits.length}`} // Force re-mount when circuit changes
-                          qubits={qubits}
-                          gates={gates}
-                          isRunning={isSimulating}
-                          onComplete={handleVisualizationComplete}
-                          playbackSpeed={playbackSpeed}
-                          autoPlay={autoPlay}
-                          ref={getVisualizer}
-                        />
-                      </VStack>
-                    </CardBody>
-                  ) : isSimulating ? (
+                  {isSimulating ? (
                     <CardBody>
                       <VStack spacing={4} justify="center" h="300px">
                         <Spinner size="xl" thickness="4px" color="blue.500" />
@@ -585,17 +500,6 @@ const SimulationPanel = () => {
                   ) : simulationComplete && results ? (
                     <CardBody>
                       <VStack spacing={4}>
-                        <QuantumStateVisualizer 
-                          key={`complete-${gates.length}-${qubits.length}`} // Force re-mount when circuit changes
-                          qubits={qubits}
-                          gates={gates}
-                          isRunning={false}
-                          onComplete={handleVisualizationComplete}
-                          playbackSpeed={playbackSpeed}
-                          autoPlay={false}
-                          ref={getVisualizer}
-                        />
-                        
                         <HStack mt={4} spacing={4}>
                           <Button 
                             size="sm" 
@@ -623,7 +527,7 @@ const SimulationPanel = () => {
                       <VStack spacing={4} align="stretch" justify="center" h="300px">
                         <Icon as={InfoIcon} fontSize="5xl" color="blue.400" alignSelf="center" />
                         <Text color="gray.500" textAlign="center" fontWeight="medium">
-                          Click "Run Simulation" to see the step-by-step evolution of your quantum circuit.
+                          Click "Run Simulation" to execute measurements on the backend and view accurate results.
                         </Text>
                         {gates.length === 0 ? (
                           <Box p={3} borderRadius="md" bg={warningBg}>
