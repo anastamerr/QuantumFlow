@@ -57,6 +57,16 @@ const Header = () => {
           >
             Simulation
           </Button>
+
+           <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => dispatch(setActivePanel('ai'))}
+            colorScheme="yellow"
+          >
+            AI
+          </Button>
+
           <Button
             size="sm"
             variant={activePanel === 'export' ? 'solid' : 'ghost'}
@@ -91,7 +101,7 @@ const Header = () => {
           </Button>
           <IconButton
             aria-label="Toggle color mode"
-            // icon={colorMode === 'light' ? '🌙' : '☀️'}
+            icon={colorMode === 'light' ? <span>🌙</span> : <span>☀️</span>}
             size="sm"
             onClick={toggleColorMode}
             variant="ghost"
