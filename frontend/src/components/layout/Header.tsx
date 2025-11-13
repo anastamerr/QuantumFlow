@@ -58,14 +58,6 @@ const Header = () => {
             Simulation
           </Button>
 
-           <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => dispatch(setActivePanel('ai'))}
-            colorScheme="yellow"
-          >
-            AI
-          </Button>
 
           <Button
             size="sm"
@@ -75,6 +67,18 @@ const Header = () => {
           >
             Export
           </Button>
+
+        
+          <Button
+            size="sm"
+            variant={activePanel === 'ai' ? 'solid' : 'ghost'}
+            onClick={() => dispatch(setActivePanel('ai'))}
+            colorScheme="yellow"
+            color="orange"
+          >
+            AI
+          </Button>
+
           <Button
             size="sm"
             variant={activePanel === 'algorithms' ? 'solid' : 'ghost'}

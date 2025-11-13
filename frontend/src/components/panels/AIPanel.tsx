@@ -43,7 +43,7 @@ const AIPanel: React.FC = () => {
           messages: [
             {
               role: "user",
-              content: `You are a Qiskit code generator. Generate ONLY the Python code for Qiskit circuits. Do not include explanations, descriptions, or any text other than the code and comments. If the user asks for anything unrelated to Qiskit, respond with ONLY "Sorry, I am unfamiliar with your request."
+              content: `You are a Qiskit code generator. Generate ONLY the Python code for Qiskit circuits. Do not include explanations, descriptions, or any text other than the code and comments. Generate code output that can all be copied and pasted to run immediately, without fixing anything. If the user asks for anything unrelated to Qiskit, respond with ONLY "Sorry, I am unfamiliar with your request."
               The user says: ${promptText}`,
             },
           ],
