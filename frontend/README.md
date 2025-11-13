@@ -1,313 +1,708 @@
-# QuantumFlow
-
-A modern, interactive quantum circuit design and simulation platform built with React, TypeScript, and Chakra UI. QuantumFlow provides an intuitive drag-and-drop interface for building quantum circuits with real-time visualization and simulation capabilities.
-
-
-
-
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
-![React](https://img.shields.io/badge/React-18.x-61dafb)
-![Chakra UI](https://img.shields.io/badge/Chakra%20UI-2.x-319795)
-![Vite](https://img.shields.io/badge/Vite-5.x-646CFF)
-
-## 🌟 Features
-
-### Circuit Design
-- **Drag & Drop Interface**: Visual gate placement with react-dnd
-- **Comprehensive Gate Library**: 15+ quantum gates including single-qubit, multi-qubit, and parameterized gates
-- **Real-time SVG Visualization**: Professional circuit diagrams with time markers and gate symbols
-- **Interactive Gate Parameters**: Sliders and inputs for rotation angles and gate parameters
-- **Multi-qubit Operations**: CNOT, CZ, SWAP, and Toffoli gates with automatic target/control assignment
-
-### Quantum Simulation
-- **State Vector Simulator**: Custom JavaScript quantum state evolution engine
-- **Step-by-step Evolution**: Watch quantum states change as gates are applied
-- **Measurement Probabilities**: Real-time probability distribution visualization
-- **Bloch Sphere Visualization**: Interactive 3D Bloch sphere using Three.js
-- **Circuit Analysis**: Automatic detection of superposition and entanglement
-
-### Code Generation
-- **Qiskit Python**: Complete Qiskit code with circuit construction and execution
-- **Cirq Python**: Google Cirq code generation with moment-based circuit building
-- **JSON Export**: Circuit data in structured JSON format
-- **SVG Export**: High-quality circuit diagrams
-
-### Advanced Features
-- **Circuit Optimization**: Gate cancellation, consolidation, and sequence conversion
-- **Hardware Mapping**: Support for IBM Falcon, Google Sycamore, and linear topologies
-- **Noise-aware Optimization**: Circuit optimization for specific quantum hardware
-- **Resizable Panels**: Customizable UI layout with drag-to-resize panels
-- **Dark/Light Mode**: Full theme support
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 16.x or higher
-- npm package manager
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd quantumflow
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-4. **Open your browser**
-   Navigate to `http://localhost:3000` (or the port shown in terminal)
-
-## 🎯 Usage Guide
-
-### Building Your First Circuit
-
-1. **Add Qubits**: Click "Add Qubit" in the sidebar (starts with 2 qubits)
-2. **Search Gates**: Use the search bar to find specific gates
-3. **Drag Gates**: Drag gates from the palette to the circuit grid
-4. **Configure Parameters**: Click on parameterized gates to adjust angles
-5. **Run Simulation**: Switch to the Simulation panel and click "Run Simulation"
-
-### Available Quantum Gates
-
-| Gate | Symbol | Type | Parameters | Description |
-|------|--------|------|------------|-------------|
-| Hadamard | H | Single-qubit | None | Creates superposition |
-| Pauli-X | X | Single-qubit | None | Bit flip gate |
-| Pauli-Y | Y | Single-qubit | None | Y rotation |
-| Pauli-Z | Z | Single-qubit | None | Phase flip |
-| S Gate | S | Single-qubit | None | 90° Z rotation |
-| T Gate | T | Single-qubit | None | 45° Z rotation |
-| RX | RX | Rotation | theta (0-360°) | X-axis rotation |
-| RY | RY | Rotation | theta (0-360°) | Y-axis rotation |
-| RZ | RZ | Rotation | phi (0-360°) | Z-axis rotation |
-| Phase | P | Rotation | phi (0-360°) | Phase gate |
-| CNOT | CX | Multi-qubit | None | Controlled NOT |
-| CZ | CZ | Multi-qubit | None | Controlled Z |
-| SWAP | SWAP | Multi-qubit | None | Qubit swap |
-| Toffoli | CCX | Multi-qubit | None | Controlled-controlled NOT |
-| Measure | M | Measurement | None | Computational basis measurement |
-
-### Example: Bell State Circuit
-
-1. Start with 2 qubits (default)
-2. Drag Hadamard (H) to qubit 0, position 0
-3. Drag CNOT to qubit 0, position 1 (automatically targets qubit 1)
-4. Run simulation to see entangled |00⟩ + |11⟩ state
-
-## 🛠️ Project Structure
-
-```
-src/
-├── components/
-│   ├── canvas/
-│   │   ├── CircuitCanvas.tsx      # Main circuit grid and visualization
-│   │   ├── GridCell.tsx           # Individual grid cells with drop zones
-│   │   └── CircuitGate.tsx        # Gate visualization components
-│   ├── gates/
-│   │   └── GateItem.tsx           # Draggable gate palette items
-│   ├── layout/
-│   │   ├── Header.tsx             # Top navigation and panel switching
-│   │   ├── Sidebar.tsx            # Gate palette and circuit controls
-│   │   └── ResizablePanel.tsx     # Custom resizable panel component
-│   ├── panels/
-│   │   ├── CodePanel.tsx          # Code generation and optimization
-│   │   ├── SimulationPanel.tsx    # Quantum simulation interface
-│   │   ├── ExportPanel.tsx        # Export options and file generation
-│   │   ├── GateParamsPanel.tsx    # Gate parameter configuration
-│   │   └── AdvancedOptimizationPanel.tsx # Advanced optimization settings
-│   └── visualization/
-│       ├── BlochSphereVisualizer.tsx    # 3D Bloch sphere with Three.js
-│       ├── QuantumStateVisualizer.tsx   # Step-by-step state evolution
-│       └── QubitVisualizer.tsx          # Multi-qubit state visualization
-├── store/
-│   ├── index.ts                   # Redux store configuration
-│   └── slices/
-│       ├── circuitSlice.ts        # Circuit state (qubits, gates)
-│       └── uiSlice.ts             # UI state (panels, selections)
-├── types/
-│   └── circuit.ts                 # TypeScript type definitions
-├── utils/
-│   ├── blochSphereUtils.ts        # Bloch sphere coordinate calculations
-│   ├── circuitOptimizer.ts        # Advanced optimization algorithms
-│   ├── circuitRenderer.ts         # SVG circuit diagram generation
-│   ├── circuitUtils.ts            # Circuit manipulation utilities
-│   ├── codeGenerator.ts           # Multi-framework code generation
-│   ├── gateLibrary.ts             # Quantum gate definitions
-│   └── stateEvolution.ts          # Quantum simulation engine
-└── App.tsx                        # Main application with DnD provider
-```
-
-## 🧮 Quantum Simulation Engine
-
-### Implementation Details
-
-The quantum simulator is implemented in `stateEvolution.ts` and includes:
-
-- **State Representation**: Complex amplitudes stored as `[real, imaginary]` tuples
-- **Gate Operations**: Matrix-free gate application for efficiency
-- **Supported Operations**:
-  - All single-qubit Pauli gates (X, Y, Z)
-  - Hadamard gate with proper superposition
-  - Rotation gates (RX, RY, RZ) with degree-to-radian conversion
-  - Phase gates (S, T, P) with complex phase tracking
-  - Two-qubit gates (CNOT, CZ, SWAP)
-  - Three-qubit Toffoli gate
-
-### Accuracy and Limitations
-
-- **Precision**: Double-precision floating-point arithmetic
-- **Qubit Limit**: Theoretical limit of ~20 qubits (2^20 states = 1M amplitudes)
-- **Practical Limit**: 8-10 qubits for smooth browser performance
-- **Memory Usage**: Exponential scaling (2^n complex numbers)
-
-## 🎨 Code Generation
-
-### Qiskit Output Example
-```python
-# Generated Qiskit code
-from qiskit import QuantumCircuit, Aer, execute
-import numpy as np
-
-# Create a quantum circuit with 2 qubits
-qc = QuantumCircuit(2, 2)
-
-# Add gates to the circuit
-qc.h(0)
-qc.cx(0, 1)
-
-# Measure all qubits
-qc.measure(0, 0)
-qc.measure(1, 1)
-
-# Run the simulation
-simulator = Aer.get_backend('qasm_simulator')
-job = execute(qc, simulator, shots=1024)
-result = job.result()
-counts = result.get_counts(qc)
-print("Measurement results:", counts)
-```
-
-### Optimization Features
-
-The code generator includes several optimization options:
-
-1. **Basic Optimizations**:
-   - Gate consolidation (combine adjacent rotation gates)
-   - Gate cancellation (remove X-X, H-H pairs)
-   - Sequence conversion (H-Z-H → X)
-
-2. **Advanced Optimizations** (in `circuitOptimizer.ts`):
-   - Circuit synthesis with 4 optimization levels
-   - Hardware-aware qubit mapping
-   - Noise-aware optimization for specific topologies
-   - Circuit depth reduction with parallelization
-
-3. **Hardware Models**:
-   - Linear topology (nearest-neighbor)
-   - Grid topology (2D lattice)
-   - IBM Falcon processor layout
-   - Google Sycamore architecture
-   - Fully connected (ideal)
-
-## 🔧 Development
-
-### Key Dependencies
-
-```json
-{
-  "react": "^18.2.0",
-  "typescript": "^5.0.2",
-  "@chakra-ui/react": "^2.8.0",
-  "@reduxjs/toolkit": "^1.9.0",
-  "react-dnd": "^16.0.1",
-  "three": "^0.128.0",
-  "framer-motion": "^6.0.0"
-}
-```
-
-### Available Scripts
-
-```bash
-npm run dev          # Start Vite dev server
-npm run build        # Build for production  
-npm run preview      # Preview production build
-npm run lint         # Run ESLint
-npm run type-check   # TypeScript compilation check
-```
-
-### State Management
-
-The application uses Redux Toolkit with two main slices:
-
-- **circuitSlice**: Manages qubits, gates, and circuit data
-- **uiSlice**: Handles UI state, panel visibility, and selections
-
-### Adding Custom Gates
-
-To add a new gate, update `gateLibrary.ts`:
-
-```typescript
-{
-  id: 'custom_gate',
-  name: 'Custom Gate',
-  symbol: 'CG',
-  description: 'Your custom quantum gate',
-  category: 'Custom Gates',
-  color: 'purple',
-  params: [{
-    name: 'angle',
-    type: 'angle',
-    default: 0,
-    min: 0,
-    max: 360,
-    step: 1
-  }]
-}
-```
-
-Then implement the gate operation in `stateEvolution.ts`.
-
-## 🎯 Browser Compatibility
-
-- **Chrome/Edge**: Full support including WebGL for 3D visualization
-- **Firefox**: Full support with Three.js
-- **Safari**: Supported (may have WebGL limitations)
-- **Mobile**: Basic functionality (drag-and-drop limited)
-
-## ⚡ Performance Tips
-
-1. **Large Circuits**: Disable real-time visualization for >6 qubits
-2. **Memory**: Clear circuits when switching between large designs
-3. **Simulation**: Use "Jump to End" for faster results on complex circuits
-4. **Browser**: Use Chrome/Edge for best Three.js performance
-
-## 🐛 Known Issues
-
-- **Multi-touch**: Limited support on mobile devices
-- **Large Circuits**: Browser may freeze with >10 qubits
-- **Three.js**: Occasional WebGL context loss on some systems
-- **Safari**: May not support all advanced optimization features
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Quantum circuit visualization inspired by Qiskit and Cirq
-- Three.js community for Bloch sphere rendering techniques
-- Chakra UI team for excellent React components
-- Redux Toolkit for state management patterns
+# QuantumFlow Frontend - Hackathon Developer Guide
+
+Welcome to the QuantumFlow frontend! This guide will help you understand the frontend architecture and get started building new features for the Qiskit Fall Fest 2025.
+
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Architecture Overview](#architecture-overview)
+- [Project Structure](#project-structure)
+- [Key Concepts](#key-concepts)
+- [Common Tasks](#common-tasks)
+- [Component Guide](#component-guide)
+- [State Management](#state-management)
+- [Adding Features](#adding-features)
+- [Styling Guide](#styling-guide)
+- [Performance Tips](#performance-tips)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-**Start building quantum circuits today!** 🚀⚛️
+## Quick Start
+
+### Installation
+```bash
+cd frontend
+npm install
+```
+
+### Development Server
+```bash
+npm run dev
+```
+
+Open http://localhost:5173 in your browser.
+
+### Build for Production
+```bash
+npm run build
+npm run preview  # Preview the production build
+```
+
+### Linting
+```bash
+npm run lint
+```
+
+---
+
+## Architecture Overview
+
+QuantumFlow frontend is built with:
+- **React 18** - UI framework
+- **TypeScript 5** - Type-safe JavaScript
+- **Vite** - Lightning-fast build tool
+- **Chakra UI** - Component library
+- **Redux Toolkit** - State management
+- **react-dnd** - Drag and drop
+- **Three.js** - 3D Bloch sphere visualization
+- **D3.js** - Data visualization
+
+### Design Philosophy
+- **Component-based**: Everything is a React component
+- **Type-safe**: TypeScript ensures correctness
+- **State-driven**: Redux manages all circuit and UI state
+- **Responsive**: Works on desktop and tablet (mobile limited)
+
+---
+
+## Project Structure
+
+```
+frontend/
+├── src/
+│   ├── components/           # React components
+│   │   ├── canvas/          # Circuit visualization
+│   │   │   ├── CircuitCanvas.tsx      # Main grid and circuit display
+│   │   │   ├── GridCell.tsx           # Drop zones for gates
+│   │   │   └── CircuitGate.tsx        # Gate rendering
+│   │   ├── gates/           # Gate palette
+│   │   │   └── GateItem.tsx           # Draggable gate items
+│   │   ├── layout/          # Layout components
+│   │   │   ├── Header.tsx             # Top navigation
+│   │   │   ├── Sidebar.tsx            # Left gate palette
+│   │   │   └── ResizablePanel.tsx     # Resizable panels
+│   │   ├── panels/          # Feature panels
+│   │   │   ├── CodePanel.tsx          # Code generation
+│   │   │   ├── SimulationPanel.tsx    # Simulation runner
+│   │   │   ├── ExportPanel.tsx        # Export options
+│   │   │   └── ...                    # More panels
+│   │   ├── visualization/   # Quantum visualizations
+│   │   │   ├── BlochSphereVisualizer.tsx  # 3D Bloch sphere
+│   │   │   ├── QuantumStateVisualizer.tsx # State evolution
+│   │   │   └── QubitVisualizer.tsx        # Multi-qubit display
+│   │   ├── common/          # Shared components
+│   │   └── generator/       # Code generation system
+│   │       ├── generators/
+│   │       │   ├── qiskitGenerator.ts     # Qiskit Python
+│   │       │   ├── cirqGenerator.ts       # Cirq Python
+│   │       │   ├── braketGenerator.ts     # AWS Braket
+│   │       │   └── jsonGenerator.ts       # JSON export
+│   │       └── optimizers/
+│   │           └── circuitOptimizer.ts    # Optimization algorithms
+│   │
+│   ├── store/               # Redux state
+│   │   ├── index.ts                # Store configuration
+│   │   └── slices/
+│   │       ├── circuitSlice.ts     # Circuit state (qubits, gates)
+│   │       └── uiSlice.ts          # UI state (panels, selections)
+│   │
+│   ├── types/               # TypeScript types
+│   │   └── circuit.ts              # Core type definitions
+│   │
+│   ├── utils/               # Utility functions
+│   │   ├── gateLibrary.ts          # Quantum gate definitions
+│   │   ├── stateEvolution.ts       # Quantum simulator
+│   │   ├── blochSphereUtils.ts     # Bloch sphere math
+│   │   ├── circuitUtils.ts         # Circuit helpers
+│   │   ├── codeGenerator.ts        # Code generation
+│   │   └── algorithmLibrary.ts     # Pre-built algorithms
+│   │
+│   ├── lib/                 # External integrations
+│   │   └── quantumApi.ts           # Backend API client
+│   │
+│   ├── App.tsx              # Main application
+│   ├── main.tsx             # Entry point
+│   └── index.html           # HTML template
+│
+├── package.json             # Dependencies
+├── tsconfig.json            # TypeScript config
+├── vite.config.ts           # Vite config
+└── .env.example             # Environment variables template
+```
+
+---
+
+## Key Concepts
+
+### 1. Circuit State (Redux)
+
+The circuit is stored in Redux with this structure:
+
+```typescript
+interface CircuitState {
+  qubits: Qubit[]        // Array of qubits
+  gates: Gate[]          // Array of gates
+  maxPosition: number    // Circuit width
+  name: string           // Circuit name
+  description: string    // Circuit description
+}
+
+interface Qubit {
+  id: string            // Unique ID
+  name: string          // Display name (e.g., "q0")
+}
+
+interface Gate {
+  id: string            // Unique ID
+  type: string          // Gate type (e.g., "h", "cnot")
+  qubit: number         // Target qubit index
+  position: number      // Time position
+  targets?: number[]    // Multi-qubit gate targets
+  params?: Record<string, number>  // Gate parameters
+}
+```
+
+### 2. Drag and Drop
+
+Gates are dragged from the palette (Sidebar) and dropped onto the circuit grid (CircuitCanvas).
+
+- **DragSource**: `GateItem.tsx` - Gates in the palette
+- **DropTarget**: `GridCell.tsx` - Cells in the circuit grid
+- **Library**: `react-dnd` with HTML5 backend
+
+### 3. Quantum Simulation
+
+The simulator is in `src/utils/stateEvolution.ts`:
+
+```typescript
+// State vector: array of complex amplitudes [real, imaginary]
+type StateVector = [number, number][]
+
+// Apply gates sequentially
+function evolveState(gates: Gate[], numQubits: number): StateVector
+```
+
+**Limitations:**
+- Practical limit: 8-10 qubits (browser performance)
+- Theoretical limit: ~20 qubits (memory constraints)
+- Exponential scaling: 2^n amplitudes
+
+### 4. Code Generation
+
+Each generator in `src/components/generator/generators/` converts the Redux circuit state to code:
+
+```typescript
+interface CodeGenerator {
+  generate(qubits: Qubit[], gates: Gate[]): string
+}
+```
+
+Generators:
+- `qiskitGenerator.ts` - Qiskit Python
+- `cirqGenerator.ts` - Cirq Python
+- `braketGenerator.ts` - AWS Braket
+- `jsonGenerator.ts` - JSON export
+
+---
+
+## Common Tasks
+
+### Adding a New Quantum Gate
+
+**Step 1**: Add gate definition to `src/utils/gateLibrary.ts`
+
+```typescript
+{
+  id: 'my_gate',
+  name: 'My Custom Gate',
+  symbol: 'MG',
+  description: 'A custom quantum gate',
+  category: 'Custom Gates',
+  color: 'purple',
+  params: [
+    {
+      name: 'angle',
+      type: 'angle',
+      default: 0,
+      min: 0,
+      max: 360,
+      step: 1
+    }
+  ]
+}
+```
+
+**Step 2**: Implement gate operation in `src/utils/stateEvolution.ts`
+
+```typescript
+function applyMyGate(
+  state: StateVector,
+  qubit: number,
+  angle: number
+): StateVector {
+  // Your quantum gate logic here
+  const rad = (angle * Math.PI) / 180
+  // ... matrix operations
+  return newState
+}
+
+// Add to switch statement in evolveState()
+case 'my_gate':
+  state = applyMyGate(state, gate.qubit, gate.params?.angle || 0)
+  break
+```
+
+**Step 3**: Add code generation support in generators
+
+```typescript
+// In qiskitGenerator.ts
+case 'my_gate':
+  return `qc.my_gate(${gate.params?.angle || 0}, ${gate.qubit})`
+```
+
+**Step 4**: Test your gate!
+
+---
+
+### Adding a New Panel
+
+**Step 1**: Create component in `src/components/panels/`
+
+```typescript
+// MyNewPanel.tsx
+import { Box, Heading } from '@chakra-ui/react'
+
+export default function MyNewPanel() {
+  return (
+    <Box p={4}>
+      <Heading size="md">My New Panel</Heading>
+      {/* Your panel content */}
+    </Box>
+  )
+}
+```
+
+**Step 2**: Register panel in `src/App.tsx`
+
+```typescript
+// Add to panel rendering logic
+{activePanel === 'mynew' && <MyNewPanel />}
+```
+
+**Step 3**: Add button in `src/components/layout/Header.tsx`
+
+```typescript
+<Button onClick={() => dispatch(setActivePanel('mynew'))}>
+  My Panel
+</Button>
+```
+
+---
+
+### Calling the Backend API
+
+The API client is in `src/lib/quantumApi.ts`:
+
+```typescript
+import { executeCircuit } from '@/lib/quantumApi'
+
+// Example: Execute circuit
+const result = await executeCircuit({
+  num_qubits: 2,
+  gates: [
+    { type: 'h', qubit: 0, position: 0 },
+    { type: 'cx', qubit: 0, targets: [1], position: 1 }
+  ],
+  shots: 1024,
+  memory: false
+})
+
+console.log(result.counts)  // { "00": 500, "11": 524 }
+```
+
+**API Endpoints:**
+- `GET /health` - Health check
+- `POST /api/v1/execute` - Execute circuit
+
+---
+
+### Accessing Circuit State
+
+Use Redux hooks:
+
+```typescript
+import { useSelector, useDispatch } from 'react-redux'
+import { addGate, removeGate } from '@/store/slices/circuitSlice'
+import type { RootState } from '@/store'
+
+function MyComponent() {
+  const dispatch = useDispatch()
+  const gates = useSelector((state: RootState) => state.circuit.gates)
+  const qubits = useSelector((state: RootState) => state.circuit.qubits)
+
+  const handleAddGate = () => {
+    dispatch(addGate({
+      id: crypto.randomUUID(),
+      type: 'h',
+      qubit: 0,
+      position: 0
+    }))
+  }
+
+  return <div>{gates.length} gates</div>
+}
+```
+
+---
+
+## Component Guide
+
+### Canvas Components
+
+#### CircuitCanvas.tsx
+Main circuit grid. Renders qubits and gates.
+
+**Key Props:** None (uses Redux state)
+
+**Usage:**
+```typescript
+<CircuitCanvas />
+```
+
+#### GridCell.tsx
+Individual cell in the circuit grid. Drop target for gates.
+
+**Key Props:**
+- `qubitIndex: number` - Which qubit row
+- `position: number` - Which time column
+
+#### CircuitGate.tsx
+Renders a gate on the circuit.
+
+**Key Props:**
+- `gate: Gate` - Gate data
+- `onClick: () => void` - Click handler
+
+---
+
+### Panel Components
+
+#### CodePanel.tsx
+Shows generated code with syntax highlighting and optimization options.
+
+**Features:**
+- Framework selection (Qiskit, Cirq, Braket, JSON)
+- Optimization level controls
+- Copy to clipboard
+
+#### SimulationPanel.tsx
+Runs quantum simulation and shows results.
+
+**Features:**
+- Run simulation button
+- Measurement probability charts
+- State vector display
+
+#### ExportPanel.tsx
+Export circuits in various formats.
+
+**Features:**
+- JSON export
+- SVG circuit diagram export
+- PNG image export (future)
+
+---
+
+### Visualization Components
+
+#### BlochSphereVisualizer.tsx
+3D Bloch sphere using Three.js.
+
+**Props:**
+- `state: [number, number]` - Qubit state as [real, imag] amplitudes
+
+**Usage:**
+```typescript
+<BlochSphereVisualizer state={[[1, 0], [0, 0]]} />
+```
+
+#### QuantumStateVisualizer.tsx
+Step-by-step state evolution display.
+
+**Features:**
+- Shows state at each gate application
+- Probability bar charts
+- Complex amplitude display
+
+---
+
+## State Management
+
+### Circuit Slice
+
+Located in `src/store/slices/circuitSlice.ts`
+
+**Actions:**
+```typescript
+// Qubit management
+dispatch(addQubit())
+dispatch(removeQubit(qubitId))
+
+// Gate management
+dispatch(addGate({ id, type, qubit, position }))
+dispatch(removeGate(gateId))
+dispatch(updateGate({ id, params }))
+
+// Circuit management
+dispatch(clearCircuit())
+dispatch(importCircuit(circuitData))
+```
+
+### UI Slice
+
+Located in `src/store/slices/uiSlice.ts`
+
+**Actions:**
+```typescript
+// Panel management
+dispatch(setActivePanel('code'))  // 'code', 'simulation', 'export', etc.
+dispatch(setFullView(true))
+
+// Selection management
+dispatch(setSelectedGate(gateId))
+```
+
+---
+
+## Adding Features
+
+### Example: Add a "Circuit Statistics" Feature
+
+**Goal:** Show circuit depth, gate count, and entanglement metrics.
+
+**Step 1**: Create utility function
+
+```typescript
+// src/utils/circuitStats.ts
+export function calculateStats(gates: Gate[]) {
+  return {
+    gateCount: gates.length,
+    depth: Math.max(...gates.map(g => g.position)) + 1,
+    twoQubitGates: gates.filter(g => g.targets).length,
+    // Add more stats...
+  }
+}
+```
+
+**Step 2**: Create component
+
+```typescript
+// src/components/panels/StatsPanel.tsx
+import { useSelector } from 'react-redux'
+import { calculateStats } from '@/utils/circuitStats'
+
+export default function StatsPanel() {
+  const gates = useSelector((state: RootState) => state.circuit.gates)
+  const stats = calculateStats(gates)
+
+  return (
+    <Box>
+      <Stat label="Gate Count" value={stats.gateCount} />
+      <Stat label="Circuit Depth" value={stats.depth} />
+    </Box>
+  )
+}
+```
+
+**Step 3**: Add to UI
+
+Register in `App.tsx` and add button in `Header.tsx`.
+
+---
+
+## Styling Guide
+
+QuantumFlow uses **Chakra UI** for styling.
+
+### Using Chakra Components
+
+```typescript
+import { Box, Button, Heading, Text } from '@chakra-ui/react'
+
+function MyComponent() {
+  return (
+    <Box p={4} bg="gray.100" borderRadius="md">
+      <Heading size="md" mb={2}>Title</Heading>
+      <Text>Description</Text>
+      <Button colorScheme="blue" onClick={...}>
+        Click Me
+      </Button>
+    </Box>
+  )
+}
+```
+
+### Theme Colors
+
+QuantumFlow uses these color schemes:
+- **Primary**: `blue` (for main actions)
+- **Success**: `green` (for positive actions)
+- **Warning**: `yellow` (for cautions)
+- **Error**: `red` (for errors)
+- **Purple**: For quantum-specific elements
+
+### Responsive Design
+
+Use Chakra's responsive props:
+
+```typescript
+<Box
+  width={{ base: '100%', md: '50%' }}  // 100% on mobile, 50% on desktop
+  display={{ base: 'block', md: 'flex' }}
+>
+```
+
+---
+
+## Performance Tips
+
+### 1. Optimize Re-renders
+
+Use `React.memo` for expensive components:
+
+```typescript
+const ExpensiveComponent = React.memo(({ data }) => {
+  // Complex rendering logic
+})
+```
+
+### 2. Lazy Load Heavy Components
+
+```typescript
+const BlochSphere = React.lazy(() => import('./BlochSphereVisualizer'))
+
+// Use with Suspense
+<Suspense fallback={<Spinner />}>
+  <BlochSphere state={state} />
+</Suspense>
+```
+
+### 3. Limit Simulation Size
+
+For >8 qubits, warn users about performance:
+
+```typescript
+if (numQubits > 8) {
+  toast.warning('Large circuits may be slow in browser')
+}
+```
+
+### 4. Debounce State Updates
+
+For real-time parameter changes:
+
+```typescript
+import { debounce } from 'lodash'
+
+const updateParam = debounce((value) => {
+  dispatch(updateGate({ id, params: { angle: value } }))
+}, 100)
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| `Module not found` | Run `npm install` |
+| `Port already in use` | Kill process on port 5173 or use different port |
+| CORS errors | Ensure backend is running and `ALLOWED_ORIGINS` is set |
+| Redux state not updating | Check if action is dispatched correctly |
+| Chakra styles not working | Import `ChakraProvider` in `App.tsx` |
+| Three.js errors | Check WebGL support in browser |
+
+### Debugging
+
+**React DevTools:**
+- Install React DevTools browser extension
+- Inspect component props and state
+
+**Redux DevTools:**
+- Install Redux DevTools extension
+- View action history and state changes
+
+**Browser Console:**
+- Check for TypeScript errors
+- Look for API call failures
+
+**Vite Dev Server:**
+- Terminal shows build errors
+- Hot module replacement issues
+
+---
+
+## Environment Variables
+
+Create `.env` file in `frontend/`:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+Access in code:
+
+```typescript
+const apiUrl = import.meta.env.VITE_API_BASE_URL
+```
+
+---
+
+## Testing (Future Enhancement)
+
+Currently, QuantumFlow doesn't have tests. Adding tests would be a great hackathon project!
+
+**Suggested setup:**
+- **Unit tests**: Vitest
+- **Component tests**: React Testing Library
+- **E2E tests**: Playwright
+
+---
+
+## Resources
+
+### Documentation
+- [React Docs](https://react.dev/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Chakra UI](https://chakra-ui.com/)
+- [Redux Toolkit](https://redux-toolkit.js.org/)
+- [Vite](https://vitejs.dev/)
+
+### Tutorials
+- [React + TypeScript Cheatsheet](https://react-typescript-cheatsheet.netlify.app/)
+- [Redux Toolkit Quick Start](https://redux-toolkit.js.org/tutorials/quick-start)
+
+---
+
+## Contributing
+
+1. Keep code clean and well-commented
+2. Use TypeScript types everywhere
+3. Follow existing component patterns
+4. Test your changes thoroughly
+5. Update documentation for new features
+
+---
+
+## Need Help?
+
+- Check existing components for examples
+- Ask hackathon mentors
+- Review the main README: `../README.md`
+- Check backend README: `../backend/README.md`
+
+---
+
+**Happy coding!** Build something amazing for the quantum computing community.
