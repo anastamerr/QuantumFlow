@@ -130,29 +130,29 @@ const ExportPanel = () => {
     const circuitGates = transformStoreGatesToCircuitGates(gates);
     
     switch (exportFormat) {
-      case 'json':
-        return JSON.stringify({
-          name: circuitName,
-          description: circuitDescription,
-          qubits,
-          gates, // Use original gates for JSON
-        }, null, 2)
-      case 'qiskit':
-        return generateQiskitCode(qubits, circuitGates, optimize, options)
-      case 'cirq':
-        return generateCirqCode(qubits, circuitGates, optimize, options)
-      case 'qasm':
-        return generateQasmCode(qubits, circuitGates, optimize, options)
-      case 'svg':
-        try {
-          return renderCircuitSvg(qubits, circuitGates)
-        } catch (err) {
-          console.error('Error generating SVG:', err)
-          return '<!-- Error generating SVG: ' + (err instanceof Error ? err.message : String(err)) + ' -->'
-        }
-      default:
-        return ''
-    }
+    case 'json':
+      return JSON.stringify({
+        name: circuitName,
+        description: circuitDescription,
+        qubits,
+        gates, // Use original gates for JSON
+      }, null, 2)
+    case 'qiskit':
+      return generateQiskitCode(qubits, circuitGates, optimize, options)
+    case 'cirq':
+      return generateCirqCode(qubits, circuitGates, optimize, options)
+    case 'qasm':
+      return generateQasmCode(qubits, circuitGates, optimize, options)
+    case 'svg':
+      try {
+        return renderCircuitSvg(qubits, circuitGates)
+      } catch (err) {
+        console.error('Error generating SVG:', err)
+        return '<!-- Error generating SVG: ' + (err instanceof Error ? err.message : String(err)) + ' -->'
+      }
+    default:
+      return ''
+  }
   }, [
     exportFormat, 
     qubits, 
@@ -167,57 +167,66 @@ const ExportPanel = () => {
   ])
   
   // Handle export button click
-  const handleExport = () => {
-    try {
-      const data = getExportData()
-      let filename = ''
-      let mimeType = ''
-      
-      // Set filename and MIME type based on format
-      switch (exportFormat) {
-        case 'json':
-          filename = `${circuitName.replace(/\s+/g, '_')}.json`
-          mimeType = 'application/json'
-          break
-        case 'qiskit':
-        case 'cirq':
-          filename = `${circuitName.replace(/\s+/g, '_')}.py`
-          mimeType = 'text/plain'
-          break
-        case 'svg':
-          filename = `${circuitName.replace(/\s+/g, '_')}.svg`
-          mimeType = 'image/svg+xml'
-          break
-        default:
-          filename = `${circuitName.replace(/\s+/g, '_')}.txt`
-          mimeType = 'text/plain'
-      }
-      
-      // Create a download link
-      const blob = new Blob([data], { type: mimeType })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-      
-      // Show success toast
-      toast({
-        title: 'Export successful',
-        description: `Circuit exported as ${filename}`,
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      })
-    } catch (err) {
-      console.error('Export failed:', err)
-      setErrorMessage((err instanceof Error) ? err.message : 'Unknown error during export.')
-      onOpen()
+  // Handle export button click
+const handleExport = () => {
+  try {
+    const data = getExportData()
+    let filename = ''
+    let mimeType = ''
+
+    // Set filename and MIME type based on format
+    switch (exportFormat) {
+      case 'json':
+        filename = `${circuitName.replace(/\s+/g, '_')}.json`
+        mimeType = 'application/json'
+        break
+      case 'qiskit':
+        filename = `${circuitName.replace(/\s+/g, '_')}.qiskit.py`
+        mimeType = 'text/plain'
+        break
+      case 'cirq':
+        filename = `${circuitName.replace(/\s+/g, '_')}.cirq.py`
+        mimeType = 'text/plain'
+        break
+      case 'qasm':
+        filename = `${circuitName.replace(/\s+/g, '_')}.qasm`
+        mimeType = 'text/plain'
+        break
+      case 'svg':
+        filename = `${circuitName.replace(/\s+/g, '_')}.svg`
+        mimeType = 'image/svg+xml'
+        break
+      default:
+        filename = `${circuitName.replace(/\s+/g, '_')}.txt`
+        mimeType = 'text/plain'
     }
+
+    // Create a download link
+    const blob = new Blob([data], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    // Show success toast
+    toast({
+      title: 'Export successful',
+      description: `Circuit exported as ${filename}`,
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    })
+  } catch (err) {
+    console.error('Export failed:', err)
+    setErrorMessage((err instanceof Error) ? err.message : 'Unknown error during export.')
+    onOpen()
   }
+}
+
   
   // Calculate estimated gate reduction - using the estimator from circuitOptimizer for advanced options
   const reductionInfo = useMemo(() => {
