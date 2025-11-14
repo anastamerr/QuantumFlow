@@ -30,6 +30,23 @@ const Header = () => {
         <Box ml={2} fontSize="sm" opacity={0.8}>
           {circuitName}
         </Box>
+        <HStack ml={4} spacing={2}>
+          <Button
+            size="sm"
+            variant="ghost"
+            color="#2431a2ff"
+          >
+            Projects
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            color="#2431a2ff"
+            onClick={() => dispatch(setActivePanel('library'))}
+          >
+            Library
+          </Button>
+        </HStack>
         <Spacer />
         
         <HStack spacing={2}>
