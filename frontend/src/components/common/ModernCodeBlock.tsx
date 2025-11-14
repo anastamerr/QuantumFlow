@@ -23,7 +23,7 @@ import { useState, useMemo } from 'react'
 
 interface ModernCodeBlockProps {
   code: string
-  language: 'python' | 'json'
+  language: 'python' | 'json' | 'qasm'
   filename?: string
   showLineNumbers?: boolean
   maxHeight?: string
@@ -89,8 +89,12 @@ const ModernCodeBlock = ({
 
   // Download file
   const handleDownload = (format: 'py' | 'json' | 'txt') => {
-    const extension = format === 'py' ? '.py' : format === 'json' ? '.json' : '.txt'
-    const mimeType = format === 'json' ? 'application/json' : 'text/plain'
+    let extension = '.txt'
+    let mimeType = 'text/plain'
+
+    if (format === 'py') extension = '.py'
+    else if (format === 'json') mimeType = 'application/json', extension = '.json'
+    else if (format === 'txt' && language === 'qasm') extension = '.qasm'
 
     const blob = new Blob([code], { type: mimeType })
     const url = URL.createObjectURL(blob)
@@ -112,7 +116,12 @@ const ModernCodeBlock = ({
   }
 
   // Language display name
-  const languageDisplay = language === 'python' ? 'Python' : 'JSON'
+  const languageDisplay =
+  language === 'python' ? 'Python' :
+  language === 'json' ? 'JSON' :
+  language === 'qasm' ? 'OpenQASM 2.0' :
+  'Code'
+
 
   return (
     <VStack
@@ -186,20 +195,12 @@ const ModernCodeBlock = ({
               />
             </Tooltip>
             <MenuList>
-              {language === 'python' && (
-                <MenuItem onClick={() => handleDownload('py')}>
-                  Download as .py
-                </MenuItem>
-              )}
-              {language === 'json' && (
-                <MenuItem onClick={() => handleDownload('json')}>
-                  Download as .json
-                </MenuItem>
-              )}
-              <MenuItem onClick={() => handleDownload('txt')}>
-                Download as .txt
-              </MenuItem>
+              {language === 'python' && <MenuItem onClick={() => handleDownload('py')}>Download as .py</MenuItem>}
+              {language === 'json' && <MenuItem onClick={() => handleDownload('json')}>Download as .json</MenuItem>}
+              {language === 'qasm' && <MenuItem onClick={() => handleDownload('txt')}>Download as .qasm</MenuItem>}
+              <MenuItem onClick={() => handleDownload('txt')}>Download as .txt</MenuItem>
             </MenuList>
+
           </Menu>
         </HStack>
       </Flex>
@@ -227,7 +228,7 @@ const ModernCodeBlock = ({
         }}
       >
         <SyntaxHighlighter
-          language={language}
+          language={language === 'qasm' ? 'text' : language}
           style={isDark ? vscDarkPlus : vs}
           showLineNumbers={showLineNumbers}
           wrapLines

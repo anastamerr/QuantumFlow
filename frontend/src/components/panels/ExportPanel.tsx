@@ -39,7 +39,7 @@ import { Gate as CircuitGate } from '../../types/circuit'
 import AdvancedOptimizationPanel from './AdvancedOptimizationPanel'
 import { defaultAdvancedOptions, estimateOptimizationImpact } from '../../utils/circuitOptimizer'
 import FullViewToggle from '../common/FullViewToggle'
-
+import { generateQasmCode } from "../generator/generators/qasmGenerator"
 const ExportPanel = () => {
   const qubits = useSelector(selectQubits)
   const gates = useSelector(selectGates)
@@ -141,9 +141,10 @@ const ExportPanel = () => {
         return generateQiskitCode(qubits, circuitGates, optimize, options)
       case 'cirq':
         return generateCirqCode(qubits, circuitGates, optimize, options)
+      case 'qasm':
+        return generateQasmCode(qubits, circuitGates, optimize, options)
       case 'svg':
         try {
-          // Actually generate SVG instead of placeholder
           return renderCircuitSvg(qubits, circuitGates)
         } catch (err) {
           console.error('Error generating SVG:', err)
@@ -298,9 +299,11 @@ const ExportPanel = () => {
               <Radio value="json" aria-label="Export as JSON">JSON (Circuit Design)</Radio>
               <Radio value="qiskit" aria-label="Export as Qiskit Python code">Qiskit Python Code</Radio>
               <Radio value="cirq" aria-label="Export as Cirq Python code">Cirq Python Code</Radio>
+              <Radio value="qasm" aria-label="Export as OpenQASM code">OpenQASM 2.0</Radio>
               <Radio value="svg" aria-label="Export as SVG diagram">SVG (Circuit Diagram)</Radio>
             </Stack>
           </RadioGroup>
+
         </Box>
         
         {/* Optimization options section - only show for code exports */}

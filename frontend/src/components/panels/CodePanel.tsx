@@ -11,6 +11,7 @@ import AdvancedOptimizationPanel from './AdvancedOptimizationPanel'
 import { defaultAdvancedOptions } from '../../utils/circuitOptimizer'
 import FullViewToggle from '../common/FullViewToggle'
 import ModernCodeBlock from '../common/ModernCodeBlock'
+import { generateQasmCode } from '../generator/generators/qasmGenerator';
 
 const CodePanel = () => {
   const dispatch = useDispatch()
@@ -65,8 +66,9 @@ const CodePanel = () => {
   }, []);
   
   const handleFormatChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    dispatch(setCodeFormat(e.target.value as 'qiskit' | 'cirq' | 'json'))
+    dispatch(setCodeFormat(e.target.value as 'qiskit' | 'cirq' | 'json' | 'qasm'))
   }
+
   
   const handleOptimizationChange = (option: keyof OptimizationOptions, value: boolean | string) => {
     setOptimizationOptions({
@@ -84,32 +86,40 @@ const CodePanel = () => {
   };
   
   const getGeneratedCode = () => {
-    if (codeFormat === 'qiskit' || codeFormat === 'cirq') {
-      // Transform the gates to match expected type
-      const circuitGates = transformStoreGatesToCircuitGates(gates);
+    const circuitGates = transformStoreGatesToCircuitGates(gates);
 
-      if (codeFormat === 'qiskit') {
+    switch (codeFormat) {
+      case 'qiskit':
         return generateQiskitCode(qubits, circuitGates, optimize, optimizationOptions)
-      } else {
+      case 'cirq':
         return generateCirqCode(qubits, circuitGates, optimize, optimizationOptions)
-      }
-    } else if (codeFormat === 'json') {
-      return JSON.stringify({ qubits, gates }, null, 2)
+      case 'qasm':
+        return generateQasmCode(qubits, circuitGates, optimize, optimizationOptions)
+      case 'json':
+        return JSON.stringify({ qubits, gates }, null, 2)
+      default:
+        return ''
     }
-    return ''
   }
 
   // Get language for syntax highlighting
-  const getLanguage = (): 'python' | 'json' => {
-    return codeFormat === 'json' ? 'json' : 'python'
-  }
+  const getLanguage = (): 'python' | 'json' | 'qasm' => {
+  if (codeFormat === 'json') return 'json'
+  if (codeFormat === 'qasm') return 'qasm'
+  return 'python'
+}
+
 
   // Get filename for download
   const getFilename = () => {
-    if (codeFormat === 'qiskit') return 'quantum_circuit_qiskit'
-    if (codeFormat === 'cirq') return 'quantum_circuit_cirq'
-    return 'quantum_circuit'
+    switch (codeFormat) {
+      case 'qiskit': return 'quantum_circuit_qiskit'
+      case 'cirq': return 'quantum_circuit_cirq'
+      case 'qasm': return 'quantum_circuit_qasm'
+      default: return 'quantum_circuit'
+    }
   }
+
   
   return (
     <Box>
@@ -121,8 +131,10 @@ const CodePanel = () => {
             <Select size="sm" value={codeFormat} onChange={handleFormatChange} w="120px">
               <option value="qiskit">Qiskit</option>
               <option value="cirq">Cirq</option>
+              <option value="qasm">OpenQASM 2.0</option>
               <option value="json">JSON</option>
             </Select>
+
           </HStack>
         </HStack>
         
