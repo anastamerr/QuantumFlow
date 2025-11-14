@@ -16,6 +16,7 @@ import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
 import AIPanel from './components/panels/AIPanel'
 import LibraryPanel from './components/panels/LibraryPanel'
+import ProjectPanel from './components/panels/ProjectPanel'
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
@@ -92,7 +93,7 @@ function App() {
         <Header />
         <Flex flex={1} overflow="hidden">
           {/* Fixed sidebar that doesn't scroll (hidden when viewing Library full-page) */}
-          {activePanel !== 'library' && (
+          {activePanel !== 'library' && activePanel !== 'projects' && (
             <Box
               position="sticky"
               top={0}
@@ -107,7 +108,7 @@ function App() {
           {/* Main content area with vertical scrolling */}
           <Box 
             flex={1} 
-            p={activePanel === 'library' ? 0 : 4} 
+            p={activePanel === 'library' || activePanel === 'projects' ? 0 : 4} 
             overflowY={'auto'} 
             h="calc(100vh - 60px)" // Adjust based on header height
             css={{
@@ -128,10 +129,10 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {activePanel === 'library' ? (
-                // Library occupies the full content area (replacing sidebar + canvas)
-                <Box flex={1} w="100%" p={4} h="calc(100vh - 60px)">
-                  <LibraryPanel />
+              {activePanel === 'library' || activePanel === 'projects' ? (
+                // Library or Projects occupy the full content area (replacing sidebar + canvas)
+                <Box flex={1} w="100%" p={0} h="calc(100vh - 60px)">
+                  {activePanel === 'library' ? <LibraryPanel /> : <ProjectPanel />}
                 </Box>
               ) : (
                 <>

@@ -10,7 +10,6 @@ import {
   Badge,
   Divider,
 } from "@chakra-ui/react";
-import FullViewToggle from "../common/FullViewToggle";
 
 interface TopicItem {
   id: string;
@@ -99,6 +98,7 @@ const LibraryPanel: React.FC = () => {
     Expert: QUANTUM_TOPICS.filter(t => t.difficulty === "Expert"),
   };
 
+
   return (
     <HStack h="100%" w="100%" spacing={0} align="stretch">
       {/* Topics List (Left) */}
@@ -106,11 +106,17 @@ const LibraryPanel: React.FC = () => {
         w="250px"
         h="100%"
         bg={listBg}
-        borderRightWidth={1}
+        borderRightWidth={0}
         borderColor={listBorderColor}
         spacing={0}
         align="stretch"
         overflowY="auto"
+        css={{
+          '&::-webkit-scrollbar': { width: '8px' },
+          '&::-webkit-scrollbar-track': { backgroundColor: 'rgba(0,0,0,0.03)' },
+          '&::-webkit-scrollbar-thumb': { background: 'rgba(0,0,0,0.15)', borderRadius: '4px' },
+          '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(0,0,0,0.2)' },
+        }}
         position="sticky"
         top={0}
       >
@@ -118,7 +124,6 @@ const LibraryPanel: React.FC = () => {
         <Box p={3} borderBottomWidth={1} borderColor={listBorderColor} flexShrink={0}>
           <HStack justify="space-between" mb={2}>
             <Heading size="md">Quantum Library</Heading>
-            <FullViewToggle />
           </HStack>
           <Text fontSize="xs" color={textColor}>
             {QUANTUM_TOPICS.length} topics • Learn quantum computing

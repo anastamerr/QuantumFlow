@@ -33,8 +33,9 @@ const Header = () => {
         <HStack ml={4} spacing={2}>
           <Button
             size="sm"
-            variant="ghost"
-            color="#2431a2ff"
+            variant={activePanel === 'projects' ? 'solid' : 'ghost'}
+            colorScheme="blue"
+            onClick={() => dispatch(setActivePanel('projects'))}
           >
             Projects
           </Button>
