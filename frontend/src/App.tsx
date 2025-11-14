@@ -15,6 +15,7 @@ import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
 import AIPanel from './components/panels/AIPanel'
+import LibraryPanel from './components/panels/LibraryPanel'
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
@@ -90,22 +91,24 @@ function App() {
       <VStack spacing={0} align="stretch" h="100vh">
         <Header />
         <Flex flex={1} overflow="hidden">
-          {/* Fixed sidebar that doesn't scroll */}
-          <Box
-            position="sticky"
-            top={0}
-            h="calc(100vh - 60px)" // Adjust based on header height
-            zIndex={10}
-            flexShrink={0}
-          >
-            <Sidebar />
-          </Box>
+          {/* Fixed sidebar that doesn't scroll (hidden when viewing Library full-page) */}
+          {activePanel !== 'library' && (
+            <Box
+              position="sticky"
+              top={0}
+              h="calc(100vh - 60px)" // Adjust based on header height
+              zIndex={10}
+              flexShrink={0}
+            >
+              <Sidebar />
+            </Box>
+          )}
           
           {/* Main content area with vertical scrolling */}
           <Box 
             flex={1} 
-            p={4} 
-            overflowY="auto" 
+            p={activePanel === 'library' ? 0 : 4} 
+            overflowY={'auto'} 
             h="calc(100vh - 60px)" // Adjust based on header height
             css={{
               '&::-webkit-scrollbar': {
@@ -125,30 +128,39 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {!isFullView && (
-                <Box flex={1} mb={4}>
-                  <CircuitCanvas />
+              {activePanel === 'library' ? (
+                // Library occupies the full content area (replacing sidebar + canvas)
+                <Box flex={1} w="100%" p={4} h="calc(100vh - 60px)">
+                  <LibraryPanel />
                 </Box>
+              ) : (
+                <>
+                  {!isFullView && (
+                    <Box flex={1} mb={4}>
+                      <CircuitCanvas />
+                    </Box>
+                  )}
+                  <ResizablePanel 
+                    direction="vertical" 
+                    defaultSize={isFullView ? 600 : 300} 
+                    minSize={150} 
+                    maxSize={isFullView ? 800 : 500}
+                    borderWidth={1} 
+                    borderRadius="md" 
+                    bg={panelBg}
+                    borderColor={borderColor}
+                    p={4}
+                    flex={isFullView ? 1 : undefined}
+                    height={isFullView ? "calc(100vh - 120px)" : undefined}
+                  >
+                    {activePanel === 'code' && <CodePanel />}
+                    {activePanel === 'simulation' && <SimulationPanel />}
+                    {activePanel === 'export' && <ExportPanel />}
+                    {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                    {activePanel === 'ai' && <AIPanel />}
+                  </ResizablePanel>
+                </>
               )}
-              <ResizablePanel 
-                direction="vertical" 
-                defaultSize={isFullView ? 600 : 300} 
-                minSize={150} 
-                maxSize={isFullView ? 800 : 500}
-                borderWidth={1} 
-                borderRadius="md" 
-                bg={panelBg}
-                borderColor={borderColor}
-                p={4}
-                flex={isFullView ? 1 : undefined}
-                height={isFullView ? "calc(100vh - 120px)" : undefined}
-              >
-                {activePanel === 'code' && <CodePanel />}
-                {activePanel === 'simulation' && <SimulationPanel />}
-                {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
-                {activePanel === 'ai' && <AIPanel />}
-              </ResizablePanel>
             </Flex>
           </Box>
             {/* Gate parameters panel - will only render when a gate is selected */}
