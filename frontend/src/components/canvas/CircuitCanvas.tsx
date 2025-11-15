@@ -5,6 +5,7 @@ import { selectSelectedGateId, selectGate, selectZoomLevel, setZoomLevel } from 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { CircuitPosition, DroppedGate, Gate as CircuitGate } from '../../types/circuit'
 import { gateLibrary } from '../../utils/gateLibrary'
+import { loadCustomGates, expandCustomGate, isCustomGate } from '../../utils/customGateManager'
 import { renderCircuitSvg } from '../../utils/circuitRenderer'
 import GridCell from './GridCell'
 import ResizablePanel from '../layout/ResizablePanel'
@@ -124,10 +125,56 @@ const CircuitCanvas: React.FC = () => {
   
   /**
    * Handle dropping a gate onto the circuit - Fixed to ensure valid multi-qubit gate configurations
-   * with special handling for two-qubit scenarios
+   * with special handling for two-qubit scenarios and custom gate expansion
    */
   const handleDrop = useCallback((item: DroppedGate, position: CircuitPosition): void => {
     try {
+      // First check if it's a custom gate
+      const customGates = loadCustomGates();
+      const customGate = customGates.find(g => g.id === item.gateType);
+      
+      if (customGate && isCustomGate(customGate)) {
+        // Check if there's enough space for the custom gate expansion
+        const gatesAtPosition = gates.filter(
+          g => g.qubit === position.qubit && 
+          typeof g.position === 'number' && 
+          g.position >= position.position && 
+          g.position < position.position + customGate.composedGates.length
+        );
+        
+        if (gatesAtPosition.length > 0) {
+          toast({
+            title: "Not enough space",
+            description: `This custom gate requires ${customGate.composedGates.length} consecutive positions. Clear the space first.`,
+            status: "warning",
+            duration: 3000,
+            isClosable: true,
+          });
+          return;
+        }
+        
+        // Expand the custom gate into its component gates
+        const expandedGates = expandCustomGate(customGate, position.qubit, position.position);
+        
+        // Add all expanded gates to the circuit
+        expandedGates.forEach((gate) => {
+          // Remove the id field since addGate expects Omit<Gate, "id">
+          const { id, ...gateWithoutId } = gate;
+          dispatch(addGate(gateWithoutId));
+        });
+        
+        toast({
+          title: "Custom gate added",
+          description: `"${customGate.name}" expanded into ${expandedGates.length} gate(s).`,
+          status: "success",
+          duration: 2000,
+          isClosable: true,
+        });
+        
+        return;
+      }
+      
+      // Normal gate handling (existing logic)
       const gateDefinition = gateLibrary.find(g => g.id === item.gateType);
       
       if (!gateDefinition) {
