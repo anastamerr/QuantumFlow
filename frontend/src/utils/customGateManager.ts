@@ -149,7 +149,10 @@ export function loadCustomGates(): CustomGateDefinition[] {
 export function updateCustomGate(
   gateId: string,
   updates: Partial<
-    Pick<CustomGateDefinition, "name" | "symbol" | "description">
+    Pick<
+      CustomGateDefinition,
+      "name" | "symbol" | "description" | "composedGates"
+    >
   >
 ): { success: boolean; error?: string } {
   const existing = loadCustomGates();
@@ -157,6 +160,14 @@ export function updateCustomGate(
 
   if (gateIndex === -1) {
     return { success: false, error: "Custom gate not found" };
+  }
+
+  // If updating composed gates, validate them
+  if (updates.composedGates) {
+    const validation = validateSingleQubitCircuit(updates.composedGates);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
   }
 
   // Update the gate
