@@ -20,7 +20,11 @@ import {
 } from "../../store/slices/circuitSlice";
 import GateItem from "../gates/GateItem";
 import { gateLibrary } from "../../utils/gateLibrary";
-import { loadCustomGates, CustomGateDefinition, isCustomGate } from "../../utils/customGateManager";
+import {
+  loadCustomGates,
+  CustomGateDefinition,
+  isCustomGate,
+} from "../../utils/customGateManager";
 import CustomGateCreator from "../common/CustomGateCreator";
 import CustomGateMenu from "../common/CustomGateMenu";
 import CustomGateDetailsModal from "../common/CustomGateDetailsModal";
@@ -42,7 +46,9 @@ const Sidebar = () => {
     ...loadCustomGates(),
   ]);
   const [searchResults, setSearchResults] = useState(allGates);
-  const [selectedGate, setSelectedGate] = useState<CustomGateDefinition | null>(null);
+  const [selectedGate, setSelectedGate] = useState<CustomGateDefinition | null>(
+    null
+  );
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   // Reload custom gates function
@@ -195,7 +201,13 @@ const Sidebar = () => {
                     <GateItem gate={gate} />
                   </Box>
                   {isCustomGate(gate) && (
-                    <Box position="absolute" right={1} top="50%" transform="translateY(-50%)" zIndex={10}>
+                    <Box
+                      position="absolute"
+                      right={1}
+                      top="50%"
+                      transform="translateY(-50%)"
+                      zIndex={10}
+                    >
                       <CustomGateMenu
                         gate={gate}
                         onEdit={handleEditGate}

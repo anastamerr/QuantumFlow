@@ -16,7 +16,10 @@ import {
   Button,
 } from "@chakra-ui/react";
 import { HamburgerIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
-import { deleteCustomGate, CustomGateDefinition } from "../../utils/customGateManager";
+import {
+  deleteCustomGate,
+  CustomGateDefinition,
+} from "../../utils/customGateManager";
 
 interface CustomGateMenuProps {
   gate: CustomGateDefinition;
@@ -24,7 +27,11 @@ interface CustomGateMenuProps {
   onDelete: () => void;
 }
 
-export default function CustomGateMenu({ gate, onEdit, onDelete }: CustomGateMenuProps) {
+export default function CustomGateMenu({
+  gate,
+  onEdit,
+  onDelete,
+}: CustomGateMenuProps) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef<HTMLButtonElement>(null);
   const toast = useToast();
@@ -87,7 +94,8 @@ export default function CustomGateMenu({ gate, onEdit, onDelete }: CustomGateMen
             </AlertDialogHeader>
 
             <AlertDialogBody>
-              Are you sure you want to delete "{gate.name}"? This action cannot be undone.
+              Are you sure you want to delete "{gate.name}"? This action cannot
+              be undone.
             </AlertDialogBody>
 
             <AlertDialogFooter>

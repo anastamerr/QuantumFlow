@@ -148,21 +148,23 @@ export function loadCustomGates(): CustomGateDefinition[] {
  */
 export function updateCustomGate(
   gateId: string,
-  updates: Partial<Pick<CustomGateDefinition, 'name' | 'symbol' | 'description'>>
+  updates: Partial<
+    Pick<CustomGateDefinition, "name" | "symbol" | "description">
+  >
 ): { success: boolean; error?: string } {
   const existing = loadCustomGates();
   const gateIndex = existing.findIndex((g) => g.id === gateId);
-  
+
   if (gateIndex === -1) {
-    return { success: false, error: 'Custom gate not found' };
+    return { success: false, error: "Custom gate not found" };
   }
-  
+
   // Update the gate
   existing[gateIndex] = {
     ...existing[gateIndex],
     ...updates,
   };
-  
+
   localStorage.setItem(CUSTOM_GATES_STORAGE_KEY, JSON.stringify(existing));
   return { success: true };
 }
@@ -193,7 +195,7 @@ export function expandCustomGate(
   customGate: CustomGateDefinition,
   targetQubit: number,
   startPosition: number
-): Gate[] {
+): Omit<Gate, "id">[] {
   return customGate.composedGates.map((gate, index) => {
     const pos =
       typeof startPosition === "number"
@@ -201,11 +203,13 @@ export function expandCustomGate(
         : { x: (startPosition as any).x + index, y: targetQubit };
 
     return {
-      ...gate,
-      id: `${gate.id}_expanded_${Date.now()}_${index}`,
+      type: gate.type,
       qubit: targetQubit,
       position: pos,
-    };
+      params: gate.params || {},
+      ...(gate.targets && { targets: gate.targets }),
+      ...(gate.controls && { controls: gate.controls }),
+    } as Omit<Gate, "id">;
   });
 }
 
