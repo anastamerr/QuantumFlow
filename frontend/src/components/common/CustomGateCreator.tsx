@@ -98,12 +98,17 @@ export default function CustomGateCreator() {
         Create Custom Gate
       </Button>
 
-      <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        size="md"
+        scrollBehavior="inside"
+      >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent maxW="560px" maxH="90vh">
           <ModalHeader>Create Custom Gate</ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
+          <ModalBody overflowY="auto" maxH="calc(90vh - 140px)">
             <VStack spacing={4} align="stretch">
               {validation.valid ? (
                 <Alert status="success" borderRadius="md">
@@ -157,7 +162,13 @@ export default function CustomGateCreator() {
                 />
               </FormControl>
 
-              <Box p={3} bg="gray.50" borderRadius="md">
+              <Box
+                p={3}
+                bg="gray.50"
+                borderRadius="md"
+                maxH="220px"
+                overflowY="auto"
+              >
                 <Text fontSize="sm" fontWeight="bold" mb={2}>
                   Current Circuit Gates:
                 </Text>
