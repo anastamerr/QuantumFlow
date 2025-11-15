@@ -16,7 +16,7 @@ function clamp01(v: number) {
 
 type GateLike = {
   qubit?: number;
-  position?: number;
+  position?: number | { x: number; y: number };
   targets?: number[];
   controls?: number[];
 };
@@ -29,11 +29,16 @@ export function calculateCircuitStats(
 
   const gateCount = gates.length;
 
-  // Circuit depth: highest position + 1 (positions assumed zero-based)
+  // Circuit depth: highest position + 1 (extract numeric value from position or coord object)
   const maxPos =
     gates.length > 0
       ? Math.max(
-          ...gates.map((g) => (typeof g.position === "number" ? g.position : 0))
+          ...gates.map((g) => {
+            if (typeof g.position === "number") return g.position;
+            if (g.position && typeof g.position === "object")
+              return g.position.x ?? 0;
+            return 0;
+          })
         )
       : 0;
   const depth = maxPos + 1;
