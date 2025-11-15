@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   VStack,
   HStack,
@@ -8,43 +8,56 @@ import {
   Heading,
   useColorModeValue,
   Badge,
-  Divider,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  SimpleGrid,
+  Card,
+  CardBody,
+  CardHeader,
+  Image,
+  Stack,
+  Tag,
+  useBreakpointValue,
 } from "@chakra-ui/react";
+import { useDispatch, useSelector } from 'react-redux'
+import { setActivePanel, selectActivePanel } from '../../store/slices/uiSlice'
 
 interface ProjectIdea {
   id: string;
   title: string;
   difficulty: "Beginner" | "Intermediate" | "Advanced";
+  description?: string;
 }
 
 const PROJECT_IDEAS: ProjectIdea[] = [
   // Beginner
-  { id: "grover-visualizer", title: "Grover's Algorithm Visualizer", difficulty: "Beginner" },
-  { id: "qft-educational-tool", title: "Quantum Fourier Transform Explorer", difficulty: "Beginner" },
-  { id: "quantum-gates-animator", title: "Interactive Quantum Gates Animator", difficulty: "Beginner" },
+  { id: "grover-visualizer", title: "Grover's Algorithm Visualizer", difficulty: "Beginner", description: "Visualize how Grover amplifies probability." },
+  { id: "qft-educational-tool", title: "Quantum Fourier Transform Explorer", difficulty: "Beginner", description: "Step through QFT on few qubits." },
+  { id: "quantum-gates-animator", title: "Interactive Quantum Gates Animator", difficulty: "Beginner", description: "See gate effects on qubit states." },
 
   // Intermediate
-  { id: "qasm-to-visual", title: "QASM-to-Visualizer Converter", difficulty: "Intermediate" },
-  { id: "quantum-teleportation-demo", title: "Quantum Teleportation Tutorial", difficulty: "Intermediate" },
-  { id: "quantum-randomness", title: "Quantum Randomness Service", difficulty: "Intermediate" },
+  { id: "qasm-to-visual", title: "QASM-to-Visualizer Converter", difficulty: "Intermediate", description: "Convert QASM text to a visual circuit." },
+  { id: "quantum-teleportation-demo", title: "Quantum Teleportation Tutorial", difficulty: "Intermediate", description: "Interactive teleportation demo." },
+  { id: "quantum-randomness", title: "Quantum Randomness Service", difficulty: "Intermediate", description: "Generate randomness using simulators." },
 
   // Advanced
-  { id: "vqe-molecule", title: "VQE for Small Molecules (H2)", difficulty: "Advanced" },
-  { id: "qaoa-optimizer", title: "QAOA for Max-Cut Problems", difficulty: "Advanced" },
-  { id: "error-mitigation-playground", title: "Noise Mitigation Playground", difficulty: "Advanced" },
-  { id: "quantum-chemistry-gui", title: "Quantum Chemistry Simulation App", difficulty: "Advanced" },
-  { id: "quantum-ml-demos", title: "Quantum Machine Learning Demos", difficulty: "Advanced" },
-  { id: "multi-backend-runner", title: "Multi-backend Experiment Runner", difficulty: "Advanced" },
+  { id: "vqe-molecule", title: "VQE for Small Molecules (H2)", difficulty: "Advanced", description: "Variational approach for H2 energy." },
+  { id: "qaoa-optimizer", title: "QAOA for Max-Cut Problems", difficulty: "Advanced", description: "Apply QAOA to combinatorial problems." },
+  { id: "error-mitigation-playground", title: "Noise Mitigation Playground", difficulty: "Advanced", description: "Tools to mitigate simulated noise." },
+  { id: "quantum-chemistry-gui", title: "Quantum Chemistry Simulation App", difficulty: "Advanced", description: "Visualize simple molecular simulations." },
+  { id: "quantum-ml-demos", title: "Quantum Machine Learning Demos", difficulty: "Advanced", description: "Small QML examples and experiments." },
+  { id: "multi-backend-runner", title: "Multi-backend Experiment Runner", difficulty: "Advanced", description: "Run experiments across different backends." },
 ];
 
 const ProjectPanel: React.FC = () => {
   const [selected, setSelected] = useState<ProjectIdea | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const activePanel = useSelector(selectActivePanel)
 
-  const listBg = useColorModeValue("gray.50", "gray.800");
-  const listBorderColor = useColorModeValue("gray.200", "gray.700");
-  const itemBg = useColorModeValue("white", "gray.700");
-  const itemHoverBg = useColorModeValue("blue.50", "gray.600");
-  const selectedBg = useColorModeValue("blue.100", "blue.900");
   const textColor = useColorModeValue("gray.700", "gray.300");
 
   const getDifficultyColor = (difficulty: string) => {
@@ -60,131 +73,90 @@ const ProjectPanel: React.FC = () => {
     }
   };
 
-  const groupedIdeas = {
-    Beginner: PROJECT_IDEAS.filter(i => i.difficulty === "Beginner"),
-    Intermediate: PROJECT_IDEAS.filter(i => i.difficulty === "Intermediate"),
-    Advanced: PROJECT_IDEAS.filter(i => i.difficulty === "Advanced"),
+  const groupedIdeas: Record<string, ProjectIdea[]> = {
+    Beginner: PROJECT_IDEAS.filter((i) => i.difficulty === "Beginner"),
+    Intermediate: PROJECT_IDEAS.filter((i) => i.difficulty === "Intermediate"),
+    Advanced: PROJECT_IDEAS.filter((i) => i.difficulty === "Advanced"),
+  };
+
+  const gridCols = useBreakpointValue({ base: 1, md: 2, lg: 3 });
+
+  useEffect(() => {
+    // open or close modal based on activePanel in the UI state
+    setIsOpen(activePanel === 'projects')
+    if (activePanel !== 'projects') {
+      setSelected(null)
+    }
+  }, [activePanel]);
+
+  const openGallery = (idea?: ProjectIdea) => {
+    if (idea) setSelected(idea);
+    setIsOpen(true);
+  };
+
+  const dispatch = useDispatch()
+
+  const closeGallery = () => {
+    // return to main circuit view when modal closes
+    dispatch(setActivePanel('circuit'))
+    setIsOpen(false);
+    setSelected(null);
   };
 
   return (
-    <HStack h="100%" w="100%" spacing={0} align="stretch">
-      {/* Projects List (Left) */}
-      <VStack
-        w="250px"
-        h="100%"
-        bg={listBg}
-        borderRightWidth={0}
-        borderColor={listBorderColor}
-        spacing={0}
-        align="stretch"
-        overflowY="auto"
-        position="sticky"
-        top={0}
-        css={{
-          '&::-webkit-scrollbar': { width: '8px' },
-          '&::-webkit-scrollbar-track': { backgroundColor: 'rgba(0,0,0,0.03)' },
-          '&::-webkit-scrollbar-thumb': { background: 'rgba(0,0,0,0.15)', borderRadius: '4px' },
-          '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(0,0,0,0.2)' },
-        }}
-      >
-        {/* Header */}
-        <Box p={3} borderBottomWidth={1} borderColor={listBorderColor} flexShrink={0}>
-          <HStack justify="space-between" mb={2}>
-            <Heading size="md">Projects</Heading>
-          </HStack>
-          <Text fontSize="xs" color={textColor}>
-            {PROJECT_IDEAS.length} ideas • Qiskit projects
-          </Text>
-        </Box>
+    <>
+      {/* Modal Gallery only - no intermediate page content */}
+      <Modal isOpen={isOpen} onClose={closeGallery} size={useBreakpointValue({ base: 'full', md: '6xl' })} scrollBehavior="inside" isCentered>
+        <ModalOverlay bg="blackAlpha.700" backdropFilter="blur(3px)" />
+        <ModalContent maxH="90vh">
+          <ModalHeader bg={useColorModeValue('blue.50', 'blue.900')} borderTopRadius="md">
+            <HStack justify="space-between" w="100%">
+              <VStack align="start" spacing={0}>
+                <Text fontSize="xl" fontWeight="bold">Project Ideas</Text>
+                <Text fontSize="sm" color={textColor}>Browse grouped project ideas and placeholders</Text>
+              </VStack>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody p={6}>
+            <Stack spacing={6}>
+              {Object.entries(groupedIdeas).map(([difficulty, ideas]) => (
+                <Box key={difficulty}>
+                  <HStack justify="space-between" mb={4}>
+                    <HStack spacing={3}>
+                      <Badge colorScheme={getDifficultyColor(difficulty)} fontSize="sm">{difficulty}</Badge>
+                      <Text fontWeight="600">{ideas.length} ideas</Text>
+                    </HStack>
+                  </HStack>
 
-        {/* Project Titles grouped by difficulty */}
-        <Box flex={1} overflowY="auto" w="100%">
-          {Object.entries(groupedIdeas).map(([difficulty, ideas]) => (
-            <Box key={difficulty}>
-              <Box
-                px={3}
-                py={2}
-                bg={useColorModeValue("gray.100", "gray.700")}
-                borderBottomWidth={1}
-                borderColor={listBorderColor}
-                position="sticky"
-                top={0}
-                zIndex={10}
-              >
-                <HStack spacing={2}>
-                  <Badge colorScheme={getDifficultyColor(difficulty)} fontSize="xs">
-                    {difficulty}
-                  </Badge>
-                  <Text fontSize="xs" fontWeight="600" color={textColor}>
-                    {ideas.length} ideas
-                  </Text>
-                </HStack>
-              </Box>
-
-              {ideas.map((idea) => (
-                <Button
-                  key={idea.id}
-                  w="100%"
-                  h="auto"
-                  p={3}
-                  justifyContent="flex-start"
-                  variant="ghost"
-                  bg={selected?.id === idea.id ? selectedBg : itemBg}
-                  _hover={{ bg: itemHoverBg }}
-                  borderRadius={0}
-                  borderBottomWidth={1}
-                  borderColor={listBorderColor}
-                  onClick={() => setSelected(idea)}
-                >
-                  <Text
-                    fontSize="sm"
-                    fontWeight={selected?.id === idea.id ? "600" : "400"}
-                    textAlign="left"
-                    color={textColor}
-                  >
-                    {idea.title}
-                  </Text>
-                </Button>
+                  <SimpleGrid columns={gridCols} spacing={4}>
+                    {ideas.map((idea) => (
+                      <Card key={idea.id} borderRadius="md" overflow="hidden" _hover={{ transform: 'translateY(-4px)', boxShadow: 'lg' }} transition="all 0.15s">
+                        <CardHeader p={0}>
+                          <Image alt={`${idea.title} placeholder`} src={"/placeholder-image.png"} fallbackSrc={"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='200'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='16'>Image</text></svg>"} objectFit="cover" w="100%" h="120px" />
+                        </CardHeader>
+                        <CardBody>
+                          <HStack justify="space-between" align="start">
+                            <Box>
+                              <Text fontWeight="600" mb={1}>{idea.title}</Text>
+                              <Text fontSize="sm" color={textColor}>{idea.description ?? 'Short description placeholder.'}</Text>
+                            </Box>
+                            <Tag size="sm" colorScheme={getDifficultyColor(idea.difficulty)}>{idea.difficulty}</Tag>
+                          </HStack>
+                          <HStack mt={4} spacing={2} justify="flex-end">
+                            <Button size="sm" variant="outline" onClick={() => { setSelected(idea); }}>Select</Button>
+                            <Button size="sm" colorScheme="blue" onClick={() => { /* placeholder action */ }}>Open</Button>
+                          </HStack>
+                        </CardBody>
+                      </Card>
+                    ))}
+                  </SimpleGrid>
+                </Box>
               ))}
-            </Box>
-          ))}
-        </Box>
-      </VStack>
-
-      {/* Content Area (Right) */}
-      <VStack flex={1} h="100%" p={6} spacing={4} align="stretch" overflowY="auto">
-        {selected ? (
-          <>
-            <Box>
-              <Heading size="lg" mb={2}>
-                {selected.title}
-              </Heading>
-            </Box>
-
-            <Divider />
-
-            {/* Placeholder content area (titles only requested) */}
-            <VStack align="start" spacing={4} flex={1}>
-              <Box p={6} w="100%">
-                <Text fontSize="sm" color={textColor} fontStyle="italic">
-                  Placeholder for "{selected.title}" project page.
-                </Text>
-              </Box>
-            </VStack>
-          </>
-        ) : (
-          <VStack justify="center" align="center" h="100%" spacing={4}>
-            <Heading size="md" color={textColor}>
-              Select a Project
-            </Heading>
-            <Text color={textColor} fontSize="sm">
-              Click a project idea from the list to view its placeholder page
-            </Text>
-          </VStack>
-        )}
-      </VStack>
-    </HStack>
-  );
-};
-
+            </Stack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+</>
+  )}
 export default ProjectPanel;

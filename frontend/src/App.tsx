@@ -93,7 +93,7 @@ function App() {
         <Header />
         <Flex flex={1} overflow="hidden">
           {/* Fixed sidebar that doesn't scroll (hidden when viewing Library full-page) */}
-          {activePanel !== 'library' && activePanel !== 'projects' && (
+          {activePanel !== 'library' && (
             <Box
               position="sticky"
               top={0}
@@ -129,10 +129,10 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {activePanel === 'library' || activePanel === 'projects' ? (
-                // Library or Projects occupy the full content area (replacing sidebar + canvas)
+              {activePanel === 'library' ? (
+                // Library occupies the full content area (replacing sidebar + canvas)
                 <Box flex={1} w="100%" p={0} h="calc(100vh - 60px)">
-                  {activePanel === 'library' ? <LibraryPanel /> : <ProjectPanel />}
+                  <LibraryPanel />
                 </Box>
               ) : (
                 <>
@@ -168,8 +168,10 @@ function App() {
           <GateParamsPanel />
         </Flex>
         
-        {/* Tutorial panel - modal overlay */}
+          {/* Tutorial panel - modal overlay */}
         <TutorialPanel />
+        {/* Projects panel - modal overlay (renders like TutorialPanel) */}
+        <ProjectPanel />
       </VStack>
     </DndProvider>
   )
