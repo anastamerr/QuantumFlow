@@ -1,4 +1,4 @@
-import { CircuitData, Gate } from "../types/circuit";
+import { Qubit } from "../types/circuit";
 
 export interface CircuitStats {
   gateCount: number;
@@ -14,9 +14,18 @@ function clamp01(v: number) {
   return Math.max(0, Math.min(1, v));
 }
 
-export function calculateCircuitStats(circuit: CircuitData): CircuitStats {
+type GateLike = {
+  qubit?: number;
+  position?: number;
+  targets?: number[];
+  controls?: number[];
+};
+
+export function calculateCircuitStats(
+  circuit: { qubits: Qubit[]; gates: GateLike[] } & Record<string, any>
+): CircuitStats {
   const numQubits = Math.max(1, (circuit.qubits || []).length);
-  const gates = circuit.gates || [];
+  const gates = (circuit.gates || []) as GateLike[];
 
   const gateCount = gates.length;
 
@@ -34,7 +43,7 @@ export function calculateCircuitStats(circuit: CircuitData): CircuitStats {
   const engagedQubits = new Set<number>();
   let twoQubitGates = 0;
 
-  gates.forEach((g: Gate) => {
+  gates.forEach((g: GateLike) => {
     const src = typeof g.qubit === "number" ? g.qubit : undefined;
 
     const targets = g.targets && g.targets.length > 0 ? g.targets : [];
