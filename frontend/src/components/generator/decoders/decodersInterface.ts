@@ -6,6 +6,7 @@ const extensionToFormat: Record<string, SupportedFormat> = {
   '.json': 'json',
   '.py': 'qiskit', // default to Qiskit; will detect Cirq automatically
   '.qasm': 'qasm',
+  '.txt': 'qiskit', // allow plain text python files saved as .txt
 }
 
 /**

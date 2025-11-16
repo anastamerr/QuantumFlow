@@ -30,7 +30,8 @@ export const generateQiskitCode = (
   // Combine basic Qiskit imports with additional ones
   const basicImports = [
     'from qiskit import QuantumCircuit, transpile',
-    'from qiskit_aer import AerSimulator',
+    // AerSimulator is provided by the Aer provider module
+    'from qiskit.providers.aer import AerSimulator',
     'from qiskit.visualization import plot_histogram',
     'import numpy as np'
   ];

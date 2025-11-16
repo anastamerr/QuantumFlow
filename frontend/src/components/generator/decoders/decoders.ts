@@ -25,6 +25,61 @@ export interface DecodedCircuit {
 }
 
 /**
+ * Parse a qubit argument like `q[0]`, `qr[1]`, `0` or `q0` and return a numeric index.
+ * Falls back to 0 for unrecognized values.
+ */
+const parseQubitIndex = (arg: any): number => {
+  if (arg === undefined || arg === null) return 0
+  const s = String(arg).trim()
+  // match bracketed indices like q[0], qr[10]
+  const bracket = s.match(/\[(\d+)\]/)
+  if (bracket && bracket[1]) return parseInt(bracket[1], 10)
+  // match trailing number like q0 or qr10
+  const trailing = s.match(/(\d+)$/)
+  if (trailing && trailing[1]) return parseInt(trailing[1], 10)
+  // if the whole string is a number
+  const asNum = Number(s)
+  if (!Number.isNaN(asNum)) return Math.floor(asNum)
+  return 0
+}
+
+/**
+ * Normalize external gate names to the internal gate library IDs
+ */
+const normalizeGateName = (name: string): string => {
+  const n = (name || '').toLowerCase().trim()
+  const map: { [k: string]: string } = {
+    // common qiskit aliases
+    cx: 'cnot',
+    ccx: 'toffoli',
+    ccnot: 'toffoli',
+    cz: 'cz',
+    cnot: 'cnot',
+    swap: 'swap',
+    meas: 'measure',
+    measure: 'measure',
+    m: 'measure',
+    h: 'h',
+    x: 'x',
+    y: 'y',
+    z: 'z',
+    s: 's',
+    t: 't',
+    rx: 'rx',
+    ry: 'ry',
+    rz: 'rz',
+    p: 'p',
+    phase: 'p',
+    qft: 'qft',
+    iqft: 'iqft',
+    'qft_dagger': 'iqft',
+    'inverse_qft': 'iqft',
+    toffoli: 'toffoli',
+  }
+  return map[n] ?? n
+}
+
+/**
  * Transform a CircuitGate or library gate back into the StoreGate format
  */
 const transformCircuitGateToStoreGate = (gate: CircuitGate): StoreGate => {
@@ -73,7 +128,7 @@ export const decodeJSON = (json: string): DecodedCircuit => {
     const qubits: Qubit[] = (parsed.qubits || []).map((q: string, i: number) => ({ id: i, name: q }))
     const gates: Gate[] = (parsed.gates || []).map((g: any, index: number) => ({
       id: g.id ?? `${g.type}_${Math.random().toString(36).substring(2, 8)}`,
-      type: g.type,
+      type: normalizeGateName(g.type),
       qubit: g.qubit ?? 0,
       targets: g.targets ?? [],
       controls: g.controls ?? [],
@@ -112,56 +167,60 @@ export const decodeQiskit = (code: string): DecodedCircuit => {
 
   while ((match = gateRegex.exec(code)) !== null) {
     const [, gateName, args] = match;
-    const lname = gateName.toLowerCase();
+  const lname = normalizeGateName(gateName)
 
-    const argList = args.split(',').map(a => a.trim());
-    const controls: number[] = [];
-    const targets: number[] = [];
-    const params: Record<string, number | string> = {};
+    const argList = args.length ? args.split(',').map(a => a.trim()).filter(Boolean) : []
+    const controls: number[] = []
+    const targets: number[] = []
+    const params: Record<string, number | string> = {}
 
     // Detect multi-qubit controlled gates
     if (lname === 'cx' || lname === 'cnot' || lname === 'cz') {
-      const control = parseInt(argList[0]) ?? 0;
-      const target = parseInt(argList[1]) ?? 0;
-      controls.push(control);
-      targets.push(target);
+      const control = parseQubitIndex(argList[0])
+      const target = parseQubitIndex(argList[1])
+      controls.push(control)
+      targets.push(target)
     } else if (lname === 'ccx' || lname === 'toffoli') {
-      controls.push(parseInt(argList[0]) ?? 0, parseInt(argList[1]) ?? 0);
-      targets.push(parseInt(argList[2]) ?? 0);
+      controls.push(parseQubitIndex(argList[0]), parseQubitIndex(argList[1]))
+      targets.push(parseQubitIndex(argList[2]))
     } else if (lname === 'swap') {
-      targets.push(parseInt(argList[0]) ?? 0, parseInt(argList[1]) ?? 0);
+      targets.push(parseQubitIndex(argList[0]), parseQubitIndex(argList[1]))
     } else if (['rx','ry','rz','p'].includes(lname)) {
-      const qubit = parseInt(argList[argList.length - 1]) ?? 0;
-      targets.push(qubit);
-      const val = parseFloat(argList[0]) ?? 0;
-      if (lname === 'rx' || lname === 'ry') params.theta = val;
-      else params.phi = val;
+      // rotations in Qiskit are usually qc.rx(theta, q[0])
+      const qubit = parseQubitIndex(argList[argList.length - 1])
+      targets.push(qubit)
+      const valRaw = argList[0]
+      const val = valRaw ? Number(String(valRaw).replace(/[^0-9eE+\-\.]/g, '')) : 0
+      const numericVal = isNaN(Number(val)) ? 0 : Number(val)
+      if (lname === 'rx' || lname === 'ry') params.theta = numericVal
+      else params.phi = numericVal
     } else if (['h','x','y','z','s','t'].includes(lname)) {
-      const qubit = parseInt(argList[0]) ?? 0;
-      targets.push(qubit);
+      const qubit = parseQubitIndex(argList[0])
+      targets.push(qubit)
     } else if (lname === 'measure') {
-      // Only parse as gate if arg0 === arg1 to avoid duplicate measures
-      const qubit0 = parseInt(argList[0]) ?? 0;
-      const qubit1 = parseInt(argList[1]) ?? 0;
-      if (qubit0 === qubit1) targets.push(qubit0);
-      else continue; // skip if it's a classical register measure
+      // measure(q, c) or measure(q)
+      const qubit = parseQubitIndex(argList[0])
+      targets.push(qubit)
     } else {
-      const qubit = parseInt(argList[0]) ?? 0;
-      targets.push(qubit);
+      // Fallback: try to extract any numeric args as qubits
+      argList.forEach(a => {
+        const n = parseQubitIndex(a)
+        if (!Number.isNaN(n)) targets.push(n)
+      })
     }
 
     // Determine main qubit and remove overlap
-    const uniqueTargets = targets.filter(t => !controls.includes(t));
-    const qubitIndex = controls.length > 0 ? controls[0] : uniqueTargets[0] ?? 0;
+    const uniqueTargets = targets.filter(t => !controls.includes(t))
+  const qubitIndex = controls.length > 0 ? controls[0] : uniqueTargets[0] ?? 0
 
     // Compute max position among involved qubits
-    const involvedQubits = [...controls, ...uniqueTargets];
-    let maxPos = 0;
+    const involvedQubits = Array.from(new Set([...controls, ...uniqueTargets]))
+    let maxPos = 0
     involvedQubits.forEach(q => {
-      const pos = positions[q] ?? 0;
-      if (pos > maxPos) maxPos = pos;
-    });
-    involvedQubits.forEach(q => positions[q] = maxPos + 1);
+      const pos = positions[q] ?? 0
+      if (pos > maxPos) maxPos = pos
+    })
+    involvedQubits.forEach(q => (positions[q] = maxPos + 1))
 
     gates.push({
       id: `${lname}_${Math.random().toString(36).substring(2, 8)}`,
@@ -171,7 +230,7 @@ export const decodeQiskit = (code: string): DecodedCircuit => {
       controls,
       params,
       position: maxPos
-    });
+    })
   }
 
   return createDecodedCircuit(qubits, gates);
@@ -196,27 +255,45 @@ export const decodeCirq = (code: string): DecodedCircuit => {
     }
   }
 
-  const gateRegex = /cirq\.([a-zA-Z]+)\(([^)]*)\)/gi
+  // Match both forms:
+  //  - cirq.H(qubits[0])
+  //  - cirq.rx(angle)(qubits[0])  (nested call where parameters appear first)
+  const gateRegex = /cirq\.([a-zA-Z_][a-zA-Z0-9_]*)\(([^)]*)\)(?:\s*\(\s*([^)]+)\s*\))?/gi
   let match
   while ((match = gateRegex.exec(code)) !== null) {
-    const [_, name, args] = match
+    const [, name, primaryArgs, secondaryArgs] = match
+    const lname = normalizeGateName(name)
     const targets: number[] = []
     const controls: number[] = []
     const params: Record<string, number | string> = {}
 
-    args.split(',').map(a => a.trim()).forEach((a, i) => {
-      const qMatch = a.match(/q\[(\d+)\]/)
-      if (qMatch) targets.push(Number(qMatch[1]))
+    // primaryArgs may be parameters (rx(angle)) or qubit refs (H(qubits[0]))
+    // secondaryArgs, if present, will contain the qubit refs for param-style calls
+    const qubitArgString = secondaryArgs ?? primaryArgs
+    const paramString = secondaryArgs ? primaryArgs : ''
+
+    // parse qubit args (support qubits[0], qubit0, q[0], etc.)
+    qubitArgString.split(',').map(a => a.trim()).filter(Boolean).forEach((a, i) => {
+      // if looks like a qubit reference, parse index
+      const looksLikeQubit = /\[\d+\]/.test(a) || /\w+\d+$/.test(a)
+      if (looksLikeQubit) targets.push(parseQubitIndex(a))
       else if (!isNaN(Number(a))) params[`param${i}`] = Number(a)
     })
+
+    // parse parameter string (for rotations) if present
+    if (paramString) {
+      // try to extract a numeric literal from paramString
+      const num = Number(String(paramString).replace(/[^0-9eE+\-\.]/g, ''))
+      if (!Number.isNaN(num)) params.theta = num
+    }
 
     const qubitIndex = targets[0] ?? 0
     const pos = positions[qubitIndex] ?? 0
     positions[qubitIndex] = pos + 1
 
     gates.push({
-      id: `${name}_${Math.random().toString(36).substring(2, 8)}`,
-      type: name.toLowerCase(),
+      id: `${lname}_${Math.random().toString(36).substring(2, 8)}`,
+      type: lname,
       qubit: qubitIndex,
       targets,
       controls,
@@ -258,12 +335,9 @@ export const decodeQASM = (qasm: string): DecodedCircuit => {
     // Gate line
     const gateMatch = gateRegex.exec(line)
     if (!gateMatch) continue
-    let [, gateName, args] = gateMatch
-    let lname = gateName.toLowerCase()
-
-    // Normalize some gates
-    if (lname === 'cx') lname = 'cnot'
-    else if (lname === 'ccx') lname = 'toffoli'
+  let [, gateName, args] = gateMatch
+  let lname = gateName.toLowerCase()
+  lname = normalizeGateName(lname)
 
     const argList = args.split(',').map(a => a.trim())
     const controls: number[] = []
@@ -272,7 +346,7 @@ export const decodeQASM = (qasm: string): DecodedCircuit => {
 
     // Multi-qubit controlled gates
     if (['cnot', 'cy', 'cz', 'toffoli'].includes(lname)) {
-      const indices = argList.map(a => parseInt(a.match(/\w+\[(\d+)\]/)?.[1] ?? '0'))
+      const indices = argList.map(a => parseQubitIndex(a))
 
       if (lname === 'toffoli') {
         controls.push(indices[0], indices[1])
@@ -282,7 +356,7 @@ export const decodeQASM = (qasm: string): DecodedCircuit => {
         targets.push(indices[1])
       }
     } else if (lname === 'swap') {
-      const indices = argList.map(a => parseInt(a.match(/\w+\[(\d+)\]/)?.[1] ?? '0'))
+      const indices = argList.map(a => parseQubitIndex(a))
       targets.push(...indices)
     } else {
       // Single-qubit gates (and parameterized gates)

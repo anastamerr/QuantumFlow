@@ -1,4 +1,5 @@
 import React, { useRef } from 'react'
+import { Button, useToast, useColorModeValue } from '@chakra-ui/react'
 import { decodeCircuitFile } from '../generator/decoders/decodersInterface' // your decoder module
 import { DecodedCircuit } from '../generator/decoders/decoders'
 
@@ -8,6 +9,9 @@ interface ImportCircuitButtonProps {
 
 const ImportCircuitButton: React.FC<ImportCircuitButtonProps> = ({ onCircuitDecoded }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
+  const bg = useColorModeValue('cyan.300', 'cyan.600')
+  const hoverBg = useColorModeValue('cyan.400', 'cyan.700')
 
   const handleButtonClick = () => {
     fileInputRef.current?.click()
@@ -20,9 +24,22 @@ const ImportCircuitButton: React.FC<ImportCircuitButtonProps> = ({ onCircuitDeco
     try {
       const decoded = await decodeCircuitFile(file)
       onCircuitDecoded(decoded)
+      toast({
+        title: 'File imported',
+        description: `${file.name} parsed successfully.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      })
     } catch (err: any) {
       console.error('Failed to import circuit:', err)
-      alert(err.message)
+      toast({
+        title: 'Import failed',
+        description: err?.message ?? 'Could not import the circuit file.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
     } finally {
       // Reset the input so the same file can be selected again if needed
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -36,14 +53,20 @@ const ImportCircuitButton: React.FC<ImportCircuitButtonProps> = ({ onCircuitDeco
         ref={fileInputRef}
         style={{ display: 'none' }}
         onChange={handleFileChange}
-        accept=".json,.py,.qasm"
+        accept=".json,.py,.qasm,.txt"
       />
-      <button
+      <Button
         onClick={handleButtonClick}
-        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors"
+        bg={bg}
+        _hover={{ bg: hoverBg }}
+        color="white"
+        size="sm"
+        fontWeight="semibold"
+        borderRadius="md"
+        boxShadow="sm"
       >
         Import
-      </button>
+      </Button>
     </div>
   )
 }
