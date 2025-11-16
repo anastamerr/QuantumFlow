@@ -139,12 +139,25 @@ const SimulationPanel = () => {
           num_qubits: qubits.length,
           gates: storeGates,
           shots,
-          memory: false,
+          memory: true, // request per-shot memory so other UIs can consume sequences
         });
         setServerConnected(true);
         setResults(response.probabilities);
         setSimulationComplete(true);
         setActiveTab(1);
+        try {
+          // Broadcast a global event so other UI components (e.g. ProjectPanel) can react
+          window.dispatchEvent(new CustomEvent('qflow:simulation:complete', {
+            detail: {
+              probabilities: response.probabilities,
+              shots,
+              memory: response.memory ?? null,
+            }
+          }));
+        } catch (e) {
+          // ignore if event dispatching fails in some environments
+          console.warn('Failed to dispatch simulation complete event', e);
+        }
       } catch (err) {
         console.error('Backend execution error:', err);
         setServerConnected(false);

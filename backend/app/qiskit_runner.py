@@ -160,7 +160,9 @@ def run_circuit(
     try:
         if memory:
             mem = result.get_memory()
-            memory_out = mem[0] if isinstance(mem, list) else mem
+            # Ensure we return the full memory list (one bitstring per shot) so the
+            # API response matches the ExecuteResponse model which expects a list.
+            memory_out = mem if isinstance(mem, list) else [mem]
     except Exception:
         memory_out = None
 
