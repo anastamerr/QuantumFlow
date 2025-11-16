@@ -36,13 +36,11 @@ interface ProjectIdea {
 const PROJECT_IDEAS: ProjectIdea[] = [
   // Beginner
   { id: "quantum-randomness", title: "Quantum Random Number Generator", difficulty: "Beginner", description: "Use a single qubit to generate true quantum randomness!" },
-  { id: "quantum-music", title: "Quantum Music Generator", difficulty: "Beginner", description: "Map random bits to a C major scale and plays music!." },
-  // { id: "grover-visualizer", title: "Grover's Algorithm Visualizer", difficulty: "Beginner", description: "Visualize how Grover amplifies probability." },
-  { id: "qft-educational-tool", title: "Quantum Fourier Transform Explorer", difficulty: "Beginner", description: "Step through QFT on few qubits." },
-  { id: "quantum-gates-animator", title: "Interactive Quantum Gates Animator", difficulty: "Beginner", description: "See gate effects on qubit states." },
+  { id: "quantum-music", title: "Quantum Music Generator", difficulty: "Beginner", description: "Maps random qubits to a C major scale and plays music! (Preferably 2 qubits)" },
+  { id: "quantum-classic-gates", title: "Classical Gates in the Quantum World", difficulty: "Beginner", description: "Discover how to build classical gates using quantum gates!" },
   
   // Intermediate
-  { id: "qasm-to-visual", title: "QASM-to-Visualizer Converter", difficulty: "Intermediate", description: "Convert QASM text to a visual circuit." },
+  { id: "quantum-half-adder", title: "Quantum Half Adder", difficulty: "Intermediate", description: "Simulate half adders using quantum gates!" },
   { id: "quantum-teleportation-demo", title: "Quantum Teleportation Tutorial", difficulty: "Intermediate", description: "Interactive teleportation demo." },
  
 
@@ -119,12 +117,18 @@ const ProjectPanel: React.FC = () => {
     setFloatingProject(idea)
     setFloatingStep(0)
     setFloatingOpen(true)
+    // For the half-adder project, show default qubits all zero inside the floating card
+    if (idea.id === 'quantum-half-adder') {
+      try { setFirstShot('0000') } catch {}
+    }
   }
 
   const closeFloating = () => {
     setFloatingOpen(false)
     setFloatingProject(null)
     setFloatingStep(0)
+    // Clear the temporary first-shot display when the floating panel closes
+    try { setFirstShot(null) } catch {}
   }
 
   // Music playback state
@@ -132,6 +136,8 @@ const ProjectPanel: React.FC = () => {
   const audioCtxRef = useRef<AudioContext | null>(null)
   // Simulation-provided bits (enabled after backend simulation)
   const [simulationBits, setSimulationBits] = useState<number[] | null>(null)
+  // Store the raw first-shot bitstring (e.g. '0101') so we can display per-qubit measurements
+  const [firstShot, setFirstShot] = useState<string | null>(null)
 
   const playNotes = async (notes: number[], tempo = 400) => {
     if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -208,6 +214,8 @@ const ProjectPanel: React.FC = () => {
         if (Array.isArray(mem) && mem.length > 0) {
           // Concatenate shot bitstrings into a flat bit array
           let bitsFromMem: number[] = []
+          // Save the first shot string for display (raw as returned by backend)
+          try { setFirstShot(typeof mem[0] === 'string' ? mem[0] : String(mem[0])) } catch {}
           for (const s of mem) {
             if (typeof s !== 'string') continue
             for (let i = 0; i < s.length; i++) {
@@ -237,6 +245,8 @@ const ProjectPanel: React.FC = () => {
         }
         // chosen is a bitstring like '0101' (MSB..LSB) — convert to array of bits
         const bits = chosen.split('').map(ch => ch === '1' ? 1 : 0)
+        // Save the sampled single-shot string for display
+        try { setFirstShot(chosen) } catch {}
         // Expand to needed bits by repeating
         const targetBits = 16 * 3
         const out: number[] = []
@@ -272,32 +282,59 @@ const ProjectPanel: React.FC = () => {
   // Project-specific steps & code
   const getProjectSteps = (id: string) => {
     if (id === 'quantum-randomness') {
-      const code = `# Quantum Random Number Generator (Qiskit)\n# Generates an N-bit random string by preparing N qubits in superposition and measuring them.\n\nfrom qiskit import QuantumCircuit, Aer, execute\n\ndef quantum_random_bits(n):\n    qc = QuantumCircuit(n, n)\n    qc.h(range(n))\n    qc.measure(range(n), range(n))\n    backend = Aer.get_backend('qasm_simulator')\n    job = execute(qc, backend=backend, shots=1)\n    result = job.result()\n    counts = result.get_counts(qc)\n    bitstr = list(counts.keys())[0]  # e.g. '0101'\n    return bitstr\n\n# Example: generate 8 random bits\nif __name__ == '__main__':\n    print(quantum_random_bits(8))\n`;
-
       return [
-        {text: 'Start with a single qubit (Q0). \n Its initial state is |0⟩, meaning it is definitely 0!'},
-        {text: 'Drag and drop an H gate (Hadamard) onto Q0.\n Now the qubit is 50% chance 0, 50% chance 1 and is in superposition!.'},
-        {text: 'Add a Measure (M) gate to Q0, after the H gate.\n Measurement collapses the superposition randomly into 0 or 1!' },
+        {text: 'Start with a single qubit (Q0). Its initial state is |0⟩, meaning it is definitely 0!'},
+        {text: 'Drag and drop an H gate (Hadamard) onto Q0. Now the qubit is 50% chance 0, 50% chance 1 and is in superposition!.'},
+        {text: 'Add a Measure (M) gate to Q0, after the H gate.Measurement collapses the superposition randomly into 0 or 1!' },
         {text: 'Press Run!' },
         {text: 'Set Shots = 50 or 100 and run again to see true statistical randomness!' },
         {text: 'To create an n-bit random number, repeat for more qubits!' },
         {text: 'Congratulations! You created a true random number generator!' }
-
-
       ]
     }
 
     if (id === 'quantum-music') {
-      const jsCode = `// Map random bits to C major scale and play using WebAudio\nconst scale = [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88, 523.25];\n// bits is an array of 0/1 values\nfunction bitsToNotes(bits) {\n  const notes = []\n  for (let i=0;i<bits.length;i+=3) {\n    const g = (bits[i]||0) | ((bits[i+1]||0)<<1) | ((bits[i+2]||0)<<2)\n    notes.push(scale[g % scale.length])\n  }\n  return notes\n}\n`;
-
       return [
-        { text: 'Overview: Generate random bits (quantum or crypto) and map groups to notes in the C major scale to create short musical phrases.' },
-        { text: 'Setup: You can use the Quantum Randomness project to provide bits, or use local crypto.getRandomValues for demo.' },
-        { text: 'Generate Bits: Prepare N qubits in |+> and measure; each measurement gives random bits. Collect enough bits for your phrase.' },
-        { text: 'Map & Play: Group bits (e.g. 3 bits per note) and map to scale degrees. Use WebAudio to play frequencies.', code: jsCode },
-        { text: 'Play: Click Play to generate a fresh random phrase and hear it mapped to C major.' },
+        { text: 'Start by adding Hadamard (H) gates to 2 qubits!' },
+        { text: 'Add a Measure (M) after the H gates!' },
+        { text: 'Click on Simulation from the top bar!' },
+        { text: 'Click Run Simulation!' },
+        { text: 'Click Play (after simulation) and hear the first few notes!'},
+        { text: 'Whenever you want to hear new notes, rerun the simulation and play the first few notes again!' },
+        { text: 'Congratulations! You have built a quantum music generator!' }
       ]
     }
+
+    if (id === 'quantum-classic-gates') {
+      return [
+        { text: 'Start by adding 2 qubits to the circuit, A and B respectively!' },
+        { text: 'To build a classical AND gate, add a Toffoli (CCNOT) gate with A and B as controls and a new qubit C as target!' },
+        { text: 'Add Measure (M) gates to all qubits!' },
+        { text: 'Click on Simulation from the top bar!' },
+        { text: 'Click Run Simulation!' },
+        { text: 'Check the states of the measured qubits and verify the AND gate output!' },
+        { text: 'To build a classical OR gate, add CNOT gates from A to C and B to C instead of the Toffoli!' },
+        { text: 'Rerun the simulation and verify the OR gate output!' },
+        { text: 'Congratulations! You have built classical gates using quantum gates!' }
+      ]
+    }
+
+    if (id === 'quantum-half-adder') {
+      return [
+        { text: 'Start by adding 4 qubits to the circuit, Carry, Sum, A and B respectively (the order matters) !' },
+        { text: 'Add Hadamard (H) gates to q2 and q3, A and B respectively!' },
+        { text: 'Apply a CNOT gate between q2 (A) and Sum, with A as control!' },
+        { text: 'Apply a CNOT gate between q3 (B) and Sum, with B as control!' },
+        { text: 'Place a Toffoli CCNOT on q1, which will reflect on the other qubits!' },
+        { text: 'Set the control as q2 and q3 (A and B) and the target as q0 (Carry)!' },
+        { text: 'Add Measure (M) to all qubits!' },
+        { text: 'Click on Simulation from the top bar!' },
+        { text: 'Click Run Simulation!' },
+        { text: 'Check the states of the measured first qubits and verify the output!' },
+        { text: 'Congratulations! You have built a quantum half-adder!' }
+      ]
+    }
+
 
     // default placeholder
     return [
@@ -388,6 +425,24 @@ const ProjectPanel: React.FC = () => {
           </HStack>
 
                 <Box p={4}>
+                    {/* Half-adder measurement display (shows only in floating panel) */}
+                    {floatingProject.id === 'quantum-half-adder' && firstShot && (
+                      <Box mb={3}>
+                        <Text fontSize="sm" color={useColorModeValue('gray.600','gray.400')} mb={2}>First shot (measurements):</Text>
+                        <HStack spacing={2} mb={2}>
+                          {['Carry','Sum','A','B'].map((name, i) => {
+                            const s = firstShot as string
+                            const idx = s.length - 1 - i
+                            const val = (idx >= 0 && idx < s.length) ? s[idx] : 'NA'
+                            return (
+                              <Box key={name} p={1} px={2} borderRadius="md" bg={useColorModeValue('gray.50','gray.700')}>
+                                <Text fontSize="xs" fontWeight="bold">{name}: {val}</Text>
+                              </Box>
+                            )
+                          })}
+                        </HStack>
+                      </Box>
+                    )}
             {(() => {
               const steps = getProjectSteps(floatingProject.id)
               const step = steps[floatingStep] || { title: '', text: '' }
@@ -395,11 +450,7 @@ const ProjectPanel: React.FC = () => {
                 <>
                 {/* text settings */}
                   <Text fontSize="sm" mb={3}>{step.text}</Text>
-                  {'code' in step && step.code && (
-                  <Box as="pre" fontSize="xs" p={2} bg={useColorModeValue('gray.50','gray.900')} borderRadius="md" overflowX="auto" mb={3}>
-                    {step.code}
-                  </Box>
-                )}
+                 
 
                   <HStack mt={3} justify="space-between">
                     <Button size="sm" variant="ghost" isDisabled={floatingStep === 0} onClick={() => setFloatingStep(Math.max(0, floatingStep - 1))}>Back</Button>
