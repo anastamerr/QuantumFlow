@@ -1,7 +1,14 @@
-import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack } from '@chakra-ui/react'
+import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack, Badge } from '@chakra-ui/react'
+import { keyframes } from '@emotion/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
 import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
+
+const pulse = keyframes`
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,212,0, 0.85); }
+  70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(255,212,0, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,212,0, 0); }
+`
 
 const Header = () => {
   const dispatch = useDispatch()
@@ -46,6 +53,37 @@ const Header = () => {
             onClick={() => dispatch(setActivePanel('library'))}
           >
             Library
+          </Button>
+          <Button
+            size="sm"
+            variant={activePanel === 'blochSphere' ? 'solid' : 'ghost'}
+            colorScheme="cyan"
+            onClick={() => dispatch(setActivePanel('blochSphere'))}
+            position="relative"
+          >
+            <Box position="relative" display="inline-flex" alignItems="center" px={2}>
+              Bloch Sphere
+              <Box
+                position="absolute"
+                top={-3}
+                right={-3}
+                bg="#FFD400"
+                color="black"
+                borderRadius="full"
+                px={2}
+                py={0}
+                fontWeight={700}
+                fontSize="xs"
+                boxShadow="md"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                zIndex={2}
+                animation={`${pulse} 1.6s ease-in-out infinite`}
+              >
+                <span style={{ marginRight: 6 }}>✨</span>NEW
+              </Box>
+            </Box>
           </Button>
         </HStack>
         <Spacer />
