@@ -24,8 +24,10 @@ starlette==0.38.6
 stevedore==5.5.0
 symengine==0.13.0
 sympy==1.14.0
+requests==2.31.0
 typing_extensions==4.15.0
 uvicorn==0.30.6
 uvloop==0.22.1
 watchfiles==1.1.1
 websockets==15.0.1
+google-genai

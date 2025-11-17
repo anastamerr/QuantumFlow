@@ -20,6 +20,7 @@ import ResizablePanel from '../layout/ResizablePanel'
 import { AddIcon, MinusIcon } from '@chakra-ui/icons'
 import ImportCircuitButton from '../ui-helpers/importButton'
 import { DecodedCircuit } from '../generator/decoders/decoders'
+import AiChatPanel from '../ui-helpers/AiChatPanel'
 
 const CircuitCanvas: React.FC = () => {
   const dispatch = useDispatch()
@@ -323,6 +324,8 @@ const CircuitCanvas: React.FC = () => {
           <Box ref={svgContainerRef} borderWidth={1} borderColor={canvasBorder} borderRadius="md" p={4} overflowX="auto" overflowY="auto" className="circuit-svg-container" h="100%" />
         </Box>
       </ResizablePanel>
+      {/* AI Assistant panel beneath visualization */}
+      <AiChatPanel />
     </Box>
   )
 }

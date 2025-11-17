@@ -12,5 +12,15 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // Proxy `/api` requests to the backend during development to avoid CORS
+    // and to allow the frontend to call `/api/...` directly.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+      },
+    },
   },
 })

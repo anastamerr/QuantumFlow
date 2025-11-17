@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Literal
 from pydantic import BaseModel, Field
 
 
@@ -27,3 +27,58 @@ class ExecuteResponse(BaseModel):
     probabilities: Dict[str, float]
     memory: Optional[List[str]] = None
     status: str = "success"
+
+
+# AI assistant action models
+class AddGateAction(BaseModel):
+    type: Literal["add_gate"] = "add_gate"
+    gate: GateModel
+
+
+class RemoveGateAction(BaseModel):
+    type: Literal["remove_gate"] = "remove_gate"
+    id: str
+
+
+class UpdateGateAction(BaseModel):
+    type: Literal["update_gate"] = "update_gate"
+    id: str
+    updates: Dict[str, Union[int, float, str, list, dict]]
+
+
+class AddQubitAction(BaseModel):
+    type: Literal["add_qubit"] = "add_qubit"
+
+
+class RemoveQubitAction(BaseModel):
+    type: Literal["remove_qubit"] = "remove_qubit"
+    id: int
+
+
+class ImportCircuitAction(BaseModel):
+    type: Literal["import_circuit"] = "import_circuit"
+    circuit: Dict
+
+
+class AddGatesAction(BaseModel):
+    type: Literal["add_gates"] = "add_gates"
+    gates: List[GateModel]
+
+
+AIAction = Union[
+    AddGateAction,
+    RemoveGateAction,
+    UpdateGateAction,
+    AddQubitAction,
+    RemoveQubitAction,
+    ImportCircuitAction,
+    AddGatesAction,
+]
+
+
+class AIResponse(BaseModel):
+    assistant_text: str
+    actions: List[AIAction] = []
+    # Optionally include a suggested circuit state (qubits/gates) the assistant recommends
+    qubits: Optional[List[Dict]] = None
+    gates: Optional[List[GateModel]] = None
