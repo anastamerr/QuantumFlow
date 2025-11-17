@@ -38,33 +38,18 @@ class QubitTouchdownCell(BaseModel):
     amplitude: float             # or any quantum-related metric
 
 
-class QubitTouchdownState(BaseModel):
-    game_id: str
-    mode: GameMode
-    current_player: int
-    board: List[QubitTouchdownCell]
-    is_over: bool = False
-    winner: Optional[int] = None
 
 
 class NewGameRequest(BaseModel):
     mode: GameMode
 
 
-class NewGameResponse(BaseModel):
-    status: str
-    state: QubitTouchdownState
 
 
 class MoveRequest(BaseModel):
     game_id: str
     target_index: int            # where the player wants to “play”
 
-
-class MoveResponse(BaseModel):
-    status: str
-    state: QubitTouchdownState
-    message: Optional[str] = None
 
 
 class QubitPosition(str, Enum):
@@ -104,7 +89,6 @@ class QubitGameMode(str, Enum):
     PVP = "PVP"  # 2 local players
     PVC = "PVC"  # player vs computer
 
-
 class QubitTouchdownState(BaseModel):
     game_id: str
     mode: QubitGameMode
@@ -113,7 +97,18 @@ class QubitTouchdownState(BaseModel):
     players: List[QubitPlayerState]
     remaining_cards: int
     is_over: bool
-    last_action: Optional[str] = None
+    last_die_roll: Optional[int] = None
+
+
+class NewGameResponse(BaseModel):
+    status: str
+    state: QubitTouchdownState
+
+class MoveResponse(BaseModel):
+    status: str
+    state: QubitTouchdownState
+    message: Optional[str] = None
+
 
 
 class QubitNewGameRequest(BaseModel):

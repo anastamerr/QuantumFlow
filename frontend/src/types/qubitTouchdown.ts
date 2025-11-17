@@ -34,6 +34,8 @@ export interface QubitGameState {
   remaining_cards: number
   is_over: boolean
   last_action?: string | null
+  last_die_roll?: number | null
+
 }
 
 export interface NewGamePayload {

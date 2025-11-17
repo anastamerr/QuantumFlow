@@ -116,6 +116,7 @@ class InternalGame:
     is_over: bool = False
     last_action: str | None = None
     players: Dict[int, InternalPlayer] = field(default_factory=dict)
+    last_die_roll: int | None = None    
 
     def to_state(self) -> QubitTouchdownState:
         return QubitTouchdownState(
@@ -126,6 +127,7 @@ class InternalGame:
             remaining_cards=self.remaining_cards,
             is_over=self.is_over,
             last_action=self.last_action,
+            last_die_roll=self.last_die_roll,
             players=[
                 QubitPlayerState(
                     id=p.id,
@@ -143,8 +145,10 @@ class InternalGame:
 GAMES: Dict[str, InternalGame] = {}
 
 
-def _random_die() -> QubitPosition:
-    return QubitPosition.ZERO if random.randint(0, 1) == 0 else QubitPosition.ONE
+def _random_die(game: InternalGame) -> QubitPosition:
+    value = random.randint(0, 1)
+    game.last_die_roll = value
+    return QubitPosition.ZERO if value == 0 else QubitPosition.ONE
 
 
 def _new_card() -> QubitCard:
@@ -164,7 +168,7 @@ def _kickoff_after_touchdown(game: InternalGame, scoring_player_id: int) -> None
     game.last_action = f"{scoring_player.name} scored a touchdown!"
 
     # Kickoff: reset ball to 0 or 1 using a binary die.
-    game.ball_position = _random_die()
+    game.ball_position = _random_die(game)
 
     # The other player now returns the kickoff.
     other_id = 1 if scoring_player_id == 2 else 2
@@ -184,7 +188,7 @@ def _handle_measurement(game: InternalGame) -> str:
         return "Measurement on 0 or 1 - ball stays in place (failed punt)."
 
     # Successful punt: collapse to 0 or 1 with 50-50 chance.
-    outcome = _random_die()
+    outcome = _random_die(game)
     game.ball_position = outcome
     return f"Measurement collapse - ball moved to {outcome.value}."
 
@@ -306,7 +310,7 @@ def create_new_game(req: QubitNewGameRequest) -> QubitTouchdownState:
     kicking_player_id = random.choice([1, 2])
 
     # Kickoff: ball goes to 0 or 1 randomly.
-    game.ball_position = _random_die()
+    game.ball_position = _random_die(game)
 
     # The other player returns the kickoff.
     game.current_player_id = 1 if kicking_player_id == 2 else 2
@@ -317,6 +321,9 @@ def create_new_game(req: QubitNewGameRequest) -> QubitTouchdownState:
     )
 
     GAMES[game_id] = game
+    if game.mode == QubitGameMode.PVC and game.current_player_id == 2:
+        _maybe_take_computer_turn(game)
+
     return game.to_state()
 
 
