@@ -17,6 +17,7 @@ import ResizablePanel from './components/layout/ResizablePanel'
 import AIPanel from './components/panels/AIPanel'
 import LibraryPanel from './components/panels/LibraryPanel'
 import ProjectPanel from './components/panels/ProjectPanel'
+import BlochSpherePage from './components/visualization/BlochSpherePage'
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
@@ -92,8 +93,8 @@ function App() {
       <VStack spacing={0} align="stretch" h="100vh">
         <Header />
         <Flex flex={1} overflow="hidden">
-          {/* Fixed sidebar that doesn't scroll (hidden when viewing Library full-page) */}
-          {activePanel !== 'library' && (
+          {/* Fixed sidebar that doesn't scroll (hidden when viewing Library or Bloch Sphere full-page) */}
+          {activePanel !== 'library' && activePanel !== 'blochSphere' && (
             <Box
               position="sticky"
               top={0}
@@ -106,9 +107,9 @@ function App() {
           )}
           
           {/* Main content area with vertical scrolling */}
-          <Box 
+            <Box 
             flex={1} 
-            p={activePanel === 'library' || activePanel === 'projects' ? 0 : 4} 
+            p={activePanel === 'library' || activePanel === 'projects' || activePanel === 'blochSphere' ? 0 : 4} 
             overflowY={'auto'} 
             h="calc(100vh - 60px)" // Adjust based on header height
             css={{
@@ -133,6 +134,11 @@ function App() {
                 // Library occupies the full content area (replacing sidebar + canvas)
                 <Box flex={1} w="100%" p={0} h="calc(100vh - 60px)">
                   <LibraryPanel />
+                </Box>
+              ) : activePanel === 'blochSphere' ? (
+                // Bloch Sphere page rendered as a React component
+                <Box flex={1} w="100%" p={0} h="calc(100vh - 60px)">
+                  <BlochSpherePage />
                 </Box>
               ) : (
                 <>
