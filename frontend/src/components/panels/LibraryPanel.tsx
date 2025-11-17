@@ -9,10 +9,34 @@ import {
   useColorModeValue,
   Badge,
   Divider,
+  Radio,
+  RadioGroup,
+  Alert,
+  AlertIcon,
+  Collapse,
+  useDisclosure,
 } from "@chakra-ui/react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation?: string;
+  topic?: string;
+}
+
+interface LevelQuiz {
+  id: string;
+  level: "Beginner" | "Intermediate" | "Advanced";
+  title: string;
+  description: string;
+  questions: QuizQuestion[];
+  passingScore: number;
+}
 
 interface TopicItem {
   id: string;
@@ -22,6 +46,7 @@ interface TopicItem {
   content: string;
   contentAfterImage?: string;
   imageUrl?: string;
+  quiz?: QuizQuestion[];
 }
 
 // NOTE: images served from /images (public folder)
@@ -46,6 +71,32 @@ Mathematical Representation:
   |ψ⟩ = α|0⟩ + β|1⟩
 
 Where α and β are probability amplitudes with |α|² + |β|² = 1`,
+    quiz: [
+      {
+        id: "q1",
+        question: "What is the key difference between a classical bit and a qubit?",
+        options: [
+          "A qubit can only be 0 or 1",
+          "A qubit can be in superposition of 0 and 1",
+          "A qubit is faster than a classical bit",
+          "A qubit uses less energy"
+        ],
+        correctAnswer: 1,
+        explanation: "Unlike classical bits that are either 0 or 1, qubits can exist in a superposition of both states simultaneously."
+      },
+      {
+        id: "q2",
+        question: "In the equation |ψ⟩ = α|0⟩ + β|1⟩, what must be true about α and β?",
+        options: [
+          "α + β = 1",
+          "|α|² + |β|² = 1",
+          "α = β",
+          "α and β must be real numbers"
+        ],
+        correctAnswer: 1,
+        explanation: "The probability amplitudes must satisfy the normalization condition |α|² + |β|² = 1 to ensure total probability equals 1."
+      }
+    ]
   },
   {
     id: "bloch-sphere",
@@ -128,6 +179,32 @@ H = 1/√2 * [[1, 1], [1, -1]]
 - Self-inverse
 
 Essential for superpositions.`,
+    quiz: [
+      {
+        id: "q1",
+        question: "What happens when you apply a Hadamard gate to |0⟩?",
+        options: [
+          "It becomes |1⟩",
+          "It becomes (|0⟩ + |1⟩)/√2",
+          "It becomes (|0⟩ - |1⟩)/√2",
+          "Nothing happens"
+        ],
+        correctAnswer: 1,
+        explanation: "H|0⟩ = (|0⟩ + |1⟩)/√2, creating an equal superposition with positive amplitudes."
+      },
+      {
+        id: "q2",
+        question: "What property makes the Hadamard gate special?",
+        options: [
+          "It's the fastest gate",
+          "It's self-inverse (H² = I)",
+          "It only works on certain qubits",
+          "It cannot be undone"
+        ],
+        correctAnswer: 1,
+        explanation: "The Hadamard gate is self-inverse, meaning applying it twice returns the qubit to its original state."
+      }
+    ]
   },
   {
     id: "bell-state",
@@ -286,6 +363,32 @@ Steps:
 5. Measure
 
 Amplitude amplification generalizes Grover.`,
+    quiz: [
+      {
+        id: "q1",
+        question: "What is the time complexity of Grover's algorithm for searching N items?",
+        options: [
+          "O(N)",
+          "O(log N)",
+          "O(√N)",
+          "O(N²)"
+        ],
+        correctAnswer: 2,
+        explanation: "Grover's algorithm provides a quadratic speedup, reducing the search time from O(N) classically to O(√N) quantumly."
+      },
+      {
+        id: "q2",
+        question: "How many iterations does Grover's algorithm need for optimal results?",
+        options: [
+          "Exactly N iterations",
+          "Approximately π√N/4 iterations",
+          "Log N iterations",
+          "One iteration is always enough"
+        ],
+        correctAnswer: 1,
+        explanation: "The optimal number of iterations is approximately π√N/4 to maximize the probability of finding the target state."
+      }
+    ]
   },
   {
     id: "quantum-phase-estimation",
@@ -361,6 +464,44 @@ A hybrid quantum-classical algorithm designed to solve combinatorial optimizatio
 • Optimal depth p unknown for most problems
 • Classical simulation limits understanding
 • Noise sensitivity increases with depth`,
+    quiz: [
+      {
+        id: "q1",
+        question: "What does QAOA stand for?",
+        options: [
+          "Quantum Amplitude Optimization Algorithm",
+          "Quantum Approximate Optimization Algorithm",
+          "Quantum Automatic Operation Algorithm",
+          "Quantum Advanced Optical Algorithm"
+        ],
+        correctAnswer: 1,
+        explanation: "QAOA stands for Quantum Approximate Optimization Algorithm, designed for combinatorial optimization problems."
+      },
+      {
+        id: "q2",
+        question: "What type of algorithm is QAOA?",
+        options: [
+          "Purely quantum",
+          "Purely classical",
+          "Hybrid quantum-classical",
+          "Photonic only"
+        ],
+        correctAnswer: 2,
+        explanation: "QAOA is a hybrid algorithm that uses quantum circuits for state preparation and classical optimization to adjust parameters."
+      },
+      {
+        id: "q3",
+        question: "What happens as the depth parameter p increases in QAOA?",
+        options: [
+          "Solutions get worse",
+          "Solutions can improve but circuits get longer",
+          "Runtime decreases",
+          "Number of qubits decreases"
+        ],
+        correctAnswer: 1,
+        explanation: "Higher depth p can lead to better approximations but requires longer quantum circuits, which are more susceptible to noise."
+      }
+    ]
   },
   {
     id: "quantum-walks",
@@ -1487,15 +1628,397 @@ Useful in NISQ era.`,
   },
 ];
 
+// Comprehensive Level-Based Quizzes
+const LEVEL_QUIZZES: LevelQuiz[] = [
+  {
+    id: "beginner-quiz",
+    level: "Beginner",
+    title: "Beginner Quantum Computing Quiz",
+    description: "Test your understanding of fundamental quantum computing concepts",
+    passingScore: 70,
+    questions: [
+      {
+        id: "q1",
+        question: "What is the key difference between a classical bit and a qubit?",
+        options: [
+          "A qubit can only be 0 or 1",
+          "A qubit can be in superposition of 0 and 1",
+          "A qubit is faster than a classical bit",
+          "A qubit uses less energy"
+        ],
+        correctAnswer: 1,
+        explanation: "Unlike classical bits that are either 0 or 1, qubits can exist in a superposition of both states simultaneously.",
+        topic: "Qubits and Superposition"
+      },
+      {
+        id: "q2",
+        question: "In the equation |ψ⟩ = α|0⟩ + β|1⟩, what must be true about α and β?",
+        options: [
+          "α + β = 1",
+          "|α|² + |β|² = 1",
+          "α = β",
+          "α and β must be real numbers"
+        ],
+        correctAnswer: 1,
+        explanation: "The probability amplitudes must satisfy the normalization condition |α|² + |β|² = 1 to ensure total probability equals 1.",
+        topic: "Qubits and Superposition"
+      },
+      {
+        id: "q3",
+        question: "On the Bloch sphere, where are the |0⟩ and |1⟩ states located?",
+        options: [
+          "|0⟩ at south pole, |1⟩ at north pole",
+          "|0⟩ at north pole, |1⟩ at south pole",
+          "Both at the equator",
+          "Both at the center"
+        ],
+        correctAnswer: 1,
+        explanation: "|0⟩ is located at the north pole and |1⟩ at the south pole of the Bloch sphere.",
+        topic: "Bloch Sphere"
+      },
+      {
+        id: "q4",
+        question: "What happens when you measure a qubit in superposition?",
+        options: [
+          "It stays in superposition",
+          "It becomes entangled",
+          "It collapses to either |0⟩ or |1⟩",
+          "It disappears"
+        ],
+        correctAnswer: 2,
+        explanation: "Measurement causes wave function collapse, forcing the qubit into a definite state (|0⟩ or |1⟩) based on the probability amplitudes.",
+        topic: "Quantum Measurement"
+      },
+      {
+        id: "q5",
+        question: "What does the Pauli-X gate do?",
+        options: [
+          "Creates superposition",
+          "Flips |0⟩ ↔ |1⟩",
+          "Adds phase",
+          "Measures the qubit"
+        ],
+        correctAnswer: 1,
+        explanation: "The Pauli-X gate is the quantum NOT gate, flipping |0⟩ to |1⟩ and |1⟩ to |0⟩.",
+        topic: "Pauli Gates"
+      },
+      {
+        id: "q6",
+        question: "What happens when you apply a Hadamard gate to |0⟩?",
+        options: [
+          "It becomes |1⟩",
+          "It becomes (|0⟩ + |1⟩)/√2",
+          "It becomes (|0⟩ - |1⟩)/√2",
+          "Nothing happens"
+        ],
+        correctAnswer: 1,
+        explanation: "H|0⟩ = (|0⟩ + |1⟩)/√2, creating an equal superposition with positive amplitudes.",
+        topic: "Hadamard Gate"
+      },
+      {
+        id: "q7",
+        question: "How do you create a Bell state |Φ+⟩ = (|00⟩ + |11⟩)/√2?",
+        options: [
+          "Apply H to qubit 0, then CNOT with qubit 0 as control",
+          "Apply CNOT then H",
+          "Apply H to both qubits",
+          "Apply X to both qubits"
+        ],
+        correctAnswer: 0,
+        explanation: "Apply Hadamard to create superposition on qubit 0, then CNOT to entangle qubit 1.",
+        topic: "Bell States"
+      },
+      {
+        id: "q8",
+        question: "In quantum circuits, what does reading from left to right represent?",
+        options: [
+          "Space",
+          "Time",
+          "Energy",
+          "Frequency"
+        ],
+        correctAnswer: 1,
+        explanation: "Quantum circuits are read from left to right, representing the time evolution of the quantum system.",
+        topic: "Circuit Basics"
+      }
+    ]
+  },
+  {
+    id: "intermediate-quiz",
+    level: "Intermediate",
+    title: "Intermediate Quantum Computing Quiz",
+    description: "Test your knowledge of quantum algorithms and multi-qubit operations",
+    passingScore: 70,
+    questions: [
+      {
+        id: "q1",
+        question: "What does a CNOT gate do?",
+        options: [
+          "Flips both qubits",
+          "Flips target if control is |1⟩",
+          "Creates superposition",
+          "Measures the qubits"
+        ],
+        correctAnswer: 1,
+        explanation: "CNOT flips the target qubit if and only if the control qubit is in state |1⟩.",
+        topic: "Controlled Gates"
+      },
+      {
+        id: "q2",
+        question: "What is the purpose of the S gate?",
+        options: [
+          "Bit flip",
+          "Adds π/2 phase to |1⟩",
+          "Creates superposition",
+          "Swaps qubits"
+        ],
+        correctAnswer: 1,
+        explanation: "The S gate adds a π/2 phase to the |1⟩ state, rotating around the Z-axis.",
+        topic: "Phase Gates"
+      },
+      {
+        id: "q3",
+        question: "What is the time complexity of the classical FFT?",
+        options: [
+          "O(N)",
+          "O(N log N)",
+          "O(log² N)",
+          "O(N²)"
+        ],
+        correctAnswer: 1,
+        explanation: "The classical Fast Fourier Transform has O(N log N) time complexity.",
+        topic: "Quantum Fourier Transform"
+      },
+      {
+        id: "q4",
+        question: "In phase kickback, what happens when U|ψ⟩ = e^(iθ)|ψ⟩?",
+        options: [
+          "The phase is lost",
+          "The phase transfers to the control qubit in controlled-U",
+          "The eigenstate changes",
+          "Nothing happens"
+        ],
+        correctAnswer: 1,
+        explanation: "When the target is an eigenstate of U, the phase e^(iθ) kicks back to the control qubit.",
+        topic: "Phase Kickback"
+      },
+      {
+        id: "q5",
+        question: "How can you decompose a SWAP gate?",
+        options: [
+          "Three CNOTs: CNOT₁₂ CNOT₂₁ CNOT₁₂",
+          "Two CNOTs and one H",
+          "Three H gates",
+          "One CNOT and two Xs"
+        ],
+        correctAnswer: 0,
+        explanation: "SWAP can be decomposed into three CNOT gates applied in sequence.",
+        topic: "SWAP Gates"
+      },
+      {
+        id: "q6",
+        question: "What does the Deutsch-Jozsa algorithm determine?",
+        options: [
+          "If a function is linear",
+          "If a function is constant or balanced",
+          "The minimum of a function",
+          "The derivative of a function"
+        ],
+        correctAnswer: 1,
+        explanation: "Deutsch-Jozsa determines if a black-box function is constant (all 0s or all 1s) or balanced (half 0s, half 1s).",
+        topic: "Deutsch-Jozsa"
+      },
+      {
+        id: "q7",
+        question: "What is the time complexity of Grover's algorithm for searching N items?",
+        options: [
+          "O(N)",
+          "O(log N)",
+          "O(√N)",
+          "O(N²)"
+        ],
+        correctAnswer: 2,
+        explanation: "Grover's algorithm provides a quadratic speedup, reducing search time from O(N) to O(√N).",
+        topic: "Grover's Algorithm"
+      },
+      {
+        id: "q8",
+        question: "What is Quantum Phase Estimation used for?",
+        options: [
+          "Creating superposition",
+          "Estimating eigenvalue phases",
+          "Measuring qubits",
+          "Swapping qubits"
+        ],
+        correctAnswer: 1,
+        explanation: "QPE estimates the phase θ where U|ψ⟩ = e^(2πiθ)|ψ⟩, crucial for algorithms like Shor's.",
+        topic: "Phase Estimation"
+      }
+    ]
+  },
+  {
+    id: "advanced-quiz",
+    level: "Advanced",
+    title: "Advanced Quantum Computing Quiz",
+    description: "Test your mastery of advanced quantum algorithms and concepts",
+    passingScore: 75,
+    questions: [
+      {
+        id: "q1",
+        question: "What type of algorithm is QAOA?",
+        options: [
+          "Purely quantum",
+          "Purely classical",
+          "Hybrid quantum-classical",
+          "Photonic only"
+        ],
+        correctAnswer: 2,
+        explanation: "QAOA is a hybrid algorithm combining quantum circuits for state preparation with classical optimization.",
+        topic: "QAOA"
+      },
+      {
+        id: "q2",
+        question: "What happens as the depth parameter p increases in QAOA?",
+        options: [
+          "Solutions get worse",
+          "Solutions can improve but circuits get longer",
+          "Runtime decreases",
+          "Number of qubits decreases"
+        ],
+        correctAnswer: 1,
+        explanation: "Higher depth p can lead to better approximations but requires longer quantum circuits, making them more noise-susceptible.",
+        topic: "QAOA"
+      },
+      {
+        id: "q3",
+        question: "What is a key difference between discrete-time and continuous-time quantum walks?",
+        options: [
+          "DTQW requires a coin qubit, CTQW doesn't",
+          "CTQW is faster than DTQW",
+          "DTQW is more accurate",
+          "They are identical"
+        ],
+        correctAnswer: 0,
+        explanation: "Discrete-time quantum walks require a 'coin' qubit for direction, while continuous-time walks evolve without one.",
+        topic: "Quantum Walks"
+      },
+      {
+        id: "q4",
+        question: "Why can't quantum states be copied according to the no-cloning theorem?",
+        options: [
+          "It would violate energy conservation",
+          "It would allow faster-than-light communication",
+          "It would violate the linearity of quantum mechanics",
+          "It's too expensive"
+        ],
+        correctAnswer: 2,
+        explanation: "The no-cloning theorem follows from the linearity of quantum mechanics - perfect copying of unknown quantum states is impossible.",
+        topic: "Error Correction"
+      },
+      {
+        id: "q5",
+        question: "What is the distance of a quantum error-correcting code?",
+        options: [
+          "Number of physical qubits",
+          "Number of logical qubits",
+          "Minimum weight of logical operator",
+          "Maximum number of errors"
+        ],
+        correctAnswer: 2,
+        explanation: "The distance d is the minimum weight of any logical operator, determining the error-correction capability: ⌊(d-1)/2⌋ errors.",
+        topic: "Error Correction"
+      },
+      {
+        id: "q6",
+        question: "In quantum teleportation, what is transmitted?",
+        options: [
+          "The quantum particle itself",
+          "Two classical bits",
+          "Pure energy",
+          "Nothing"
+        ],
+        correctAnswer: 1,
+        explanation: "Quantum teleportation transmits two classical bits that tell Bob which correction to apply to reconstruct the state.",
+        topic: "Teleportation"
+      },
+      {
+        id: "q7",
+        question: "What is the main security principle of BB84 quantum key distribution?",
+        options: [
+          "Computational hardness",
+          "Eavesdropping necessarily disturbs quantum states",
+          "Perfect encryption",
+          "Faster transmission"
+        ],
+        correctAnswer: 1,
+        explanation: "BB84 security relies on quantum mechanics: any eavesdropping attempt necessarily disturbs the quantum states, making it detectable.",
+        topic: "QKD"
+      },
+      {
+        id: "q8",
+        question: "What is the complexity advantage of Amplitude Estimation over classical Monte Carlo?",
+        options: [
+          "Linear speedup",
+          "Quadratic speedup",
+          "Exponential speedup",
+          "No advantage"
+        ],
+        correctAnswer: 1,
+        explanation: "Amplitude Estimation achieves O(1/ε) scaling versus O(1/ε²) for classical Monte Carlo methods, providing quadratic speedup.",
+        topic: "Amplitude Estimation"
+      },
+      {
+        id: "q9",
+        question: "What do Quantum Neural Networks primarily exploit?",
+        options: [
+          "Faster processing",
+          "Lower energy consumption",
+          "Quantum phenomena like superposition and entanglement",
+          "Better memory"
+        ],
+        correctAnswer: 2,
+        explanation: "QNNs leverage quantum phenomena like superposition and entanglement for potentially richer data representations.",
+        topic: "QNN"
+      },
+      {
+        id: "q10",
+        question: "What causes barren plateaus in variational quantum circuits?",
+        options: [
+          "Too few parameters",
+          "Random deep circuits with vanishing gradients",
+          "Insufficient data",
+          "Hardware noise"
+        ],
+        correctAnswer: 1,
+        explanation: "Barren plateaus occur in random deep circuits where gradients vanish exponentially, making optimization difficult.",
+        topic: "Barren Plateaus"
+      }
+    ]
+  }
+];
+
 const LibraryPanel: React.FC = () => {
   // Load from localStorage or default to null
-  const [selectedTopic, setSelectedTopic] = useState<TopicItem | null>(() => {
-    const savedId = localStorage.getItem("selectedTopicId");
-    if (savedId) {
-      return QUANTUM_TOPICS.find((t) => t.id === savedId) || null;
-    }
-    return null;
-  });
+  const [selectedTopic, setSelectedTopic] = useState<TopicItem | null>(null);
+  
+  // Quiz state
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string>("");
+  const [quizResults, setQuizResults] = useState<{questionId: string, correct: boolean, selectedAnswer: number}[]>([]);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const { isOpen: showExplanation, onToggle: toggleExplanation } = useDisclosure();
+  
+  // Level Quiz state
+  const [showLevelQuiz, setShowLevelQuiz] = useState(false);
+  const [currentLevelQuiz, setCurrentLevelQuiz] = useState<LevelQuiz | null>(null);
+  const [levelQuizQuestionIndex, setLevelQuizQuestionIndex] = useState(0);
+  const [levelQuizSelectedAnswer, setLevelQuizSelectedAnswer] = useState<string>("");
+  const [levelQuizResults, setLevelQuizResults] = useState<{questionId: string, correct: boolean, selectedAnswer: number, topic?: string}[]>([]);
+  const [levelQuizCompleted, setLevelQuizCompleted] = useState(false);
+  const [showAnswerFeedback, setShowAnswerFeedback] = useState(false);
+  const [currentAnswerCorrect, setCurrentAnswerCorrect] = useState(false);
+  const { isOpen: showLevelExplanation, onToggle: toggleLevelExplanation } = useDisclosure();
 
   // Save to localStorage whenever selection changes
   useEffect(() => {
@@ -1505,6 +2028,133 @@ const LibraryPanel: React.FC = () => {
       localStorage.removeItem("selectedTopicId");
     }
   }, [selectedTopic]);
+
+  // Reset quiz when topic changes
+  useEffect(() => {
+    setShowQuiz(false);
+    setCurrentQuestionIndex(0);
+    setSelectedAnswer("");
+    setQuizResults([]);
+    setQuizCompleted(false);
+    
+    // Also reset level quiz
+    setShowLevelQuiz(false);
+    setCurrentLevelQuiz(null);
+    setLevelQuizQuestionIndex(0);
+    setLevelQuizSelectedAnswer("");
+    setLevelQuizResults([]);
+    setLevelQuizCompleted(false);
+    setShowAnswerFeedback(false);
+    setCurrentAnswerCorrect(false);
+  }, [selectedTopic]);
+
+  const startQuiz = () => {
+    setShowQuiz(true);
+    setCurrentQuestionIndex(0);
+    setSelectedAnswer("");
+    setQuizResults([]);
+    setQuizCompleted(false);
+  };
+
+  const submitAnswer = () => {
+    if (!selectedTopic?.quiz || selectedAnswer === "") return;
+    
+    const currentQuestion = selectedTopic.quiz[currentQuestionIndex];
+    const isCorrect = parseInt(selectedAnswer) === currentQuestion.correctAnswer;
+    
+    const newResult = {
+      questionId: currentQuestion.id,
+      correct: isCorrect,
+      selectedAnswer: parseInt(selectedAnswer)
+    };
+    
+    setQuizResults(prev => [...prev, newResult]);
+    
+    if (currentQuestionIndex < selectedTopic.quiz.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedAnswer("");
+    } else {
+      setQuizCompleted(true);
+    }
+  };
+
+  const resetQuiz = () => {
+    setCurrentQuestionIndex(0);
+    setSelectedAnswer("");
+    setQuizResults([]);
+    setQuizCompleted(false);
+  };
+
+  const getQuizScore = () => {
+    const correct = quizResults.filter(r => r.correct).length;
+    return `${correct}/${quizResults.length}`;
+  };
+
+  // Level Quiz functions
+  const startLevelQuiz = (level: "Beginner" | "Intermediate" | "Advanced") => {
+    const quiz = LEVEL_QUIZZES.find(q => q.level === level);
+    if (quiz) {
+      setCurrentLevelQuiz(quiz);
+      setShowLevelQuiz(true);
+      setLevelQuizQuestionIndex(0);
+      setLevelQuizSelectedAnswer("");
+      setLevelQuizResults([]);
+      setLevelQuizCompleted(false);
+      setShowAnswerFeedback(false);
+      setCurrentAnswerCorrect(false);
+    }
+  };
+
+  const submitLevelAnswer = () => {
+    if (!currentLevelQuiz || levelQuizSelectedAnswer === "") return;
+    
+    const currentQuestion = currentLevelQuiz.questions[levelQuizQuestionIndex];
+    const isCorrect = parseInt(levelQuizSelectedAnswer) === currentQuestion.correctAnswer;
+    
+    const newResult = {
+      questionId: currentQuestion.id,
+      correct: isCorrect,
+      selectedAnswer: parseInt(levelQuizSelectedAnswer),
+      topic: currentQuestion.topic
+    };
+    
+    setLevelQuizResults(prev => [...prev, newResult]);
+    setCurrentAnswerCorrect(isCorrect);
+    setShowAnswerFeedback(true);
+  };
+
+  const proceedToNextQuestion = () => {
+    setShowAnswerFeedback(false);
+    
+    if (levelQuizQuestionIndex < currentLevelQuiz!.questions.length - 1) {
+      setLevelQuizQuestionIndex(prev => prev + 1);
+      setLevelQuizSelectedAnswer("");
+    } else {
+      setLevelQuizCompleted(true);
+    }
+  };
+
+  const resetLevelQuiz = () => {
+    setLevelQuizQuestionIndex(0);
+    setLevelQuizSelectedAnswer("");
+    setLevelQuizResults([]);
+    setLevelQuizCompleted(false);
+    setShowAnswerFeedback(false);
+    setCurrentAnswerCorrect(false);
+  };
+
+  const getLevelQuizScore = () => {
+    const correct = levelQuizResults.filter(r => r.correct).length;
+    return `${correct}/${levelQuizResults.length}`;
+  };
+
+  const getLevelQuizPercentage = () => {
+    return Math.round((levelQuizResults.filter(r => r.correct).length / levelQuizResults.length) * 100);
+  };
+
+  const passedLevelQuiz = () => {
+    return currentLevelQuiz ? getLevelQuizPercentage() >= currentLevelQuiz.passingScore : false;
+  };
 
   const listBg = useColorModeValue("gray.50", "gray.800");
   const listBorderColor = useColorModeValue("gray.200", "gray.700");
@@ -1866,13 +2516,30 @@ const LibraryPanel: React.FC = () => {
                 top={0}
                 zIndex={10}
               >
-                <HStack spacing={2}>
-                  <Badge colorScheme={getDifficultyColor(difficulty)} fontSize="xs">
-                    {difficulty}
-                  </Badge>
-                  <Text fontSize="xs" fontWeight="600" color={textColor}>
-                    {topics.length} topics
-                  </Text>
+                <HStack spacing={2} justify="space-between">
+                  <HStack spacing={2}>
+                    <Badge colorScheme={getDifficultyColor(difficulty)} fontSize="xs">
+                      {difficulty}
+                    </Badge>
+                    <Text fontSize="xs" fontWeight="600" color={textColor}>
+                      {topics.length} topics
+                    </Text>
+                  </HStack>
+                  <Button
+                    size="xs"
+                    colorScheme="purple"
+                    variant="solid"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startLevelQuiz(difficulty as "Beginner" | "Intermediate" | "Advanced");
+                    }}
+                    fontSize="10px"
+                    px={2}
+                    py={1}
+                    height="18px"
+                  >
+                    Test yourself!
+                  </Button>
                 </HStack>
               </Box>
               {topics.map((topic) => (
@@ -2022,22 +2689,496 @@ const LibraryPanel: React.FC = () => {
                   </Box>
                 )}
               </Box>
+              
+              {/* Quiz Section */}
+              {selectedTopic.quiz && selectedTopic.quiz.length > 0 && (
+                <Box
+                  p={6}
+                  borderWidth={1}
+                  borderColor={listBorderColor}
+                  borderRadius="md"
+                  w="100%"
+                  bg={itemBg}
+                >
+                  {!showQuiz ? (
+                    <VStack spacing={4}>
+                      <Heading size="md" color={titleColor}>📝 Test Your Knowledge</Heading>
+                      <Text color={textColor} textAlign="center">
+                        Ready to test what you've learned? Take the {selectedTopic.difficulty.toLowerCase()} quiz!
+                      </Text>
+                      <Button 
+                        colorScheme="blue" 
+                        onClick={startQuiz}
+                        size="lg"
+                      >
+                        Start Quiz ({selectedTopic.quiz.length} questions)
+                      </Button>
+                    </VStack>
+                  ) : (
+                    <VStack spacing={4} align="stretch">
+                      {!quizCompleted ? (
+                        // Active Quiz
+                        <>
+                          <HStack justify="space-between">
+                            <Badge colorScheme="blue" fontSize="sm">
+                              Question {currentQuestionIndex + 1} of {selectedTopic.quiz.length}
+                            </Badge>
+                            <Button size="sm" variant="ghost" onClick={() => setShowQuiz(false)}>
+                              Exit Quiz
+                            </Button>
+                          </HStack>
+                          
+                          <Box p={4} bg={useColorModeValue('blue.50', 'blue.900')} borderRadius="md">
+                            <Text fontSize="lg" fontWeight="bold" mb={4}>
+                              {selectedTopic.quiz[currentQuestionIndex].question}
+                            </Text>
+                            
+                            <RadioGroup value={selectedAnswer} onChange={setSelectedAnswer}>
+                              <VStack align="start" spacing={3}>
+                                {selectedTopic.quiz[currentQuestionIndex].options.map((option, index) => (
+                                  <Radio key={index} value={index.toString()}>
+                                    {option}
+                                  </Radio>
+                                ))}
+                              </VStack>
+                            </RadioGroup>
+                          </Box>
+                          
+                          <HStack justify="space-between">
+                            <Box></Box>
+                            <Button 
+                              colorScheme="green" 
+                              onClick={submitAnswer}
+                              isDisabled={selectedAnswer === ""}
+                            >
+                              {currentQuestionIndex < selectedTopic.quiz.length - 1 ? 'Next Question' : 'Finish Quiz'}
+                            </Button>
+                          </HStack>
+                        </>
+                      ) : (
+                        // Quiz Results
+                        <>
+                          <Heading size="md" color={titleColor} textAlign="center">
+                            🎉 Quiz Completed!
+                          </Heading>
+                          
+                          <Alert status={quizResults.filter(r => r.correct).length >= selectedTopic.quiz.length * 0.7 ? "success" : "warning"}>
+                            <AlertIcon />
+                            You scored {getQuizScore()} ({Math.round((quizResults.filter(r => r.correct).length / quizResults.length) * 100)}%)
+                          </Alert>
+                          
+                          <Button onClick={toggleExplanation}>
+                            {showExplanation ? 'Hide' : 'Show'} Answer Explanations
+                          </Button>
+                          
+                          <Collapse in={showExplanation}>
+                            <VStack spacing={4} align="stretch">
+                              {selectedTopic.quiz.map((question, index) => {
+                                const result = quizResults[index];
+                                return (
+                                  <Box key={question.id} p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                                    <Text fontWeight="bold" mb={2}>Q{index + 1}: {question.question}</Text>
+                                    <Text color={result.correct ? 'green.500' : 'red.500'} mb={2}>
+                                      {result.correct ? '✓ Correct' : '✗ Incorrect'}
+                                    </Text>
+                                    <Text fontSize="sm" color={textColor}>
+                                      <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
+                                    </Text>
+                                    {question.explanation && (
+                                      <Text fontSize="sm" color={textColor} mt={2} fontStyle="italic">
+                                        {question.explanation}
+                                      </Text>
+                                    )}
+                                  </Box>
+                                );
+                              })}
+                            </VStack>
+                          </Collapse>
+                          
+                          <HStack spacing={4}>
+                            <Button onClick={resetQuiz} colorScheme="blue" variant="outline">
+                              Retake Quiz
+                            </Button>
+                            <Button onClick={() => setShowQuiz(false)}>
+                              Back to Content
+                            </Button>
+                          </HStack>
+                        </>
+                      )}
+                    </VStack>
+                  )}
+                </Box>
+              )}
             </VStack>
           </>
         ) : (
-          <VStack justify="center" align="center" h="100%" spacing={4}>
-            <Heading size="2xl" color={textColor}>Select a Topic!</Heading>
-            //<Heading fontSize="50px" color={textColor} textAlign="center" fontStyle="bold">
-            <Text color={textColor} fontSize="30px" textAlign="center">
-              Click a topic to view details
-            </Text>
-            <Text color={textColor} fontSize="lg" fontStyle="italic" textAlign="center" mt={2}>
-              Where curiosity meets quantum...let the exploration begin! 
-            </Text>
-            </Heading>
-          </VStack>
+          <Box position="relative" h="100%" w="100%" overflow="hidden">
+            {/* Animated Background */}
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              w="100%"
+              h="100%"
+              background={`radial-gradient(circle at 20% 30%, ${useColorModeValue('rgba(59, 130, 246, 0.1)', 'rgba(59, 130, 246, 0.05)')} 0%, transparent 50%),
+                          radial-gradient(circle at 80% 70%, ${useColorModeValue('rgba(147, 51, 234, 0.1)', 'rgba(147, 51, 234, 0.05)')} 0%, transparent 50%),
+                          radial-gradient(circle at 40% 80%, ${useColorModeValue('rgba(16, 185, 129, 0.1)', 'rgba(16, 185, 129, 0.05)')} 0%, transparent 50%)`}
+            />
+            
+            {/* Floating Particles */}
+            {[...Array(20)].map((_, i) => (
+              <Box
+                key={i}
+                position="absolute"
+                w="4px"
+                h="4px"
+                bg={`hsl(${220 + i * 15}, 70%, 60%)`}
+                borderRadius="50%"
+                opacity={0.6}
+                animation={`float-${i % 4} ${4 + (i % 3)}s ease-in-out infinite`}
+                left={`${10 + (i * 4.5) % 80}%`}
+                top={`${10 + (i * 3) % 80}%`}
+                css={{
+                  '@keyframes float-0': {
+                    '0%, 100%': { transform: 'translateY(0px) rotate(0deg)', opacity: 0.6 },
+                    '50%': { transform: 'translateY(-20px) rotate(180deg)', opacity: 1 },
+                  },
+                  '@keyframes float-1': {
+                    '0%, 100%': { transform: 'translateX(0px) rotate(0deg)', opacity: 0.4 },
+                    '50%': { transform: 'translateX(20px) rotate(180deg)', opacity: 0.8 },
+                  },
+                  '@keyframes float-2': {
+                    '0%, 100%': { transform: 'translateY(0px) translateX(0px)', opacity: 0.5 },
+                    '33%': { transform: 'translateY(-15px) translateX(10px)', opacity: 0.9 },
+                    '66%': { transform: 'translateY(10px) translateX(-10px)', opacity: 0.7 },
+                  },
+                  '@keyframes float-3': {
+                    '0%, 100%': { transform: 'scale(1) rotate(0deg)', opacity: 0.3 },
+                    '50%': { transform: 'scale(1.5) rotate(360deg)', opacity: 0.8 },
+                  },
+                }}
+              />
+            ))}
+            
+            {/* Quantum Symbols */}
+            <Box
+              position="absolute"
+              top="20%"
+              left="15%"
+              fontSize="60px"
+              opacity={0.2}
+              animation="quantum-pulse 3s ease-in-out infinite"
+              css={{
+                '@keyframes quantum-pulse': {
+                  '0%, 100%': { transform: 'scale(1) rotate(0deg)', opacity: 0.2 },
+                  '50%': { transform: 'scale(1.1) rotate(10deg)', opacity: 0.4 },
+                },
+              }}
+            >
+              |ψ⟩
+            </Box>
+            
+            <Box
+              position="absolute"
+              top="60%"
+              right="20%"
+              fontSize="50px"
+              opacity={0.15}
+              animation="quantum-spin 4s linear infinite"
+              css={{
+                '@keyframes quantum-spin': {
+                  '0%': { transform: 'rotate(0deg)', opacity: 0.15 },
+                  '50%': { transform: 'rotate(180deg)', opacity: 0.3 },
+                  '100%': { transform: 'rotate(360deg)', opacity: 0.15 },
+                },
+              }}
+            >
+              ⊕
+            </Box>
+            
+            <Box
+              position="absolute"
+              top="30%"
+              right="15%"
+              fontSize="40px"
+              opacity={0.25}
+              animation="quantum-float 5s ease-in-out infinite"
+              css={{
+                '@keyframes quantum-float': {
+                  '0%, 100%': { transform: 'translateY(0px)', opacity: 0.25 },
+                  '50%': { transform: 'translateY(-30px)', opacity: 0.4 },
+                },
+              }}
+            >
+              ∫
+            </Box>
+            
+            {/* Main Content */}
+            <VStack justify="center" align="center" h="100%" spacing={6} position="relative" zIndex={10}>
+              <Box textAlign="center">
+                <Heading 
+                  size="3xl" 
+                  color={titleColor} 
+                  mb={4}
+                  animation="title-glow 2s ease-in-out infinite alternate"
+                  css={{
+                    '@keyframes title-glow': {
+                      '0%': { textShadow: `0 0 5px ${useColorModeValue('rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.6)')}` },
+                      '100%': { textShadow: `0 0 20px ${useColorModeValue('rgba(59, 130, 246, 0.5)', 'rgba(59, 130, 246, 0.8)')}, 0 0 30px ${useColorModeValue('rgba(147, 51, 234, 0.3)', 'rgba(147, 51, 234, 0.5)')}` },
+                    },
+                  }}
+                >
+                  Select a Topic!
+                </Heading>
+                
+                <Box
+                  display="inline-block"
+                  animation="wave 2.5s ease-in-out infinite"
+                  css={{
+                    '@keyframes wave': {
+                      '0%, 100%': { transform: 'translateY(0px)' },
+                      '25%': { transform: 'translateY(-10px)' },
+                      '50%': { transform: 'translateY(0px)' },
+                      '75%': { transform: 'translateY(-5px)' },
+                    },
+                  }}
+                >
+                  <Text color={textColor} fontSize="2xl" fontWeight="500">
+                    Click a topic to view details
+                  </Text>
+                </Box>
+              </Box>
+              
+              <Text 
+                color={titleColor} 
+                fontSize="xl" 
+                fontStyle="italic" 
+                textAlign="center"
+                fontWeight="500"
+                animation="text-glow 3s ease-in-out infinite alternate"
+                css={{
+                  '@keyframes text-glow': {
+                    '0%': { textShadow: `0 0 10px ${useColorModeValue('rgba(59, 130, 246, 0.4)', 'rgba(59, 130, 246, 0.7)')}` },
+                    '100%': { textShadow: `0 0 20px ${useColorModeValue('rgba(147, 51, 234, 0.6)', 'rgba(147, 51, 234, 0.8)')}, 0 0 30px ${useColorModeValue('rgba(16, 185, 129, 0.4)', 'rgba(16, 185, 129, 0.6)')}` },
+                  },
+                }}
+              >
+                Where curiosity meets quantum...let the exploration begin! ✨
+              </Text>
+              
+              {/* Animated Arrow Hint */}
+              <Box
+                animation="arrow-bounce 2s ease-in-out infinite"
+                css={{
+                  '@keyframes arrow-bounce': {
+                    '0%, 100%': { transform: 'translateX(0px)', opacity: 0.6 },
+                    '50%': { transform: 'translateX(-10px)', opacity: 1 },
+                  },
+                }}
+              >
+                <Text fontSize="lg" color={textColor} opacity={0.7}>
+                  ← Explore topics on the left
+                </Text>
+              </Box>
+            </VStack>
+          </Box>
         )}
       </VStack>
+      
+      {/* Level Quiz Modal/Overlay */}
+      {showLevelQuiz && currentLevelQuiz && (
+        <Box
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="rgba(0, 0, 0, 0.8)"
+          zIndex={1000}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={4}
+        >
+          <Box
+            bg={itemBg}
+            borderRadius="lg"
+            p={6}
+            maxW="800px"
+            w="100%"
+            maxH="90vh"
+            overflowY="auto"
+            boxShadow="2xl"
+          >
+            {!levelQuizCompleted ? (
+              <VStack spacing={6} align="stretch">
+                <HStack justify="space-between">
+                  <VStack align="start" spacing={1}>
+                    <Heading size="lg" color={titleColor}>
+                      {currentLevelQuiz.title}
+                    </Heading>
+                    <Text color={textColor} fontSize="sm">
+                      {currentLevelQuiz.description}
+                    </Text>
+                    <Badge colorScheme={getDifficultyColor(currentLevelQuiz.level)} fontSize="xs">
+                      {currentLevelQuiz.level} Level
+                    </Badge>
+                  </VStack>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowLevelQuiz(false)}
+                    color="red.500"
+                  >
+                    ✕ Close
+                  </Button>
+                </HStack>
+                
+                <HStack justify="space-between">
+                  <Badge colorScheme="blue" fontSize="md" p={2}>
+                    Question {levelQuizQuestionIndex + 1} of {currentLevelQuiz.questions.length}
+                  </Badge>
+                  <Text fontSize="sm" color={textColor}>
+                    Topic: {currentLevelQuiz.questions[levelQuizQuestionIndex].topic}
+                  </Text>
+                </HStack>
+                
+                <Box p={6} bg={useColorModeValue('blue.50', 'blue.900')} borderRadius="md">
+                  <Text fontSize="lg" fontWeight="bold" mb={4}>
+                    {currentLevelQuiz.questions[levelQuizQuestionIndex].question}
+                  </Text>
+                  
+                  <RadioGroup value={levelQuizSelectedAnswer} onChange={setLevelQuizSelectedAnswer}>
+                    <VStack align="start" spacing={3}>
+                      {currentLevelQuiz.questions[levelQuizQuestionIndex].options.map((option, index) => (
+                        <Radio 
+                          key={index} 
+                          value={index.toString()} 
+                          size="lg"
+                          isDisabled={showAnswerFeedback}
+                        >
+                          <Text fontSize="md">{option}</Text>
+                        </Radio>
+                      ))}
+                    </VStack>
+                  </RadioGroup>
+                </Box>
+                
+                {/* Answer Feedback */}
+                {showAnswerFeedback && (
+                  <Alert status={currentAnswerCorrect ? "success" : "error"} borderRadius="md">
+                    <AlertIcon />
+                    <VStack align="start" spacing={2} flex={1}>
+                      <Text fontWeight="bold">
+                        {currentAnswerCorrect ? "✅ Correct!" : "❌ Incorrect"}
+                      </Text>
+                      <Text fontSize="sm">
+                        <strong>Correct Answer:</strong> {currentLevelQuiz.questions[levelQuizQuestionIndex].options[currentLevelQuiz.questions[levelQuizQuestionIndex].correctAnswer]}
+                      </Text>
+                      {currentLevelQuiz.questions[levelQuizQuestionIndex].explanation && (
+                        <Text fontSize="sm" fontStyle="italic">
+                          <strong>Explanation:</strong> {currentLevelQuiz.questions[levelQuizQuestionIndex].explanation}
+                        </Text>
+                      )}
+                    </VStack>
+                  </Alert>
+                )}
+                
+                <HStack justify="space-between">
+                  <Text fontSize="sm" color={textColor}>
+                    Passing Score: {currentLevelQuiz.passingScore}%
+                  </Text>
+                  {!showAnswerFeedback ? (
+                    <Button
+                      colorScheme="green"
+                      onClick={submitLevelAnswer}
+                      isDisabled={levelQuizSelectedAnswer === ""}
+                      size="lg"
+                    >
+                      Submit Answer
+                    </Button>
+                  ) : (
+                    <Button
+                      colorScheme="blue"
+                      onClick={proceedToNextQuestion}
+                      size="lg"
+                    >
+                      {levelQuizQuestionIndex < currentLevelQuiz.questions.length - 1 ? 'Next Question' : 'Finish Quiz'}
+                    </Button>
+                  )}
+                </HStack>
+              </VStack>
+            ) : (
+              <VStack spacing={6} align="stretch">
+                <VStack spacing={4}>
+                  <Heading size="lg" color={titleColor} textAlign="center">
+                    🎉 {currentLevelQuiz.level} Quiz Completed!
+                  </Heading>
+                  
+                  <Alert status={passedLevelQuiz() ? "success" : "warning"} borderRadius="md">
+                    <AlertIcon />
+                    <VStack align="start" spacing={1}>
+                      <Text fontWeight="bold">
+                        You scored {getLevelQuizScore()} ({getLevelQuizPercentage()}%)
+                      </Text>
+                      <Text fontSize="sm">
+                        {passedLevelQuiz() 
+                          ? `🎊 Congratulations! You passed the ${currentLevelQuiz.level} level!`
+                          : `You need ${currentLevelQuiz.passingScore}% to pass. Keep learning and try again!`}
+                      </Text>
+                    </VStack>
+                  </Alert>
+                </VStack>
+                
+                <Button onClick={toggleLevelExplanation} size="lg">
+                  {showLevelExplanation ? 'Hide' : 'Show'} Detailed Results
+                </Button>
+                
+                <Collapse in={showLevelExplanation}>
+                  <VStack spacing={4} align="stretch" maxH="400px" overflowY="auto">
+                    {currentLevelQuiz.questions.map((question, index) => {
+                      const result = levelQuizResults[index];
+                      return (
+                        <Box key={question.id} p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                          <HStack justify="space-between" mb={2}>
+                            <Text fontWeight="bold" fontSize="sm" color="purple.500">
+                              Topic: {question.topic}
+                            </Text>
+                            <Badge colorScheme={result.correct ? 'green' : 'red'}>
+                              {result.correct ? '✓ Correct' : '✗ Incorrect'}
+                            </Badge>
+                          </HStack>
+                          <Text fontWeight="bold" mb={2}>Q{index + 1}: {question.question}</Text>
+                          <Text fontSize="sm" color={textColor} mb={2}>
+                            <strong>Your Answer:</strong> {question.options[result.selectedAnswer]}
+                          </Text>
+                          <Text fontSize="sm" color={textColor} mb={2}>
+                            <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
+                          </Text>
+                          {question.explanation && (
+                            <Text fontSize="sm" color={textColor} fontStyle="italic">
+                              <strong>Explanation:</strong> {question.explanation}
+                            </Text>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </VStack>
+                </Collapse>
+                
+                <HStack spacing={4} justify="center">
+                  <Button onClick={resetLevelQuiz} colorScheme="blue" variant="outline" size="lg">
+                    Retake Quiz
+                  </Button>
+                  <Button onClick={() => setShowLevelQuiz(false)} colorScheme="gray" size="lg">
+                    Close
+                  </Button>
+                </HStack>
+              </VStack>
+            )}
+          </Box>
+        </Box>
+      )}
     </HStack>
   );
 };
