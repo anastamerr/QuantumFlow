@@ -1602,7 +1602,7 @@ const LibraryPanel: React.FC = () => {
 
       (async () => {
         try {
-          const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls");
+          //const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls");
           const controls = new OrbitControls(camera, renderer.domElement);
           controls.enableDamping = true;
           controls.enablePan = false;
@@ -1715,7 +1715,7 @@ const LibraryPanel: React.FC = () => {
 
       (async () => {
         try {
-          const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls");
+          //const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls");
           const controls = new OrbitControls(camera, renderer.domElement);
           controls.enableDamping = true;
           controls.enablePan = false;
