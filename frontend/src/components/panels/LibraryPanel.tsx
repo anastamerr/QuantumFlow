@@ -2487,13 +2487,7 @@ const LibraryPanel: React.FC = () => {
         borderColor={listBorderColor}
         spacing={0}
         align="stretch"
-        overflowY="auto"
-        css={{
-          "&::-webkit-scrollbar": { width: "8px" },
-          "&::-webkit-scrollbar-track": { backgroundColor: "rgba(0,0,0,0.03)" },
-          "&::-webkit-scrollbar-thumb": { background: "rgba(0,0,0,0.15)", borderRadius: "4px" },
-          "&::-webkit-scrollbar-thumb:hover": { background: "rgba(0,0,0,0.2)" },
-        }}
+        overflowY="hidden"
       >
         <Box p={3} borderBottomWidth={1} borderColor={listBorderColor}>
           <HStack justify="space-between" mb={2}>
@@ -2503,7 +2497,35 @@ const LibraryPanel: React.FC = () => {
               {QUANTUM_TOPICS.length} topics • Learn quantum computing
             </Text>
         </Box>
-        <Box flex={1} overflowY="auto" w="100%">
+        <Box 
+          flex={1} 
+          overflowY="scroll"
+          maxHeight="calc(100vh - 120px)"
+          w="100%"
+          style={{
+            scrollbarWidth: "thin",
+            scrollbarColor: `${useColorModeValue("#cbd5e0", "#4a5568")} ${useColorModeValue("#f7fafc", "#2d3748")}`
+          }}
+          sx={{
+            "&::-webkit-scrollbar": { 
+              width: "12px",
+              display: "block"
+            },
+            "&::-webkit-scrollbar-track": { 
+              backgroundColor: "#e2e8f0",
+              borderRadius: "6px",
+              border: "1px solid #cbd5e0"
+            },
+            "&::-webkit-scrollbar-thumb": { 
+              background: "#64748b", 
+              borderRadius: "6px",
+              border: "2px solid #e2e8f0",
+              "&:hover": { 
+                background: "#475569"
+              }
+            }
+          }}
+        >
           {Object.entries(groupedTopics).map(([difficulty, topics]) => (
             <Box key={difficulty}>
               <Box
@@ -2562,6 +2584,10 @@ const LibraryPanel: React.FC = () => {
                     fontWeight={selectedTopic?.id === topic.id ? "700" : "600"}
                     textAlign="left"
                     color={titleColor}
+                    whiteSpace="normal"
+                    wordBreak="break-word"
+                    lineHeight="1.3"
+                    noOfLines={2}
                   >
                     {topic.title}
                   </Text>
