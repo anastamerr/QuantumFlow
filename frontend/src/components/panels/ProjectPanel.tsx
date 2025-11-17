@@ -25,6 +25,7 @@ import {
 } from "@chakra-ui/react";
 import { useDispatch, useSelector } from 'react-redux'
 import { setActivePanel, selectActivePanel } from '../../store/slices/uiSlice'
+import { text } from "d3";
 
 interface ProjectIdea {
   id: string;
@@ -307,14 +308,25 @@ const ProjectPanel: React.FC = () => {
 
     if (id === 'quantum-classic-gates') {
       return [
-        { text: 'Start by adding 2 qubits to the circuit, A and B respectively!' },
+        {text: 'Let\'s build an AND gate first! Start by adding 3 qubits to the circuit, A, B and C respectively!' },
         { text: 'To build a classical AND gate, add a Toffoli (CCNOT) gate with A and B as controls and a new qubit C as target!' },
         { text: 'Add Measure (M) gates to all qubits!' },
         { text: 'Click on Simulation from the top bar!' },
         { text: 'Click Run Simulation!' },
         { text: 'Check the states of the measured qubits and verify the AND gate output!' },
-        { text: 'To build a classical OR gate, add CNOT gates from A to C and B to C instead of the Toffoli!' },
+
+        { text: 'To build a classical OR gate, add CNOT gates from A to C and B to C!' },
         { text: 'Rerun the simulation and verify the OR gate output!' },
+
+        { text: 'The easiest of them all: NOT gate! Just add a X gate to a qubit and measure it!' },
+        { text: 'Rerun the simulation and verify the NOT gate output!' },
+
+        { text: 'To build XOR gates, start by adding 3 gates, A and B as inputs and C as output!'},
+        { text: 'Add CNOT gates from A as control to C and B as control to C!' },
+        { text: 'Rerun the simulation and verify the XOR gate output!' },
+
+        { text: 'To build NAND, NOR, or XNOR gates, add an X gate after your previous circuits!' },
+
         { text: 'Congratulations! You have built classical gates using quantum gates!' }
       ]
     }

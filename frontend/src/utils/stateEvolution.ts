@@ -145,10 +145,24 @@ export const applyThreeQubitGate = (
 ): QuantumState => {
   const newState: QuantumState = {};
   
-  if (gate.type === 'toffoli' && gate.controls && gate.controls.length >= 2 && gate.targets && gate.targets.length > 0) {
+  // Require at least 3 qubits in the circuit for Toffoli and prefer the gate's `qubit` as the target
+  if (
+    gate.type === 'toffoli' &&
+    numQubits >= 3 &&
+    gate.controls &&
+    gate.controls.length >= 2
+  ) {
     const control1 = gate.controls[0];
     const control2 = gate.controls[1];
-    const target = gate.targets[0];
+    // Use gate.qubit as the target if provided; otherwise fall back to targets[0]
+    const target = (gate.qubit !== undefined) ? gate.qubit : (gate.targets && gate.targets.length > 0 ? gate.targets[0] : undefined);
+    if (target === undefined) {
+      // If no explicit target, copy state through (invalid gate configuration)
+      Object.entries(state).forEach(([basisState, amplitude]) => {
+        newState[basisState] = [...amplitude];
+      });
+      return newState;
+    }
     
     // Apply Toffoli gate
     Object.entries(state).forEach(([basisState, amplitude]) => {

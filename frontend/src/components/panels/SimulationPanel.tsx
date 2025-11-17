@@ -20,6 +20,12 @@ import {
   Divider,
   Badge,
   Icon,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
   Grid,
   GridItem,
   Tooltip,
@@ -60,6 +66,7 @@ const SimulationPanel = () => {
   // const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   // const [autoPlay, setAutoPlay] = useState<boolean>(false);
   const [simulationComplete, setSimulationComplete] = useState<boolean>(false);
+  const [memory, setMemory] = useState<string[] | null>(null);
   
   // Store visualization instance reference
   // const visualizerRef = useRef<any>(null);
@@ -113,7 +120,7 @@ const SimulationPanel = () => {
     
     gates.forEach(gate => {
       const type = gate.type;
-      stats[type] = (stats[type] || 0) + 1;
+      stats[type] = (stats[type] || 1) + 1;
     });
     
     return stats;
@@ -143,6 +150,7 @@ const SimulationPanel = () => {
         });
         setServerConnected(true);
         setResults(response.probabilities);
+        setMemory(response.memory ?? null);
         setSimulationComplete(true);
         setActiveTab(1);
         try {
@@ -440,6 +448,17 @@ const SimulationPanel = () => {
                 Analysis
               </Tab>
               <Tab 
+                isDisabled={!simulationComplete || !memory}
+                _selected={{ 
+                  color: "white", 
+                  bg: "blue.500",
+                  boxShadow: "md" 
+                }}
+                fontWeight="medium"
+              >
+                Output
+              </Tab>
+              <Tab 
                 isDisabled={!simulationComplete || !results}
                 _selected={{ 
                   color: "white", 
@@ -638,6 +657,54 @@ const SimulationPanel = () => {
                             </Text>
                           </Flex>
                         </Box>
+                      </Box>
+                    )}
+                  </CardBody>
+                </Card>
+              </TabPanel>
+              
+              {/* Output Tab: show first 16 shots memory table */}
+              <TabPanel p={0} pt={3}>
+                <Card
+                  borderRadius="lg"
+                  boxShadow="md"
+                  bg={cardBg}
+                  minH="200px"
+                  maxH="800px"
+                  borderWidth="1px"
+                  borderColor={borderColor}
+                  overflow="auto"
+                >
+                  <CardBody>
+                    {!simulationComplete || !memory ? (
+                      <VStack spacing={4} justify="center" h="200px">
+                        <Text color="gray.500" textAlign="center">Run the simulation (with memory enabled) to see shot output.</Text>
+                      </VStack>
+                    ) : (
+                      <Box>
+                        <Heading size="md" mb={3}>Raw Shot Output (first {Math.min(16, memory.length)} shots)</Heading>
+                        <Table variant="simple" size="sm">
+                          <Thead>
+                            <Tr>
+                              <Th>Shot #</Th>
+                              {Array.from({ length: qubits.length }).map((_, qi) => (
+                                <Th key={qi} isNumeric={false}>Q{qi}</Th>
+                              ))}
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {memory.slice(0, Math.min(16, memory.length)).map((s, si) => (
+                              <Tr key={si}>
+                                <Td>{si + 1}</Td>
+                                {Array.from({ length: qubits.length }).map((_, qi) => {
+                                  const idx = (s as string).length - 1 - qi
+                                  const val = (idx >= 0 && idx < (s as string).length) ? (s as string)[idx] : 'NA'
+                                  return <Td key={qi} fontFamily="monospace">{val}</Td>
+                                })}
+                              </Tr>
+                            ))}
+                          </Tbody>
+                        </Table>
                       </Box>
                     )}
                   </CardBody>
