@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from .models import ExecuteRequest, ExecuteResponse, AIResponse, GateModel
 from .qiskit_runner import run_circuit
+import math
 
 # optional genai (Gemini) client — try common import paths so environments
 # that expose the client under different module names are supported.
@@ -177,12 +178,57 @@ def _normalize_gate_dict(g: dict) -> dict:
             except Exception:
                 pass
 
+    # Ensure params dict exists so we can normalize angle params for rotation gates
+    params = out.get('params') if isinstance(out.get('params'), dict) else {}
+    params = dict(params)
+    out['params'] = params
+
     # Normalize position to int if possible
     if 'position' in out:
         try:
             out['position'] = int(out['position'])
         except Exception:
             pass
+
+    # Normalize rotation parameters: AI returns degrees, convert to radians and map aliases
+    gate_type = str(out.get('type', '')).lower()
+    if gate_type in {'rx', 'ry', 'rz', 'p'}:
+        def _extract_numeric(value):
+            if value is None:
+                return None
+            if isinstance(value, (int, float)):
+                return float(value)
+            try:
+                return float(str(value).strip())
+            except Exception:
+                return None
+
+        def _convert_aliases(preferred_key: str, aliases: list[str]):
+            chosen_value = None
+            chosen_is_numeric = False
+            for alias in aliases:
+                if alias in params and params[alias] is not None:
+                    val = params[alias]
+                    numeric = _extract_numeric(val)
+                    if numeric is not None:
+                        chosen_value = math.radians(numeric)
+                        chosen_is_numeric = True
+                        break
+                    else:
+                        chosen_value = val
+                        chosen_is_numeric = False
+                        break
+            if chosen_value is not None:
+                params[preferred_key] = chosen_value
+            # remove duplicates while keeping the preferred key
+            for alias in aliases:
+                if alias != preferred_key:
+                    params.pop(alias, None)
+
+        if gate_type in {'rx', 'ry'}:
+            _convert_aliases('theta', ['theta', 'angle', 'value', 'degrees', 'deg'])
+        elif gate_type in {'rz', 'p'}:
+            _convert_aliases('phi', ['phi', 'theta', 'angle', 'value', 'degrees', 'deg'])
 
     return out
 

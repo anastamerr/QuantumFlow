@@ -190,10 +190,16 @@ export const decodeQiskit = (code: string): DecodedCircuit => {
       const qubit = parseQubitIndex(argList[argList.length - 1])
       targets.push(qubit)
       const valRaw = argList[0]
-      const val = valRaw ? Number(String(valRaw).replace(/[^0-9eE+\-\.]/g, '')) : 0
-      const numericVal = isNaN(Number(val)) ? 0 : Number(val)
-      if (lname === 'rx' || lname === 'ry') params.theta = numericVal
-      else params.phi = numericVal
+      // Preserve parameter as number when it parses to a valid number, otherwise keep the raw expression string
+      let parsedVal: number | string = 0
+      if (valRaw !== undefined && valRaw !== null) {
+        const trimmed = String(valRaw).trim()
+        const asNum = Number(trimmed)
+        if (!Number.isNaN(asNum)) parsedVal = asNum
+        else parsedVal = trimmed
+      }
+      if (lname === 'rx' || lname === 'ry') params.theta = parsedVal
+      else params.phi = parsedVal
     } else if (['h','x','y','z','s','t'].includes(lname)) {
       const qubit = parseQubitIndex(argList[0])
       targets.push(qubit)
@@ -282,9 +288,11 @@ export const decodeCirq = (code: string): DecodedCircuit => {
 
     // parse parameter string (for rotations) if present
     if (paramString) {
-      // try to extract a numeric literal from paramString
-      const num = Number(String(paramString).replace(/[^0-9eE+\-\.]/g, ''))
-      if (!Number.isNaN(num)) params.theta = num
+      // try to parse a numeric literal, otherwise preserve raw expression
+      const trimmed = String(paramString).trim()
+      const asNum = Number(trimmed)
+      if (!Number.isNaN(asNum)) params.theta = asNum
+      else params.theta = trimmed
     }
 
     const qubitIndex = targets[0] ?? 0
@@ -363,7 +371,12 @@ export const decodeQASM = (qasm: string): DecodedCircuit => {
       argList.forEach((a, i) => {
         const m = a.match(/\w+\[(\d+)\]/)
         if (m) targets.push(parseInt(m[1], 10))
-        else if (!isNaN(Number(a))) params[`param${Object.keys(params).length}`] = Number(a)
+        else {
+          const trimmed = String(a).trim()
+          const asNum = Number(trimmed)
+          if (!Number.isNaN(asNum)) params[`param${Object.keys(params).length}`] = asNum
+          else if (trimmed.length) params[`param${Object.keys(params).length}`] = trimmed
+        }
       })
     }
 
