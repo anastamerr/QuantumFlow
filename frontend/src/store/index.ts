@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit'
 import circuitReducer from './slices/circuitSlice'
 import uiReducer from './slices/uiSlice'
+import qubitTouchdownReducer from './slices/qubitTouchdownSlice'
 
 export const store = configureStore({
   reducer: {
     circuit: circuitReducer,
     ui: uiReducer,
+    qubitTouchdown: qubitTouchdownReducer
   },
 })
 
