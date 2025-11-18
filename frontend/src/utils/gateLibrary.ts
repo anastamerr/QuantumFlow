@@ -11,6 +11,8 @@ export const gateLibrary: GateDefinition[] = [
       "Creates superposition by placing a qubit in an equal superposition of |0⟩ and |1⟩",
     category: "Single-Qubit Gates",
     color: "blue",
+    matrix:
+      "\\frac{1}{\\sqrt{2}} \\begin{bmatrix} 1 & 1 \\\\ 1 & -1 \\end{bmatrix}",
   },
   {
     id: "x",
@@ -20,6 +22,7 @@ export const gateLibrary: GateDefinition[] = [
       "Quantum equivalent of the NOT gate, flips the state of a qubit",
     category: "Single-Qubit Gates",
     color: "red",
+    matrix: "\\begin{bmatrix} 0 & 1 \\\\ 1 & 0 \\end{bmatrix}",
   },
   {
     id: "y",
@@ -29,6 +32,7 @@ export const gateLibrary: GateDefinition[] = [
       "Rotates the qubit state around the Y-axis of the Bloch sphere",
     category: "Single-Qubit Gates",
     color: "green",
+    matrix: "\\begin{bmatrix} 0 & -i \\\\ i & 0 \\end{bmatrix}",
   },
   {
     id: "z",
@@ -38,6 +42,7 @@ export const gateLibrary: GateDefinition[] = [
       "Rotates the qubit state around the Z-axis of the Bloch sphere",
     category: "Single-Qubit Gates",
     color: "purple",
+    matrix: "\\begin{bmatrix} 1 & 0 \\\\ 0 & -1 \\end{bmatrix}",
   },
   {
     id: "s",
@@ -47,6 +52,7 @@ export const gateLibrary: GateDefinition[] = [
       "Phase gate, rotates the qubit state by 90 degrees around the Z-axis",
     category: "Single-Qubit Gates",
     color: "teal",
+    matrix: "\\begin{bmatrix} 1 & 0 \\\\ 0 & i \\end{bmatrix}",
   },
   {
     id: "t",
@@ -56,6 +62,7 @@ export const gateLibrary: GateDefinition[] = [
       "Phase gate, rotates the qubit state by 45 degrees around the Z-axis",
     category: "Single-Qubit Gates",
     color: "cyan",
+    matrix: "\\begin{bmatrix} 1 & 0 \\\\ 0 & e^{i\\pi/4} \\end{bmatrix}",
   },
   {
     id: "rx",
@@ -141,6 +148,8 @@ export const gateLibrary: GateDefinition[] = [
     color: "yellow",
     targets: 1,
     controls: 1,
+    matrix:
+      "\\begin{bmatrix} 1 & 0 & 0 & 0 \\\\ 0 & 1 & 0 & 0 \\\\ 0 & 0 & 0 & 1 \\\\ 0 & 0 & 1 & 0 \\end{bmatrix}",
   },
   {
     id: "cz",
@@ -152,6 +161,8 @@ export const gateLibrary: GateDefinition[] = [
     color: "yellow",
     targets: 1,
     controls: 1,
+    matrix:
+      "\\begin{bmatrix} 1 & 0 & 0 & 0 \\\\ 0 & 1 & 0 & 0 \\\\ 0 & 0 & 1 & 0 \\\\ 0 & 0 & 0 & -1 \\end{bmatrix}",
   },
   {
     id: "cp",
@@ -163,6 +174,8 @@ export const gateLibrary: GateDefinition[] = [
     color: "pink",
     targets: 1,
     controls: 1,
+    matrix:
+      "\\begin{bmatrix} 1 & 0 & 0 & 0 \\\\ 0 & 1 & 0 & 0 \\\\ 0 & 0 & 1 & 0 \\\\ 0 & 0 & 0 & e^{i\\phi} \\end{bmatrix}",
     params: [
       {
         name: "phi",
@@ -182,6 +195,8 @@ export const gateLibrary: GateDefinition[] = [
     category: "Multi-Qubit Gates",
     color: "gray",
     targets: 2,
+    matrix:
+      "\\begin{bmatrix} 1 & 0 & 0 & 0 \\\\ 0 & 0 & 1 & 0 \\\\ 0 & 1 & 0 & 0 \\\\ 0 & 0 & 0 & 1 \\end{bmatrix}",
   },
   {
     id: "toffoli",
@@ -193,6 +208,8 @@ export const gateLibrary: GateDefinition[] = [
     color: "yellow",
     targets: 1,
     controls: 2,
+    matrix:
+      "\\text{Identity except } |110\\rangle \\leftrightarrow |111\\rangle",
   },
 
   // Measurement

@@ -23,6 +23,13 @@ export interface LessonChallenge {
   difficulty: "easy" | "medium" | "hard";
 }
 
+export interface ConceptCheck {
+  question: string;
+  options: string[];
+  correctAnswer: number; // index
+  explanation: string;
+}
+
 export interface Lesson {
   id: string;
   title: string;
@@ -33,6 +40,7 @@ export interface Lesson {
     equations?: string[];
     visualizations?: string[];
   };
+  conceptChecks?: ConceptCheck[];
   examples: {
     title: string;
     circuit: Omit<Gate, "id">[];
@@ -91,6 +99,33 @@ export const lessonsData: Lesson[] = [
         "X|1\\rangle = |0\\rangle",
       ],
     },
+    conceptChecks: [
+      {
+        question: "What is the effect of the X-gate on the state |0⟩?",
+        options: [
+          "It remains |0⟩",
+          "It becomes |1⟩",
+          "It becomes a superposition",
+          "It destroys the qubit",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "The X-gate acts as a quantum NOT gate, flipping |0⟩ to |1⟩ and vice versa.",
+      },
+      {
+        question:
+          "In a quantum circuit diagram, which direction does time flow?",
+        options: [
+          "Right to Left",
+          "Top to Bottom",
+          "Left to Right",
+          "Bottom to Top",
+        ],
+        correctAnswer: 2,
+        explanation:
+          "By convention, quantum circuits are read from left to right, with operations applied in that order.",
+      },
+    ],
     examples: [
       {
         title: "Single Qubit Identity",
@@ -167,6 +202,28 @@ The **Hadamard Gate (H)** is used to create superposition:
         "H|1\\rangle = |-\\rangle = \\frac{|0\\rangle - |1\\rangle}{\\sqrt{2}}",
       ],
     },
+    conceptChecks: [
+      {
+        question:
+          "If you measure a qubit in the |+⟩ state, what is the probability of getting 0?",
+        options: ["0%", "50%", "100%", "25%"],
+        correctAnswer: 1,
+        explanation:
+          "The |+⟩ state is an equal superposition, so there is a 50% chance of measuring 0 and a 50% chance of measuring 1.",
+      },
+      {
+        question: "What is the difference between the |+⟩ and |−⟩ states?",
+        options: [
+          "They have different measurement probabilities.",
+          "One is entangled, the other is not.",
+          "They differ only by a relative phase.",
+          "They are the same state.",
+        ],
+        correctAnswer: 2,
+        explanation:
+          "Both have 50/50 measurement probabilities, but |−⟩ has a negative phase on the |1⟩ component.",
+      },
+    ],
     examples: [
       {
         title: "Entering Superposition",
@@ -254,6 +311,33 @@ The CNOT flips the target only if the control is $|1\\rangle$. Since the control
         "|\\Phi^+\\rangle = \\frac{|00\\rangle + |11\\rangle}{\\sqrt{2}}",
       ],
     },
+    conceptChecks: [
+      {
+        question: "In a CNOT gate, when does the target qubit flip?",
+        options: [
+          "Always",
+          "When the control qubit is |0⟩",
+          "When the control qubit is |1⟩",
+          "Randomly",
+        ],
+        correctAnswer: 2,
+        explanation:
+          "The CNOT (Controlled-NOT) gate flips the target qubit only if the control qubit is in the state |1⟩.",
+      },
+      {
+        question:
+          "What is a key characteristic of an entangled state like a Bell State?",
+        options: [
+          "The qubits are independent.",
+          "Measuring one qubit instantly tells you the state of the other.",
+          "It requires 3 or more qubits.",
+          "It cannot be created with simple gates.",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "In a Bell state, the measurement outcomes are perfectly correlated. Knowing one result reveals the other.",
+      },
+    ],
     examples: [
       {
         title: "CNOT Logic",
@@ -332,6 +416,32 @@ The CNOT flips the target only if the control is $|1\\rangle$. Since the control
         "QFT|x\\rangle = \\frac{1}{\\sqrt{N}} \\sum_{k=0}^{N-1} e^{2\\pi i x k / N} |k\\rangle",
       ],
     },
+    conceptChecks: [
+      {
+        question: "What does the Quantum Fourier Transform (QFT) do?",
+        options: [
+          "It measures the qubits.",
+          "It transforms a state from the computational basis to the Fourier basis.",
+          "It clones the quantum state.",
+          "It performs classical addition.",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "The QFT is the quantum analogue of the discrete Fourier transform, mapping computational basis states to Fourier basis states.",
+      },
+      {
+        question: "Which gates are primarily used to construct the QFT?",
+        options: [
+          "X and Z gates",
+          "Hadamard and Controlled-Phase gates",
+          "CNOT and Toffoli gates",
+          "SWAP gates only",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "The QFT is built using a sequence of Hadamard gates for superposition and Controlled-Phase gates for relative phase shifts.",
+      },
+    ],
     examples: [
       {
         title: "1-Qubit QFT",
@@ -422,6 +532,32 @@ $H^{\\otimes n} \\to X^{\\otimes n} \\to \\text{Multi-Controlled Z} \\to X^{\\ot
         "U_s = 2|s\\rangle\\langle s| - I",
       ],
     },
+    conceptChecks: [
+      {
+        question: "What is the main advantage of Grover's Algorithm?",
+        options: [
+          "It sorts a database instantly.",
+          "It provides a quadratic speedup for searching unstructured databases.",
+          "It provides an exponential speedup for factoring.",
+          "It corrects quantum errors.",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "Grover's algorithm offers a quadratic speedup (O(√N)) compared to classical search (O(N)).",
+      },
+      {
+        question: "What is the role of the Oracle in Grover's algorithm?",
+        options: [
+          "It measures the solution.",
+          "It marks the correct solution by flipping its phase.",
+          "It resets the circuit.",
+          "It creates the initial superposition.",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "The Oracle identifies the target item(s) by multiplying their amplitude by -1 (phase flip), distinguishing them from the rest.",
+      },
+    ],
     examples: [
       {
         title: "Preparation",
@@ -508,7 +644,46 @@ $H^{\\otimes n} \\to X^{\\otimes n} \\to \\text{Multi-Controlled Z} \\to X^{\\ot
 4. **Measurement**: Reveals period information.`,
       equations: ["f(x) = a^x \\pmod N"],
     },
-    examples: [],
+    conceptChecks: [
+      {
+        question: "What problem does Shor's Algorithm solve efficiently?",
+        options: [
+          "Database search",
+          "Integer factorization",
+          "Traveling salesman problem",
+          "Weather forecasting",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "Shor's algorithm can factor large integers exponentially faster than the best known classical algorithms, threatening RSA encryption.",
+      },
+      {
+        question:
+          "Why do we initialize the first register in uniform superposition?",
+        options: [
+          "To save energy.",
+          "To evaluate the function f(x) for all inputs simultaneously (Quantum Parallelism).",
+          "To make the circuit look nicer.",
+          "It is not necessary.",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "Superposition allows the quantum computer to process all possible inputs at once, which is crucial for finding the period of the function.",
+      },
+    ],
+    examples: [
+      {
+        title: "State Preparation",
+        circuit: [
+          { type: "h", qubit: 0, position: 0 },
+          { type: "h", qubit: 1, position: 0 },
+          { type: "h", qubit: 2, position: 0 },
+          { type: "x", qubit: 3, position: 0 },
+        ],
+        explanation:
+          "A typical setup for Shor's algorithm: The top 3 qubits (measuring register) are in superposition, and the bottom qubit (work register) is set to |1>.",
+      },
+    ],
     challenges: [
       {
         id: "shor-init",
@@ -571,7 +746,51 @@ $SWAP(0,1) \\to H(0) \\to CP^\\dagger(1 \\to 0) \\to H(1)$.`,
         "|\\tilde{\\varphi}\\rangle = QFT^\\dagger \\left( \\frac{1}{\\sqrt{N}} \\sum e^{2\\pi i \\varphi k}|k\\rangle \\right)",
       ],
     },
-    examples: [],
+    conceptChecks: [
+      {
+        question: "What is the goal of Quantum Phase Estimation (QPE)?",
+        options: [
+          "To estimate the eigenvalue (phase) of a unitary operator.",
+          "To estimate the probability of measuring 0.",
+          "To estimate the time it takes to run a circuit.",
+          "To estimate the number of gates needed.",
+        ],
+        correctAnswer: 0,
+        explanation:
+          "QPE is designed to determine the phase θ of an eigenvalue e^(2πiθ) of a unitary operator U.",
+      },
+      {
+        question: "Why is the Inverse QFT used at the end of QPE?",
+        options: [
+          "To scramble the results.",
+          "To transform the phase information encoded in amplitudes back into the computational basis.",
+          "To undo the errors.",
+          "It is just a convention.",
+        ],
+        correctAnswer: 1,
+        explanation:
+          "The phase information is encoded in the Fourier basis. The Inverse QFT transforms it back to the computational basis so we can measure the binary representation of the phase.",
+      },
+    ],
+    examples: [
+      {
+        title: "Phase Kickback",
+        circuit: [
+          { type: "h", qubit: 0, position: 0 },
+          { type: "x", qubit: 1, position: 0 },
+          { type: "h", qubit: 1, position: 1 },
+          {
+            type: "cp",
+            qubit: 0,
+            targets: [1],
+            params: { angle: "π/4" },
+            position: 2,
+          },
+        ],
+        explanation:
+          "The core mechanism of QPE is 'phase kickback', where the phase of the target qubit is kicked back to the control qubit.",
+      },
+    ],
     challenges: [
       {
         id: "qpe-inverse-qft",

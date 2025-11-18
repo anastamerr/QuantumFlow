@@ -35,6 +35,8 @@ import {
 } from "../../store/slices/circuitSlice";
 import { useState, useEffect, useCallback } from "react";
 import { gateLibrary } from "../../utils/gateLibrary";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 const GateParamsPanel = () => {
   const dispatch = useDispatch();
@@ -296,12 +298,12 @@ const GateParamsPanel = () => {
       {/* Backdrop overlay */}
       <Box
         position="fixed"
-        top="60px"
+        top="0"
         left="0"
         right="0"
         bottom="0"
         bg="blackAlpha.600"
-        zIndex={999}
+        zIndex={1499}
         onClick={handleClose}
         _hover={{ cursor: "pointer" }}
       />
@@ -309,16 +311,16 @@ const GateParamsPanel = () => {
       {/* Gate parameters panel */}
       <Box
         position="fixed"
-        top="60px"
+        top="0"
         right="0"
-        w="320px"
-        h="calc(100vh - 60px)"
+        w={{ base: "100%", md: "320px" }}
+        h="100vh"
         bg={bg}
         p={4}
         borderLeftWidth={1}
         borderColor={borderColor}
         boxShadow="lg"
-        zIndex={1000}
+        zIndex={1500}
         overflowY="auto"
       >
         <VStack spacing={4} align="stretch">
@@ -633,6 +635,44 @@ const GateParamsPanel = () => {
             <Text>Delete: Remove selected gate</Text>
             <Text>Esc: Close parameter panel</Text>
           </Box>
+
+          {/* Quantum Lens: Matrix Representation */}
+          {gateDefinition.matrix && (
+            <Box
+              mt={4}
+              p={3}
+              borderRadius="md"
+              bg={useColorModeValue("blue.50", "blue.900")}
+              borderLeft="4px solid"
+              borderLeftColor="blue.500"
+            >
+              <Text
+                fontWeight="bold"
+                fontSize="xs"
+                mb={2}
+                color="gray.500"
+                textTransform="uppercase"
+                display="flex"
+                alignItems="center"
+              >
+                Quantum Lens (Matrix)
+              </Text>
+              <Box
+                overflowX="auto"
+                display="flex"
+                justifyContent="center"
+                dangerouslySetInnerHTML={{
+                  __html: katex.renderToString(gateDefinition.matrix, {
+                    displayMode: true,
+                    throwOnError: false,
+                  }),
+                }}
+              />
+              <Text fontSize="xs" color="gray.500" mt={2}>
+                * Describes state evolution
+              </Text>
+            </Box>
+          )}
         </VStack>
       </Box>
     </>

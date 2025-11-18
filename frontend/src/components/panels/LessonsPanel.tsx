@@ -50,6 +50,7 @@ import {
   TimeIcon,
   ChevronRightIcon,
   SettingsIcon,
+  WarningIcon,
 } from "@chakra-ui/icons";
 import { useDispatch, useSelector, shallowEqual } from "react-redux";
 import {
@@ -57,14 +58,20 @@ import {
   getLessonsByCategory,
   type Lesson,
   type LessonChallenge,
+  type ConceptCheck,
 } from "../../data/lessonsData";
+import { generateQiskitCode } from "../generator/generators/qiskitGenerator";
 import {
   selectQubits,
   selectGates,
   addGates,
   clearCircuit,
   addQubit,
+  Gate,
 } from "../../store/slices/circuitSlice";
+import { selectSelectedGateId, selectGate } from "../../store/slices/uiSlice";
+import { gateLibrary } from "../../utils/gateLibrary";
+import { renderCircuitSvg } from "../../utils/circuitRenderer";
 import CircuitCanvas from "../canvas/CircuitCanvas";
 import GatePickerDrawer from "../common/GatePickerDrawer";
 import FullViewToggle from "../common/FullViewToggle";
@@ -98,7 +105,54 @@ const difficultyColor = (d: "easy" | "medium" | "hard" | string) =>
     ? "red"
     : "gray";
 
-// Component to render formatted text with bold (**text**) and inline LaTeX ($...$)
+const CircuitPreview = ({ gates }: { gates: Omit<Gate, "id">[] }) => {
+  const svgString = useMemo(() => {
+    // Calculate required qubits
+    const maxQubit = gates.reduce(
+      (max, g) =>
+        Math.max(
+          max,
+          g.qubit ?? 0,
+          ...(g.targets ?? []),
+          ...(g.controls ?? [])
+        ),
+      0
+    );
+
+    const qubits = Array.from({ length: maxQubit + 1 }, (_, i) => ({
+      id: i,
+      name: `q[${i}]`,
+    }));
+
+    // Add dummy IDs to gates for the renderer
+    const gatesWithIds = gates.map((g, i) => ({
+      ...g,
+      id: `preview-gate-${i}`,
+    })) as any;
+
+    return renderCircuitSvg(qubits, gatesWithIds);
+  }, [gates]);
+
+  return (
+    <Box
+      p={4}
+      bg="white"
+      borderRadius="md"
+      overflowX="auto"
+      borderWidth="1px"
+      borderColor="gray.200"
+      _dark={{ bg: "gray.800", borderColor: "gray.700" }}
+      dangerouslySetInnerHTML={{ __html: svgString }}
+      sx={{
+        "& svg": {
+          display: "block",
+          margin: "0 auto",
+        },
+      }}
+    />
+  );
+};
+
 const FormattedText = ({ text }: { text: string }) => {
   const bg = useColorModeValue("gray.100", "gray.700");
 
@@ -288,6 +342,89 @@ const LessonCard = React.memo(function LessonCard({
     </Card>
   );
 });
+
+const ConceptCheckCard = ({
+  check,
+  index,
+}: {
+  check: ConceptCheck;
+  index: number;
+}) => {
+  const [selected, setSelected] = useState<number | null>(null);
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const bg = useColorModeValue("gray.50", "gray.700");
+
+  const handleSelect = (idx: number) => {
+    setSelected(idx);
+    const correct = idx === check.correctAnswer;
+    setIsCorrect(correct);
+    setShowExplanation(true);
+  };
+
+  return (
+    <Card
+      variant="outline"
+      mb={4}
+      borderColor={
+        showExplanation ? (isCorrect ? "green.200" : "red.200") : undefined
+      }
+    >
+      <CardHeader pb={2}>
+        <HStack justify="space-between">
+          <Text fontWeight="bold" fontSize="sm" color="gray.500">
+            Concept Check {index + 1}
+          </Text>
+          {showExplanation && (
+            <Icon
+              as={isCorrect ? CheckCircleIcon : WarningIcon}
+              color={isCorrect ? "green.500" : "red.500"}
+            />
+          )}
+        </HStack>
+        <Text mt={2} fontWeight="medium">
+          {check.question}
+        </Text>
+      </CardHeader>
+      <CardBody pt={2}>
+        <VStack align="stretch" spacing={2}>
+          {check.options.map((opt, i) => (
+            <Button
+              key={i}
+              variant={selected === i ? "solid" : "outline"}
+              colorScheme={
+                selected === i ? (isCorrect ? "green" : "red") : "gray"
+              }
+              justifyContent="flex-start"
+              onClick={() => handleSelect(i)}
+              isDisabled={showExplanation && isCorrect}
+              size="sm"
+              whiteSpace="normal"
+              height="auto"
+              py={2}
+              textAlign="left"
+            >
+              {opt}
+            </Button>
+          ))}
+        </VStack>
+        {showExplanation && (
+          <Box mt={4} p={3} bg={bg} borderRadius="md">
+            <Text
+              fontSize="sm"
+              fontWeight="bold"
+              mb={1}
+              color={isCorrect ? "green.500" : "red.500"}
+            >
+              {isCorrect ? "Correct!" : "Not quite."}
+            </Text>
+            <Text fontSize="sm">{check.explanation}</Text>
+          </Box>
+        )}
+      </CardBody>
+    </Card>
+  );
+};
 
 export default function LessonsPanel() {
   const dispatch = useDispatch();
@@ -649,6 +786,63 @@ export default function LessonsPanel() {
                     </Accordion>
                   )}
 
+                  <Accordion allowToggle>
+                    <AccordionItem>
+                      <AccordionButton py={isCompactLayout ? 2 : 3}>
+                        <Box
+                          flex="1"
+                          textAlign="left"
+                          fontWeight="bold"
+                          fontSize={{ base: "sm", md: "md" }}
+                        >
+                          Live Code Preview
+                        </Box>
+                        <AccordionIcon />
+                      </AccordionButton>
+                      <AccordionPanel pb={isCompactLayout ? 2 : 4}>
+                        <VStack align="stretch" spacing={2}>
+                          <Text fontSize="xs" color="gray.500">
+                            This is the Qiskit (Python) code for your current
+                            circuit.
+                          </Text>
+                          <Box position="relative">
+                            <Code
+                              whiteSpace="pre-wrap"
+                              p={3}
+                              borderRadius="md"
+                              display="block"
+                              overflowX="auto"
+                              fontSize="xs"
+                              maxH="200px"
+                              overflowY="auto"
+                            >
+                              {generateQiskitCode(
+                                qubits as any[],
+                                gates as any[]
+                              )}
+                            </Code>
+                            <Button
+                              size="xs"
+                              position="absolute"
+                              top={2}
+                              right={2}
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  generateQiskitCode(
+                                    qubits as any[],
+                                    gates as any[]
+                                  )
+                                );
+                              }}
+                            >
+                              Copy
+                            </Button>
+                          </Box>
+                        </VStack>
+                      </AccordionPanel>
+                    </AccordionItem>
+                  </Accordion>
+
                   {currentChallenge?.solution && (
                     <Accordion allowToggle>
                       <AccordionItem>
@@ -983,6 +1177,18 @@ export default function LessonsPanel() {
                   </Card>
                 )}
 
+                {selectedLesson.conceptChecks &&
+                  selectedLesson.conceptChecks.length > 0 && (
+                    <Box>
+                      <Text fontWeight="bold" mb={3} px={1}>
+                        Check Your Understanding
+                      </Text>
+                      {selectedLesson.conceptChecks.map((check, i) => (
+                        <ConceptCheckCard key={i} check={check} index={i} />
+                      ))}
+                    </Box>
+                  )}
+
                 <Card>
                   <CardHeader p={{ base: 3, md: 4 }}>
                     <Text fontWeight="bold">Learning Objectives</Text>
@@ -1011,24 +1217,47 @@ export default function LessonsPanel() {
                       </Text>
                     </CardHeader>
                     <CardBody p={{ base: 3, md: 4 }}>
-                      <VStack align="stretch">
+                      <VStack align="stretch" spacing={4}>
                         <FormattedText text={example.explanation} />
-                        <Code
-                          whiteSpace="pre-wrap"
-                          p={3}
-                          borderRadius="md"
-                          display="block"
-                          overflowX="auto"
-                        >
-                          {JSON.stringify(example.circuit, null, 2)}
-                        </Code>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => loadChallengeCircuit(example.circuit)}
-                        >
-                          Load in Circuit Builder
-                        </Button>
+
+                        <Box>
+                          <Text
+                            fontSize="sm"
+                            fontWeight="bold"
+                            mb={2}
+                            color="gray.500"
+                          >
+                            Circuit Preview:
+                          </Text>
+                          <CircuitPreview gates={example.circuit} />
+                        </Box>
+
+                        <HStack>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            colorScheme="blue"
+                            onClick={() =>
+                              loadChallengeCircuit(example.circuit)
+                            }
+                            flex={1}
+                          >
+                            Load in Circuit Builder
+                          </Button>
+                          <Tooltip label="Copy circuit JSON to clipboard">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  JSON.stringify(example.circuit, null, 2)
+                                );
+                              }}
+                            >
+                              Copy JSON
+                            </Button>
+                          </Tooltip>
+                        </HStack>
                       </VStack>
                     </CardBody>
                   </Card>
@@ -1140,9 +1369,36 @@ export default function LessonsPanel() {
               size="lg"
               borderRadius="full"
               w="100%"
+              colorScheme={overallProgress === 100 ? "green" : "blue"}
+              hasStripe={overallProgress > 0 && overallProgress < 100}
+              isAnimated={overallProgress > 0 && overallProgress < 100}
             />
           </VStack>
         </Box>
+
+        {overallProgress === 0 && !selectedLesson && (
+          <Alert status="info" borderRadius="md" mb={6} variant="left-accent">
+            <AlertIcon />
+            <Box flex="1">
+              <Text fontWeight="bold">New to QuantumFlow?</Text>
+              <Text fontSize="sm">
+                Start your journey with the basics of quantum computing.
+              </Text>
+            </Box>
+            <Button
+              colorScheme="blue"
+              size="sm"
+              onClick={() => {
+                const firstLesson = lessonsData.find(
+                  (l) => l.category === "beginner"
+                );
+                if (firstLesson) setSelectedLesson(firstLesson);
+              }}
+            >
+              Start First Lesson
+            </Button>
+          </Alert>
+        )}
 
         {selectedLesson ? (
           <Box>{LessonDetailView}</Box>
