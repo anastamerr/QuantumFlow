@@ -15,6 +15,7 @@ import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import QMLPanel from './components/panels/QMLPanel'
+import { LessonPanel } from './components/panels/LessonPanel'
 import AIChatbot from './components/ai/AIChatbot'
 import ResizablePanel from './components/layout/ResizablePanel'
 
@@ -151,6 +152,7 @@ function App() {
                 {activePanel === 'export' && <ExportPanel />}
                 {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
                 {activePanel === 'qml' && <QMLPanel />}
+                {activePanel === 'lessons' && <LessonPanel />}
               </ResizablePanel>
             </Flex>
           </Box>

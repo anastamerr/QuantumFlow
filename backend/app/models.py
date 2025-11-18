@@ -49,6 +49,55 @@ class ChatResponse(BaseModel):
     status: str = "success"
 
 
+# Lesson models
+class LessonStartRequest(BaseModel):
+    lesson_id: str = Field(..., description="Lesson identifier")
+    user_id: str = Field("default", description="User identifier")
+
+
+class LessonStepGuidanceRequest(BaseModel):
+    lesson_id: str
+    step_number: int = Field(..., ge=1)
+    lesson_data: Dict[str, Any] = Field(..., description="Full lesson data from frontend")
+    user_id: str = "default"
+
+
+class LessonValidationRequest(BaseModel):
+    lesson_id: str
+    step_number: int = Field(..., ge=1)
+    user_circuit: List[Dict[str, Any]] = Field(..., description="Current user circuit")
+    lesson_data: Dict[str, Any] = Field(..., description="Full lesson data")
+    user_id: str = "default"
+
+
+class LessonHintRequest(BaseModel):
+    lesson_id: str
+    step_number: int = Field(..., ge=1)
+    lesson_data: Dict[str, Any]
+    user_circuit: List[Dict[str, Any]]
+    user_id: str = "default"
+
+
+class LessonFixRequest(BaseModel):
+    lesson_id: str
+    step_number: int = Field(..., ge=1)
+    user_circuit: List[Dict[str, Any]]
+    lesson_data: Dict[str, Any]
+    issue_type: str = Field(..., description="Type of issue to fix")
+    user_id: str = "default"
+
+
+class LessonStatusRequest(BaseModel):
+    user_id: str = "default"
+
+
+class LessonSuggestionRequest(BaseModel):
+    lesson_id: str
+    user_circuit: List[Dict[str, Any]]
+    lesson_data: Dict[str, Any]
+    user_id: str = "default"
+
+
 # QML models
 class QMLTrainRequest(BaseModel):
     train_data: List[List[float]] = Field(..., description="Training data points")

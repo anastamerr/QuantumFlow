@@ -11,7 +11,7 @@ const Header = () => {
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
 
-  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'qml') => {
+  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'qml' | 'lessons') => {
     dispatch(setActivePanel(panel))
   }
 
@@ -86,6 +86,14 @@ const Header = () => {
             colorScheme="purple"
           >
             QML
+          </Button>
+          <Button
+            size="sm"
+            variant={activePanel === 'lessons' ? 'solid' : 'ghost'}
+            onClick={() => handlePanelChange('lessons')}
+            colorScheme="green"
+          >
+            📚 Lessons
           </Button>
           <IconButton
             aria-label="Toggle AI Chat"

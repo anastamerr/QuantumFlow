@@ -225,3 +225,208 @@ export async function encodeData(dataPoint: number[], numQubits: number, encodin
     status: string;
   }>;
 }
+
+// === Lesson API ===
+
+export async function startLesson(lessonId: string, userId: string = "default") {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured");
+
+  const res = await fetch(`${base}/api/v1/lessons/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lesson_id: lessonId,
+      user_id: userId,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to start lesson ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function getLessonStepGuidance(
+  lessonId: string,
+  stepNumber: number,
+  lessonData: any,
+  userId: string = "default"
+) {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured");
+
+  const res = await fetch(`${base}/api/v1/lessons/guidance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lesson_id: lessonId,
+      step_number: stepNumber,
+      lesson_data: lessonData,
+      user_id: userId,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to get guidance ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function validateLessonStep(
+  lessonId: string,
+  stepNumber: number,
+  userCircuit: any[],
+  lessonData: any,
+  userId: string = "default"
+) {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured");
+
+  const res = await fetch(`${base}/api/v1/lessons/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lesson_id: lessonId,
+      step_number: stepNumber,
+      user_circuit: userCircuit,
+      lesson_data: lessonData,
+      user_id: userId,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to validate step ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function getLessonHint(
+  lessonId: string,
+  stepNumber: number,
+  lessonData: any,
+  userCircuit: any[],
+  userId: string = "default"
+) {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured");
+
+  const res = await fetch(`${base}/api/v1/lessons/hint`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lesson_id: lessonId,
+      step_number: stepNumber,
+      lesson_data: lessonData,
+      user_circuit: userCircuit,
+      user_id: userId,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to get hint ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function getLessonStatus(userId: string = "default") {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured");
+
+  const res = await fetch(`${base}/api/v1/lessons/status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to get lesson status ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function suggestNextAction(
+  lessonId: string,
+  userCircuit: any[],
+  lessonData: any,
+  userId: string = "default"
+) {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured");
+
+  const res = await fetch(`${base}/api/v1/lessons/suggest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lesson_id: lessonId,
+      user_circuit: userCircuit,
+      lesson_data: lessonData,
+      user_id: userId,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to get suggestion ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function fixCircuitIssue(
+  lessonId: string,
+  stepNumber: number,
+  userCircuit: any[],
+  lessonData: any,
+  issueType: string,
+  userId: string = "default"
+) {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured");
+
+  const res = await fetch(`${base}/api/v1/lessons/fix`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lesson_id: lessonId,
+      step_number: stepNumber,
+      user_circuit: userCircuit,
+      lesson_data: lessonData,
+      issue_type: issueType,
+      user_id: userId,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fix issue ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export const quantumApi = {
+  executeCircuit,
+  generateCircuitFromChat,
+  trainQNN,
+  evaluateQNN,
+  getQMLTemplates,
+  encodeData,
+  startLesson,
+  getLessonStepGuidance,
+  validateLessonStep,
+  getLessonHint,
+  getLessonStatus,
+  suggestNextAction,
+  fixCircuitIssue,
+};

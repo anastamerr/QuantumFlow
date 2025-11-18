@@ -9,7 +9,9 @@ from .models import (
     QMLTrainRequest, QMLTrainResponse,
     QMLEvaluateRequest, QMLEvaluateResponse,
     QMLTemplatesResponse, DataEncodingRequest, DataEncodingResponse,
-    GateModel
+    GateModel,
+    LessonStartRequest, LessonStepGuidanceRequest, LessonValidationRequest,
+    LessonHintRequest, LessonFixRequest, LessonStatusRequest, LessonSuggestionRequest
 )
 from .qiskit_runner import run_circuit
 from .gemini_service import get_gemini_service
@@ -19,6 +21,7 @@ from .qml_templates import (
     create_angle_encoding_circuit,
     create_amplitude_encoding_circuit
 )
+from .lesson_assistant import LessonAssistant
 
 
 load_dotenv()
@@ -36,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize lesson assistant
+lesson_assistant = LessonAssistant()
 
 
 @app.get("/health")
@@ -171,6 +177,107 @@ def encode_data_to_circuit(req: DataEncodingRequest) -> DataEncodingResponse:
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# === Lesson Endpoints ===
+
+@app.post("/api/v1/lessons/start")
+def start_lesson(req: LessonStartRequest):
+    """Start a new lesson session."""
+    try:
+        result = lesson_assistant.start_lesson(req.lesson_id, req.user_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/lessons/guidance")
+def get_step_guidance(req: LessonStepGuidanceRequest):
+    """Get guidance for the current step."""
+    try:
+        result = lesson_assistant.get_current_step_guidance(
+            req.lesson_id,
+            req.step_number,
+            req.lesson_data,
+            req.user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/lessons/validate")
+def validate_step(req: LessonValidationRequest):
+    """Validate if the user completed the current step correctly."""
+    try:
+        result = lesson_assistant.validate_step(
+            req.lesson_id,
+            req.step_number,
+            req.user_circuit,
+            req.lesson_data,
+            req.user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/lessons/hint")
+def get_hint(req: LessonHintRequest):
+    """Get an additional hint for the current step."""
+    try:
+        result = lesson_assistant.provide_hint(
+            req.lesson_id,
+            req.step_number,
+            req.lesson_data,
+            req.user_circuit,
+            req.user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/lessons/fix")
+def fix_issue(req: LessonFixRequest):
+    """Get specific guidance to fix a detected issue."""
+    try:
+        result = lesson_assistant.fix_circuit_issue(
+            req.lesson_id,
+            req.step_number,
+            req.user_circuit,
+            req.lesson_data,
+            req.issue_type,
+            req.user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/lessons/status")
+def get_lesson_status(req: LessonStatusRequest):
+    """Get current lesson status for a user."""
+    try:
+        result = lesson_assistant.get_lesson_status(req.user_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/lessons/suggest")
+def suggest_next_action(req: LessonSuggestionRequest):
+    """Suggest what the user should do next based on circuit state."""
+    try:
+        result = lesson_assistant.suggest_next_action(
+            req.lesson_id,
+            req.user_circuit,
+            req.lesson_data,
+            req.user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
