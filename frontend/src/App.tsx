@@ -166,7 +166,7 @@ function App() {
           </Flex>
         ) : (
           // New dedicated full-page game view
-          <QubitTouchdownPage onBack={() => setViewMode('workbench')} />
+          <QubitTouchdownPage />
         )}
 
         <TutorialPanel />

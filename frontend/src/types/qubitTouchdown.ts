@@ -1,51 +1,41 @@
-export type GameMode = 'PVP' | 'PVC'
-
-export type QubitPosition = '0' | '1' | '+' | '-' | '+i' | '-i'
-
-export type CardType =
-  | 'H'
-  | 'S'
-  | 'X'
-  | 'Y'
-  | 'Z'
-  | 'SQRT_X'
-  | 'I'
-  | 'MEASURE'
+export type QubitPosition = '0' | '1' | '+' | '-' | '+i' | '-i';
+export type GameMode = 'PVP' | 'PVC';
 
 export interface QubitCard {
-  id: string
-  type: CardType
+  id: string;
+  type: string; // 'H', 'X', 'Y', 'Z', 'S', 'I', 'Meas', '√X'
 }
 
-export interface QubitPlayer {
-  id: number
-  name: string
-  endzone: QubitPosition
-  touchdowns: number
-  hand: QubitCard[]
+export interface Player {
+  id: number;
+  name: string;
+  endzone: QubitPosition;
+  touchdowns: number;
+  hand: QubitCard[];
 }
 
-export interface QubitGameState {
-  game_id: string
-  mode: GameMode
-  ball_position: QubitPosition
-  current_player_id: number
-  players: QubitPlayer[]
-  remaining_cards: number
-  is_over: boolean
-  last_action?: string | null
-  last_die_roll?: number | null
-
+export interface PendingMove {
+  newPos: QubitPosition;
+  nextPid: number;
+  newLastAction: string;
+  updatedPlayers: Record<number, Player>;
+  isOver: boolean;
+  newDeck: QubitCard[];
 }
 
-export interface NewGamePayload {
-  mode: GameMode
-  player1Name?: string
-  player2Name?: string
-}
-
-export interface PlayCardPayload {
-  gameId: string
-  playerId: number
-  cardId: string
+export interface QubitTouchdownState {
+  game_id: string;
+  mode: GameMode;
+  ballPosition: QubitPosition;
+  current_player_id: number;
+  deck: QubitCard[];
+  players: Player[]; // Note: Logic returns object, we often convert to array for UI
+  lastAction: string;
+  lastDieRoll: number | null;
+  is_over: boolean;
+  
+  // Animation States
+  isDiceRolling: boolean;
+  rollTrigger: number;
+  pendingMove: PendingMove | null;
 }
