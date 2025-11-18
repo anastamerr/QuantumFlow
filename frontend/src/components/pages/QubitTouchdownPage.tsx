@@ -7,248 +7,70 @@ import {
   HStack,
   Radio,
   RadioGroup,
-  Stack,
   Text,
-  useColorModeValue,
-  VStack,
   Modal,
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalCloseButton,
+  VStack,
+  useColorModeValue,
 } from '@chakra-ui/react'
 import { useDispatch, useSelector } from 'react-redux'
-import type { AppDispatch, RootState } from '@/store'
-import { CardType, QubitPosition,GameMode, QubitPlayer, QubitGameState} from '@/types/qubitTouchdown'
-import { playCard, startNewGame,selectQubitTouchdown } from '@/store/slices/qubitTouchdownSlice'
 
+// --- Project Imports ---
+import type { AppDispatch } from '@/store'
+import { GameMode } from '@/types/qubitTouchdown'
+import { playCard, startNewGame, selectQubitTouchdown } from '@/store/slices/qubitTouchdownSlice'
 
-
-const NODE_POSITIONS: Record<QubitPosition, { top: string; left: string }> = {
-  '+': { top: '5%', left: '50%' },
-  '0': { top: '30%', left: '25%' },
-  '-i': { top: '30%', left: '75%' },
-  '+i': { top: '60%', left: '25%' },
-  '1': { top: '60%', left: '75%' },
-  '-': { top: '85%', left: '50%' },
-}
-
-type Edge = {
-  from: QubitPosition
-  to: QubitPosition
-  label: string
-}
-
-const EDGES: Edge[] = [
-  { from: '0', to: '+', label: 'H' },
-  { from: '0', to: '-i', label: '√x' },
-  { from: '0', to: '1', label: 'X,Y' },
-
-  { from: '+', to: '0', label: 'H' },
-
-  { from: '-i', to: '+', label: 'S' },
-  { from: '-i', to: '+i', label: 'X,Z,H' },
-  { from: '-i', to: '1', label: '√x' },
-
-  { from: '1', to: '0', label: 'X,Y' },
-  { from: '1', to: '+i', label: '√x' },
-  { from: '1', to: '-', label: 'H' },
-
-  { from: '-', to: '1', label: 'H' },
-
-  { from: '+i', to: '0', label: '√x' },
-  { from: '+i', to: '-i', label: 'X,Z,H' },
-  { from: '+i', to: '-', label: 'S' },
-
-]
-
-function BoardNode({ pos }: { pos: QubitPosition }) {
-  const { game } = useSelector(selectQubitTouchdown) // or pass game as prop if you prefer
-  const isBallHere = game?.ball_position === pos
-  const node = NODE_POSITIONS[pos]
-
-  return (
-    <Box
-      position="absolute"
-      top={node.top}
-      left={node.left}
-      transform="translate(-50%, -50%)"
-    >
-      <Box
-        w="70px"
-        h="70px"
-        borderRadius="full"
-        bg={isBallHere ? 'yellow.500' : 'yellow.300'}
-        color="black"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        borderWidth={3}
-        borderColor={isBallHere ? 'orange.500' : 'yellow.600'}
-        fontWeight="bold"
-        boxShadow={isBallHere ? '0 0 12px rgba(255, 255, 0, 0.8)' : 'none'}
-      >
-        {pos}
-      </Box>
-    </Box>
-  )
-}
-function EdgeArrow({ edge }: { edge: Edge }) {
-  const from = NODE_POSITIONS[edge.from]
-  const to = NODE_POSITIONS[edge.to]
-
-  // 1. Parse positions to numbers
-  const x1 = parseFloat(from.left)
-  const y1 = parseFloat(from.top)
-  const x2 = parseFloat(to.left)
-  const y2 = parseFloat(to.top)
-
-  // Check if there is a reverse edge (from B back to A)
-  const isBidirectional = EDGES.some(e => e.from === edge.to && e.to === edge.from)
-
-  const t = isBidirectional ? 0.3 : 0.5
-
-  // Linear Interpolation to find the exact percentage coordinate
-  const labelLeft = x1 + (x2 - x1) * t
-  const labelTop = y1 + (y2 - y1) * t
-
-  // Create a unique ID for the marker
-  const markerId = `arrowhead-${edge.from}-${edge.to}`
-
-  return (
-    <>
-      {/* Layer 1: The Line (SVG) */}
-      <Box
-        position="absolute"
-        top="0"
-        left="0"
-        w="100%"
-        h="100%"
-        pointerEvents="none"
-        zIndex={0}
-      >
-        <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
-          <defs>
-            <marker
-              id={markerId}
-              markerWidth="10"
-              markerHeight="7"
-              refX="28" 
-              refY="3.5"
-              orient="auto"
-            >
-              <polygon points="0 0, 10 3.5, 0 7" fill="white" />
-            </marker>
-          </defs>
-          <line
-            x1={from.left}
-            y1={from.top}
-            x2={to.left}
-            y2={to.top}
-            stroke="white"
-            strokeWidth="2"
-            opacity="0.9" // Line transperanty 
-            markerEnd={`url(#${markerId})`}
-          />
-        </svg>
-      </Box>
-
-      {/* Layer 2: The Label (HTML) */}
-      <Box
-        position="absolute"
-        top={`${labelTop}%`}
-        left={`${labelLeft}%`}
-        transform="translate(-50%, -50%)"
-        zIndex={1}
-      >
-        <Text
-          fontSize="xs"
-          fontWeight="bold"
-          color="white"
-          bg="blackAlpha.900"
-          px={1}
-          borderRadius="sm"
-          whiteSpace="nowrap" 
-        >
-          {edge.label}
-        </Text>
-      </Box>
-    </>
-  )
-}
+// --- Modular Components Imports ---
+import { QubitBoard } from './QubitBoard'
+import { QubitGameControls } from './QubitGameControls'
 
 interface QubitTouchdownPageProps {
   onBack: () => void
 }
 
 export default function QubitTouchdownPage({ onBack }: QubitTouchdownPageProps) {
-const dispatch = useDispatch<AppDispatch>()
-const { game, loading, error } = useSelector(selectQubitTouchdown)
+  const dispatch = useDispatch<AppDispatch>()
+  const { game, loading, error } = useSelector(selectQubitTouchdown)
 
-const [mode, setMode] = useState<GameMode>('PVP')
-const [isRulesOpen, setIsRulesOpen] = useState(true)
+  const [mode, setMode] = useState<GameMode>('PVP')
+  const [isRulesOpen, setIsRulesOpen] = useState(false)
 
-const bgBoard = useColorModeValue('green.700', 'green.900')
-const circleBg = useColorModeValue('white', 'gray.800')
-const circleActiveBg = useColorModeValue('blue.500', 'blue.300')
-const circleActiveColor = useColorModeValue('white', 'gray.900')
+  const bgPage = useColorModeValue('gray.50', 'gray.900')
+  const bgBoardContainer = useColorModeValue('white', 'gray.800')
+  const textColor = useColorModeValue('gray.800', 'white')
 
+  const startGame = useCallback(() => {
+    dispatch(startNewGame({ mode }))
+  }, [dispatch, mode])
 
-
-// start a game
-const startGame = useCallback(() => {
-  dispatch(startNewGame({ mode }))
-}, [dispatch, mode])
-
-// play a card
-const handlePlayCard = (cardId: string) => {
-  if (!game || game.is_over) return
-  dispatch(
-    playCard({
-      gameId: game.game_id,
-      playerId: game.current_player_id,
-      cardId,
-    }),
-  )
-}
-
-// Optionally auto-start a default game when page opens
-useEffect(() => {
-  if (!game) {
-    startGame()
+  const handlePlayCard = (cardId: string) => {
+    if (!game || game.is_over) return
+    dispatch(
+      playCard({
+        gameId: game.game_id,
+        playerId: game.current_player_id,
+        cardId,
+      }),
+    )
   }
-}, [game, startGame])
 
-const renderBoardCircle = (pos: QubitPosition) => {
-  const isBallHere = game?.ball_position === pos
-  return (
-    <Box
-      w="70px"
-      h="70px"
-      borderRadius="full"
-      bg={isBallHere ? 'yellow.500' : 'yellow.300'}
-      color="black"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      borderWidth={3}
-      borderColor={isBallHere ? 'orange.500' : 'yellow.600'}
-      fontWeight="bold"
-      boxShadow={isBallHere ? '0 0 12px rgba(255, 255, 0, 0.8)' : 'none'}
-    >
-      {pos}
-    </Box>
-  )
-}
+  useEffect(() => {
+    if (!game) {
+      startGame()
+    }
+  }, [game, startGame])
 
-
-  
   const player1 = game?.players.find((p) => p.id === 1)
   const player2 = game?.players.find((p) => p.id === 2)
 
   return (
-    <Box flex={1} p={4} overflow="hidden">
+    <Box flex={1} p={4} h="100vh" overflow="hidden" bg={bgPage} color={textColor}>
+      
+      {/* --- Header Section --- */}
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="md">Qubit Touchdown</Heading>
         <HStack spacing={3}>
@@ -258,248 +80,106 @@ const renderBoardCircle = (pos: QubitPosition) => {
             isDisabled={!!game && !game.is_over}
           >
             <HStack spacing={3}>
-              <Radio value="PVP">2 players</Radio>
-              <Radio value="PVC">Vs computer</Radio>
+              <Radio value="PVP">2 Players</Radio>
+              <Radio value="PVC">Vs Computer</Radio>
             </HStack>
           </RadioGroup>
+
           <Button
             colorScheme="blue"
             onClick={startGame}
             isLoading={loading}
-            variant="solid"
+            size="sm"
           >
-            New game
+            New Game
           </Button>
-          <Button variant="ghost" onClick={() => setIsRulesOpen(true)}>
-        How to play
-        </Button>
-          <Button variant="outline" onClick={onBack}>
-            Back to circuit builder
+          
+          <Button variant="ghost" onClick={() => setIsRulesOpen(true)} size="sm">
+            How to Play
+          </Button>
+          <Button variant="outline" onClick={onBack} size="sm">
+            Exit
           </Button>
         </HStack>
       </Flex>
 
-      <Flex gap={6} h="calc(100vh - 120px)">
-        {/* Left: board + status */}
-<VStack
-  align="stretch"
-  flex="1"
-  spacing={4}
-  bg={bgBoard}
-  borderRadius="md"
-  p={4}
->
-  <Heading size="sm" mb={2}>
-    Field
-  </Heading>
-
-  <Box
-    flex="1"
-    position="relative"
-    borderRadius="md"
-    borderWidth={1}
-    borderColor="whiteAlpha.500"
-    overflow="hidden"
-  >
-    {/* Edges layer */}
-    {EDGES.map((edge, idx) => (
-      <EdgeArrow key={idx} edge={edge} />
-    ))}
-
-    {/* Nodes layer */}
-    {(Object.keys(NODE_POSITIONS) as QubitPosition[]).map((pos) => (
-      <BoardNode key={pos} pos={pos} />
-    ))}
-  </Box>
-  <Box>
-    <Text fontSize="sm" fontWeight="bold">
-      Cards remaining: {game?.remaining_cards ?? 52}
-    </Text>
-
-    {game && (
-  <HStack mt={2} spacing={2}>
-    <Text fontSize="sm" fontWeight="bold">
-      Die:
-    </Text>
-    <Box
-      w="32px"
-      h="32px"
-      borderRadius="md"
-      borderWidth={2}
-      borderColor="whiteAlpha.700"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      fontWeight="bold"
-      bg="whiteAlpha.200"
-    >
-      {game.last_die_roll ?? '–'}
-    </Box>
-  </HStack>
-)}
-
-    {game?.last_action && (
-      <Text fontSize="sm" mt={1}>
-        {game.last_action}
-      </Text>
-    )}
-    {game?.is_over && (
-      <Text mt={2} fontWeight="bold" color="green.400">
-        Game over - highest touchdowns wins!
-      </Text>
-    )}
-    {error && (
-      <Text mt={2} color="red.400">
-        {error}
-      </Text>
-    )}
-  </Box>
-</VStack>
-
-
-        {/* Middle: hands and scoreboard */}
-        <VStack align="stretch" flex="1" spacing={4}>
-          <Box>
-            <Heading size="sm" mb={2}>
-              Scoreboard
-            </Heading>
-            <VStack align="stretch" spacing={2}>
-              {player1 && (
-                <HStack justify="space-between">
-                  <Text fontWeight="bold">
-                    {player1.name} (endzone {player1.endzone})
-                  </Text>
-                  <Text>Touchdowns: {player1.touchdowns}</Text>
-                </HStack>
-              )}
-              {player2 && (
-                <HStack justify="space-between">
-                  <Text fontWeight="bold">
-                    {player2.name} (endzone {player2.endzone})
-                  </Text>
-                  <Text>Touchdowns: {player2.touchdowns}</Text>
-                </HStack>
-              )}
-              {game && (
-                <Text fontSize="sm" mt={2}>
-                  Current turn: Player {game.current_player_id}
+      {/* --- Main Game Layout --- */}
+      <Flex gap={6} h="calc(100vh - 100px)" direction={{ base: 'column', lg: 'row' }}>
+        
+        {/* Left Column: The Field 
+           flex={3} makes it smaller than Controls
+        */}
+        <VStack 
+            flex={{ base: 1, lg: 3 }} 
+            spacing={4} 
+            bg={bgBoardContainer} 
+            p={4} 
+            borderRadius="md" 
+            boxShadow="sm"
+            borderWidth={1}
+            borderColor="whiteAlpha.200"
+        >
+            <Flex w="full" justify="space-between" align="center">
+                <Heading size="sm">Field</Heading>
+                <Text fontSize="sm" fontStyle="italic" color="yellow.500">
+                    {game?.last_action || "Game Ready"}
                 </Text>
-              )}
-            </VStack>
-          </Box>
+            </Flex>
 
-          <Box>
-            <Heading size="sm" mb={2}>
-              Hands
-            </Heading>
-            <VStack align="stretch" spacing={4}>
-              {player1 && (
-                <Box>
-                  <Text mb={1} fontWeight="bold">
-                    {player1.name}
-                  </Text>
-                  <HStack spacing={2} wrap="wrap">
-                    {player1.hand.map((card) => (
-                     <Button
-                    key={card.id}
-                    size="sm"
-                    variant={game?.current_player_id === 1 ? 'solid' : 'outline'}
-                    colorScheme={game?.current_player_id === 1 ? 'blue' : 'gray'}
-                    onClick={() => handlePlayCard(card.id)}
-                    isDisabled={
-                        !game ||
-                        game.is_over ||
-                        game.current_player_id !== 1 ||
-                        loading
-                    }
-                    >
-                    {card.type}
-                    </Button>
-                    ))}
-                    {player1.hand.length === 0 && (
-                      <Text fontSize="xs" color="gray.400">
-                        No cards left
-                      </Text>
-                    )}
-                  </HStack>
-                </Box>
-              )}
-
-              {player2 && (
-                <Box>
-                  <Text mb={1} fontWeight="bold">
-                    {player2.name}
-                    {game?.mode === 'PVC' ? ' (computer)' : ''}
-                  </Text>
-                  <HStack spacing={2} wrap="wrap">
-                    {player2.hand.map((card) => (
-                      <Button
-                    key={card.id}
-                    size="sm"
-                    variant={game?.current_player_id === 2 ? 'solid' : 'outline'}
-                    colorScheme={game?.current_player_id === 2 ? 'purple' : 'gray'}
-                    onClick={() => handlePlayCard(card.id)}
-                    isDisabled={
-                        !game ||
-                        game.is_over ||
-                        game.current_player_id !== 2 ||
-                        loading ||
-                        game.mode === 'PVC' // human cannot play computer's cards
-                    }
-                    >
-                    {card.type}
-                    </Button>
-                    ))}
-                    {player2.hand.length === 0 && (
-                      <Text fontSize="xs" color="gray.400">
-                        No cards left
-                      </Text>
-                    )}
-                  </HStack>
-                </Box>
-              )}
-            </VStack>
-          </Box>
+            <QubitBoard ballPosition={game?.ball_position} />
+            
+            {error && (
+                <Text fontSize="sm" color="red.500" w="full" textAlign="center">
+                    Error: {error}
+                </Text>
+            )}
         </VStack>
+
+        {/* Right Column: Controls & Stats 
+           flex={5} makes it wider (takes 5/8ths of space)
+        */}
+        <Box 
+            flex={{ base: 1, lg: 5 }} 
+            minW={{ lg: "500px" }}
+        >
+            <QubitGameControls 
+                player1={player1}
+                player2={player2}
+                currentPlayerId={game?.current_player_id ?? 1}
+                isGameOver={!!game?.is_over}
+                remainingCards={game?.remaining_cards ?? 52}
+                lastDieRoll={game?.last_die_roll ?? null}
+                onPlayCard={handlePlayCard}
+                gameMode={mode}
+            />
+        </Box>
+
       </Flex>
+
+      {/* --- Rules Modal --- */}
       <Modal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} size="xl">
-  <ModalOverlay />
-  <ModalContent>
-    <ModalHeader>How to play Qubit Touchdown</ModalHeader>
-    <ModalCloseButton />
-    <ModalBody pb={6}>
-      <VStack align="stretch" spacing={3}>
-        <Text fontSize="sm">
-          Qubit Touchdown is a 2-player, football-themed game where each move
-          is a quantum gate on a single qubit.
-        </Text>
-        <Text fontSize="sm" fontWeight="bold">
-          Goal
-        </Text>
-        <Text fontSize="sm">
-          Player 1 scores by bringing the ball to +, Player 2 by bringing it to
-          −. Each arrival is a touchdown. After a touchdown, the scorer kicks
-          off by sending the ball randomly to 0 or 1.
-        </Text>
-        <Text fontSize="sm" fontWeight="bold">
-          Turn
-        </Text>
-        <Text fontSize="sm">
-          On your turn, play one card, move the ball according to that gate,
-          draw a new card, then check for a touchdown. The game ends after all
-          52 cards have been used.
-        </Text>
-        <Text fontSize="sm" fontWeight="bold">
-          Measurement
-        </Text>
-        <Text fontSize="sm">
-          If the ball is at 0 or 1, measurement does nothing. Otherwise, it
-          sends the ball to 0 or 1 with a 50–50 chance (binary die).
-        </Text>
-      </VStack>
-    </ModalBody>
-  </ModalContent>
-</Modal>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>How to Play</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <VStack align="stretch" spacing={3}>
+              <Text fontSize="sm">
+                <strong>Goal:</strong> Move the ball to your endzone. Player 1 targets <strong>(+)</strong>, Player 2 targets <strong>(-)</strong>.
+              </Text>
+              <Text fontSize="sm">
+                <strong>Turns:</strong> Play a card (Quantum Gate) to move the ball along the paths.
+              </Text>
+              <Box bg="gray.100" p={3} borderRadius="md" color="black">
+                 <Text fontSize="xs" fontWeight="bold">Cards:</Text>
+                 <Text fontSize="xs">• <strong>H (Hadamard):</strong> Swaps Basis (0/1) ↔ Superposition (+/-)</Text>
+                 <Text fontSize="xs">• <strong>X, Y, Z:</strong> Standard rotations.</Text>
+                 <Text fontSize="xs">• <strong>Meas (Measurement):</strong> If ball is in superposition, it collapses to 0 or 1 randomly.</Text>
+              </Box>
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
 
     </Box>
   )
