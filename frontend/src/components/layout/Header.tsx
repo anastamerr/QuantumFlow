@@ -77,7 +77,7 @@ const Header = () => {
             size="sm"
             variant={activePanel === 'puzzles' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('puzzles')}
-            colorScheme="green"
+            colorScheme="cyan"
           >
             Puzzles
           </Button>
