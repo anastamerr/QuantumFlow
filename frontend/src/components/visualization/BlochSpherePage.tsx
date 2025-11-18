@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { setActivePanel } from '../../store/slices/uiSlice'
+import { useColorModeValue } from '@chakra-ui/react'
 
 // Lightweight wrapper to load Plotly from CDN when needed
 const loadPlotly = () => {
@@ -106,6 +107,12 @@ const makeAxes = () => {
 const BlochSpherePage: React.FC = () => {
   const plotRef = useRef<HTMLDivElement | null>(null)
   const dispatch = useDispatch()
+  const sidebarBg = useColorModeValue('gray.50', 'gray.700')
+  const sidebarText = useColorModeValue('#1a202c', '#f7fafc')
+  // Header color from theme (matches `Header` bg="quantum.primary")
+  const headerColor = '#3182CE'
+  const headerBright = '#63AEEA'
+  const [showIntro, setShowIntro] = useState(true)
   const [theta, setTheta] = useState(0)
   const [phi, setPhi] = useState(0)
   const vectorRef = useRef<any>(setQubitVector(0, 0))
@@ -119,7 +126,9 @@ const BlochSpherePage: React.FC = () => {
   const [messages, setMessages] = useState<Record<string, string>>({})
   const [helpTagVisible, setHelpTagVisible] = useState(true)
 
+  // Initialize Plotly only after the user dismisses the intro overlay
   useEffect(() => {
+    if (showIntro) return
     let mounted = true
     loadPlotly().then(Plotly => {
       if (!mounted || !plotRef.current) return
@@ -143,7 +152,7 @@ const BlochSpherePage: React.FC = () => {
       Plotly.newPlot(plotRef.current, data, layout)
     }).catch(err => console.error('Failed to load Plotly', err))
     return () => { mounted = false }
-  }, [])
+  }, [showIntro])
 
   // update the vector on slider change or gates
   const updatePlotVector = (t: number, p: number) => {
@@ -229,8 +238,21 @@ const BlochSpherePage: React.FC = () => {
   // sync slider-driven updates
   useEffect(() => { updatePlotVector(theta, phi) }, [theta, phi])
 
+  if (showIntro) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 1200 }}>
+        <div style={{ width: 520, maxWidth: '90%', borderRadius: 12, padding: 22, background: `linear-gradient(180deg, ${headerBright}, ${headerColor})`, color: 'white', boxShadow: '0 18px 48px rgba(0,0,0,0.48)', textAlign: 'center', border: '1px solid rgba(255,255,255,0.12)' }}>
+          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>Make sure your window is maximized for a full experience!</div>
+          <div style={{ marginTop: 8 }}>
+            <button onClick={() => setShowIntro(false)} style={{ background: '#FFD400', color: '#0b2f66', border: 'none', padding: '10px 18px', borderRadius: 8, fontWeight: 800, cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.25)' }}>Ready!</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div style={{ display: 'flex', width: '100%', height: '100%', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', width: '100%', height: '100%', boxSizing: 'border-box', position: 'relative' }}>
       <style>{`.deg-input{ background: white; color: #013a63; padding:4px 6px; border-radius:6px; border:none; } .deg-input::placeholder{ color: #9aaec0; } .gate-name{ font-style: italic; cursor: pointer; } .gate-btn{ display:inline-block; padding:6px 10px; border-radius:8px; background:#cfefff; color:#013a63; border:none; font-weight:700; cursor:pointer; font-style:italic; } .apply-btn{ font-weight:700; background:#bfe9ff; color:#013a63; border:none; }`}</style>
       <div style={{ width: 320, minWidth: 260, margin: '12px', borderRadius: 12, padding: 8, overflow: 'auto' }}>
         {/* Page title above controls */}
