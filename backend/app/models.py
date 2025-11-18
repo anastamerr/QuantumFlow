@@ -27,3 +27,15 @@ class ExecuteResponse(BaseModel):
     probabilities: Dict[str, float]
     memory: Optional[List[str]] = None
     status: str = "success"
+
+
+class PuzzleValidationRequest(BaseModel):
+    num_qubits: int = Field(..., ge=1, description="Number of qubits in the circuit")
+    gates: List[GateModel]
+    target_label: str = Field(..., description="Target gate label (e.g., Pauli X, Swap)")
+
+
+class PuzzleValidationResponse(BaseModel):
+    is_correct: bool
+    message: str
+    status: str = "success"

@@ -14,10 +14,13 @@ import {
   Collapse,
   Divider,
   Tooltip,
+  Spinner,
 } from '@chakra-ui/react'
 import { useSelector } from 'react-redux'
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react'
 import type { RootState } from '@/store'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 type PuzzleState = {
   description: string
@@ -29,64 +32,65 @@ type PuzzleState = {
 }
 
 const quantumPuzzles: PuzzleState[] = [
-  // --- Beginner Puzzles (Focus on single-qubit gates and basic identity) ---
   {
     description: "Replicate the effect of the Pauli-X (NOT) gate on a single qubit, but without using an X gate. Use two gates only.",
     qubits: 1,
-    targetMatrix: '[[0, 1], [1, 0]] (Pauli X)',
+    targetMatrix: "Pauli X",
     isSolved: false,
     attemptCount: 0,
-    difficulty: 'Beginner',
+    difficulty: "Beginner",
   },
   {
     description: "Apply a gate that flips the phase of the angle state. The state angle should remain unchanged. Use one gate.",
     qubits: 1,
-    targetMatrix: '[[1, 0], [0, -1]] (Pauli Z)',
+    targetMatrix: "Pauli Z",
     isSolved: false,
     attemptCount: 0,
-    difficulty: 'Beginner',
+    difficulty: "Beginner",
   },
   {
     description: "Create the identity operation (do nothing) using exactly two different gates. The resulting matrix must be the Identity Matrix (I).",
     qubits: 1,
-    targetMatrix: '[[1, 0], [0, 1]] (Identity)',
+    targetMatrix: "Identity",
     isSolved: false,
     attemptCount: 0,
-    difficulty: 'Beginner',
+    difficulty: "Beginner",
   },
   {
     description: "Build a circuit that swaps the states of two qubits (Qubit 0 and Qubit 1) using **three CNOT gates** and no other gates.",
     qubits: 2,
-    targetMatrix: 'Swap Gate Matrix',
+    targetMatrix: "Swap",
     isSolved: false,
     attemptCount: 0,
-    difficulty: 'Intermediate',
+    difficulty: "Intermediate",
   },
   {
     description: "Construct a circuit that rotates a qubit by an angle of pi/4 around the Z-axis, but only if the control qubit (Qubit 0) is in the angle state. This is a Controlled-pi/4 gate.",
     qubits: 2,
-    targetMatrix: 'Controlled Rz',
+    targetMatrix: "Controlled Rz",
     isSolved: false,
     attemptCount: 0,
-    difficulty: 'Advanced',
+    difficulty: "Advanced",
   },
   {
     description: "Simulate a Toffoli (CCNOT) gate using only single-qubit gates and CNOT gates. This will require several steps and three qubits.",
     qubits: 3,
-    targetMatrix: 'Toffoli Gate Matrix',
+    targetMatrix: "Toffoli",
     isSolved: false,
     attemptCount: 0,
-    difficulty: 'Advanced',
+    difficulty: "Advanced",
   },
-];
+]
 
 export default function PuzzlesPanel(): JSX.Element {
   const toast = useToast()
   const userCircuitGates = useSelector((state: RootState) => state.circuit.gates)
+  const numQubits = useSelector((state: RootState) => state.circuit.qubits.length)
 
   const [currentPuzzleID, setCurrentPuzzleID] = React.useState(0)
   const [showTarget, setShowTarget] = React.useState(false)
   const [showDetails, setShowDetails] = React.useState(false)
+  const [isLoading, setIsLoading] = React.useState(false)
 
   const puzzle = quantumPuzzles[currentPuzzleID]
 
@@ -115,37 +119,71 @@ export default function PuzzlesPanel(): JSX.Element {
     setShowDetails(false)
   }
 
-  const solvedCount = quantumPuzzles.filter(p => p.isSolved).length
+  const solvedCount = quantumPuzzles.filter((p) => p.isSolved).length
   const progressPct = Math.round((solvedCount / quantumPuzzles.length) * 100)
 
-  const handleCheckSolution = () => {
-    // keep original puzzle logic: random success simulation
-    const success = Math.random() < 0.5
-
-    if (success) {
+  const handleCheckSolution = async () => {
+    if (userCircuitGates.length === 0) {
       toast({
-        title: 'Puzzle Solved!',
-        description: 'Your circuit successfully matches the target transformation. Great job!',
-        status: 'success',
-        duration: 5000,
+        title: 'No Circuit',
+        description: 'Add gates to your circuit before checking.',
+        status: 'warning',
+        duration: 3000,
         isClosable: true,
       })
+      return
+    }
 
-      puzzle.isSolved = true
+    setIsLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/validate-puzzle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          num_qubits: numQubits,
+          gates: userCircuitGates,
+          target_label: puzzle.targetMatrix,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || 'Validation failed')
+      }
+
+      const result = await response.json()
+
+      if (result.is_correct) {
+        toast({
+          title: 'Puzzle Solved!',
+          description: 'Your circuit successfully matches the target transformation. Great job!',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        })
+        puzzle.isSolved = true
+      } else {
+        toast({
+          title: 'Incorrect Solution',
+          description: 'The output of your circuit does not match the required target.',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        })
+      }
       puzzle.attemptCount += 1
-    } else {
-      puzzle.attemptCount += 1
+    } catch (error) {
       toast({
-        title: 'Incorrect Solution',
-        description: 'The output of your circuit does not match the required target.',
+        title: 'Validation Error',
+        description: error instanceof Error ? error.message : 'Failed to validate circuit.',
         status: 'error',
         duration: 3000,
         isClosable: true,
       })
+    } finally {
+      setIsLoading(false)
+      setCurrentPuzzleID((id) => id) // trigger re-render to reflect attempt count / solved flag
     }
-
-    // force update UI (since we're mutating const array items)
-    setCurrentPuzzleID((id) => id)
   }
 
   const handleCopyGoal = async () => {
@@ -210,14 +248,18 @@ export default function PuzzlesPanel(): JSX.Element {
         <Spacer />
 
         <HStack spacing={3} width={{ base: '40%', md: '30%' }}>
-          <Text fontSize="sm" whiteSpace="nowrap">{solvedCount}/{quantumPuzzles.length} solved</Text>
+          <Text fontSize="sm" whiteSpace="nowrap">
+            {solvedCount}/{quantumPuzzles.length} solved
+          </Text>
           <Progress value={progressPct} size="sm" flex="1" borderRadius="md" />
         </HStack>
       </HStack>
 
       <VStack align="stretch" spacing={4}>
         <Box p={3} bg="gray.50" _dark={{ bg: 'gray.700' }} borderRadius="md">
-          <Text fontWeight="bold" mb={2}>Goal</Text>
+          <Text fontWeight="bold" mb={2}>
+            Goal
+          </Text>
           <Text mb={2}>{puzzle.description}</Text>
 
           <HStack spacing={3} align="center">
@@ -242,8 +284,12 @@ export default function PuzzlesPanel(): JSX.Element {
 
           <Collapse in={showTarget} animateOpacity>
             <Box mt={3} p={3} bg="white" _dark={{ bg: 'gray.800' }} borderRadius="md" borderWidth={1} borderColor="gray.100">
-              <Text fontSize="sm" fontWeight="semibold">Target Matrix</Text>
-              <Text fontSize="sm" mt={1} whiteSpace="pre-wrap">{puzzle.targetMatrix}</Text>
+              <Text fontSize="sm" fontWeight="semibold">
+                Target Matrix
+              </Text>
+              <Text fontSize="sm" mt={1} whiteSpace="pre-wrap">
+                {puzzle.targetMatrix}
+              </Text>
             </Box>
           </Collapse>
 
@@ -263,15 +309,13 @@ export default function PuzzlesPanel(): JSX.Element {
             <Text fontSize="sm">Attempts: {puzzle.attemptCount}</Text>
             <HStack>
               <Text fontSize="sm">Status:</Text>
-              <Badge colorScheme={puzzle.isSolved ? 'green' : 'red'}>
-                {puzzle.isSolved ? 'SOLVED' : 'ACTIVE'}
-              </Badge>
+              <Badge colorScheme={puzzle.isSolved ? 'green' : 'red'}>{puzzle.isSolved ? 'SOLVED' : 'ACTIVE'}</Badge>
             </HStack>
           </VStack>
 
           <HStack>
-            <Button colorScheme="blue" onClick={handleCheckSolution} isDisabled={userCircuitGates.length === 0}>
-              Check Solution
+            <Button colorScheme="blue" onClick={handleCheckSolution} isDisabled={userCircuitGates.length === 0 || isLoading}>
+              {isLoading ? <Spinner size="sm" /> : 'Check Solution'}
             </Button>
 
             <Button variant="outline" onClick={handleMarkSolved} title="Mark as solved manually">
