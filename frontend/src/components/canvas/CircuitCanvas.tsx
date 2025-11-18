@@ -9,7 +9,8 @@ import { renderCircuitSvg } from '../../utils/circuitRenderer'
 import GridCell from './GridCell'
 import ResizablePanel from '../layout/ResizablePanel'
 import { AddIcon, MinusIcon } from '@chakra-ui/icons'
-
+ import SnapshotList from '../SnapshotList';
+ import './CircuitEditor.css';
 /**
  * CircuitCanvas component displays the quantum circuit grid and visualization
  */

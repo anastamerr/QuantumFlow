@@ -1,4 +1,4 @@
-import { Box, Flex, VStack, useColorModeValue, useToast } from '@chakra-ui/react'
+import { Box, Flex, VStack, useColorModeValue, useToast,useBreakpointValue  } from '@chakra-ui/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useEffect } from 'react'
@@ -14,8 +14,13 @@ import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
-
+import SnapshotViewer from '../src/components/SnapshotViewer'; 
+import { setSnapshots, clearSnapshots, setLoading } from '../src/features/snapshots/snapshotsSlice';
+import { normalizeSnapshot, calculateTotalSize, shouldAutoCollapse } from '../src/utils/snapshotSafetyUtils';
+import { useDispatch } from 'react-redux';
+  
 function App() {
+
   const activePanel = useSelector(selectActivePanel)
   const isFullView = useSelector(selectIsFullView)
   const toast = useToast()
@@ -33,7 +38,6 @@ function App() {
       ) {
         return
       }
-      
       // Escape key to close panels or deselect items
       if (e.key === 'Escape') {
         // Would need to dispatch relevant actions
@@ -160,4 +164,4 @@ function App() {
   )
 }
 
-export default App
+export default App;

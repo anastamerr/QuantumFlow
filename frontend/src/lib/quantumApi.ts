@@ -1,3 +1,9 @@
+ import { setSnapshots, clearSnapshots } from '../features/snapshots/snapshotsSlice';
+ import { 
+normalizeSnapshot, 
+calculateTotalSize, 
+shouldAutoCollapse 
+} from '../utils/snapshotSafetyUtils';
 export function getApiBaseUrl(): string {
   const vite = (typeof import.meta !== "undefined" && (import.meta as any).env)
     ? (import.meta as any).env.VITE_API_BASE_URL
@@ -65,3 +71,8 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
+export async function getSnapshots(payload: ExecutePayload) { const base =
+getApiBaseUrl(); const res = await fetch(`${base}/api/v1/evolution`, { method: "POST",
+headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), }); if
+(!res.ok) { throw new Error(`Snapshot error ${res.status}`); } return res.json() as
+Promise<{ intermediateStates: any[]; status: string; }>; }

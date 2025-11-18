@@ -1,11 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit'
 import circuitReducer from './slices/circuitSlice'
 import uiReducer from './slices/uiSlice'
-
+import debugReducer from './slices/debugSlice';
 export const store = configureStore({
   reducer: {
     circuit: circuitReducer,
     ui: uiReducer,
+    debug: debugReducer,
   },
 })
 

@@ -1,7 +1,13 @@
 import os
 from typing import Dict, Optional, List, Any
-
 from dotenv import load_dotenv
+from collections import defaultdict
+
+# --- Fixed Imports ---
+from qiskit import QuantumCircuit, transpile
+from qiskit_aer import Aer
+from qiskit.quantum_info import Statevector
+# ---------------------
 
 
 def _get_angle(value: Any) -> float:
@@ -73,8 +79,6 @@ def _apply_gate(qc, gate: Dict[str, Any]):
             raise ValueError("Toffoli requires controls[0], controls[1], targets[0]")
         qc.ccx(controls[0], controls[1], targets[0])
     else:
-        # Unsupported gate types are ignored to keep execution robust
-        # Alternatively, raise to notify client: raise ValueError(f"Unsupported gate type: {gtype}")
         pass
 
 
@@ -88,14 +92,6 @@ def _get_aer_backend(backend_name: str):
         pass
 
     # Fallback to Aer.get_backend
-    try:
-        from qiskit_aer import Aer
-    except Exception:
-        try:
-            from qiskit import Aer  # older import path
-        except Exception as e:  # pragma: no cover
-            raise RuntimeError(f"Qiskit Aer not available: {e}")
-
     try:
         return Aer.get_backend(backend_name)
     except Exception:
@@ -116,11 +112,6 @@ def run_circuit(
     load_dotenv()
 
     backend_name = override_backend or os.getenv("QISKIT_BACKEND", "aer_simulator")
-
-    try:
-        from qiskit import QuantumCircuit, transpile
-    except Exception as e:  # pragma: no cover
-        raise RuntimeError(f"Failed to import Qiskit: {e}")
 
     # Build circuit
     qc = QuantumCircuit(num_qubits, num_qubits)
@@ -172,3 +163,65 @@ def run_circuit(
         "memory": memory_out,
     }
 
+#
+# --- THIS IS THE NEW, CORRECTED HACKATHON FUNCTION ---
+#
+def get_state_evolution(
+    num_qubits: int,
+    gates: List[Dict[str, Any]],
+) -> Dict:
+    """
+    Computes the statevector after each column of gates.
+    This fulfills Task (a) of the hackathon.
+    """
+    
+    # 1. Group gates by their column "position"
+    columns = defaultdict(list)
+    for g in gates:
+        pos = g.get("position")
+        if pos is None:
+            pos = 0  # Default to column 0 if not specified
+        columns[pos].append(g)
+
+    # 2. Initialize the circuit and state
+    qc = QuantumCircuit(num_qubits)
+    snapshots = []
+
+    # 3. Get the initial state |0...0>
+    try:
+        # Calculate the initial statevector directly
+        initial_sv = Statevector(qc)
+        initial_state_vec = [f"{c.real:.5f}{c.imag:+.5f}j" for c in initial_sv.data]
+        snapshots.append(initial_state_vec)
+        
+    except Exception as e:
+        raise RuntimeError(f"Failed to get initial statevector: {e}")
+
+    # 4. Loop through each column, apply gates, and save snapshot
+    # We sort the columns to ensure correct order
+    for col_index in sorted(columns.keys()):
+        
+        # Apply all gates in this specific column
+        for gate in columns[col_index]:
+            try:
+                # Use the existing helper function to apply the gate
+                _apply_gate(qc, gate)
+            except Exception as e:
+                # Ignore gates that fail, for robustness
+                print(f"Skipping gate {gate.get('type')}: {e}")
+
+        # 5. Get the statevector *directly from the circuit*
+        try:
+            current_statevector = Statevector(qc)
+            
+            # Convert statevector to the JSON-friendly list of strings
+            state_list = [f"{c.real:.5f}{c.imag:+.5f}j" for c in current_statevector.data]
+            snapshots.append(state_list)
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to get statevector at column {col_index}: {e}")
+
+    # 6. Return the final dictionary as required
+    return {
+        "intermediateStates": snapshots
+    }

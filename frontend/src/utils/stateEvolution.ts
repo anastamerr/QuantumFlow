@@ -1,3 +1,5 @@
+// --- This is the complete, final file: frontend/src/utils/stateEvolution.ts ---
+
 import { Gate } from '../types/circuit';
 
 /**
@@ -359,9 +361,6 @@ const applyRotationX = (
   const cos = Math.cos(angle / 2);
   const sin = Math.sin(angle / 2);
   
-  // For |0⟩ state (targetBit = '0'), new amplitude = cos(θ/2) * |0⟩ + (-i*sin(θ/2)) * |1⟩
-  // For |1⟩ state (targetBit = '1'), new amplitude = (-i*sin(θ/2)) * |0⟩ + cos(θ/2) * |1⟩
-  
   if (targetBit === '0') {
     // Original state |0⟩ contributes cos(θ/2) to |0⟩ and -i*sin(θ/2) to |1⟩
     const newAmplitude0: Complex = [
@@ -411,9 +410,6 @@ const applyRotationY = (
   // Apply RY matrix: RY(θ) = [cos(θ/2), -sin(θ/2); sin(θ/2), cos(θ/2)]
   const cos = Math.cos(angle / 2);
   const sin = Math.sin(angle / 2);
-  
-  // For |0⟩ state (targetBit = '0'), new amplitude = cos(θ/2) * |0⟩ + (-sin(θ/2)) * |1⟩
-  // For |1⟩ state (targetBit = '1'), new amplitude = sin(θ/2) * |0⟩ + cos(θ/2) * |1⟩
   
   if (targetBit === '0') {
     // Original state |0⟩ contributes cos(θ/2) to |0⟩ and -sin(θ/2) to |1⟩
@@ -602,34 +598,109 @@ const addToState = (state: QuantumState, basisState: string, amplitude: Complex)
   }
 };
 
+
+// -----------------------------------------------------------------
+// NEW HACKATHON CODE - This is the engine for Task (b)
+// -----------------------------------------------------------------
+
 /**
- * Mock function to simulate a quantum circuit execution and return measurement probabilities
- * Disabled: measurements must come from backend.
+ * Type definition for a circuit column, which is just an array of gates.
  */
-/*
-export const simulateCircuit = (gates: Gate[], numQubits: number): Record<string, number> => {
-  // Initialize state to |0...0⟩
-  let state: QuantumState = {};
+export type CircuitColumn = Gate[];
+
+/**
+ * Type definition for the full circuit data, which is an array of columns.
+ */
+export type CircuitData = CircuitColumn[];
+
+/**
+ * Computes the quantum state snapshot after each COLUMN of gates.
+ * This is the main function for Task (b).
+ * @param columns - The circuit definition, structured as an array of columns.
+ * @param numQubits - The total number of qubits in the circuit.
+ * @returns An array of QuantumState objects. snapshots[0] is the initial state,
+ * snapshots[1] is the state after the first column, etc.
+ */
+export const computeStateSnapshots = (
+  columns: CircuitData,
+  numQubits: number
+): QuantumState[] => {
+  // 1. Initialize the state to |0...0>
+  const initialState: QuantumState = {};
   const zeroState = '0'.repeat(numQubits);
-  state[zeroState] = [1, 0]; // amplitude 1+0i
-  
-  // Fill all other states with zero amplitude
-  for (let i = 1; i < Math.pow(2, numQubits); i++) {
-    const binaryString = i.toString(2).padStart(numQubits, '0');
-    state[binaryString] = [0, 0]; // amplitude 0+0i
+  initialState[zeroState] = [1, 0]; // Amplitude 1 + 0i
+
+  // 2. Create a list to store the snapshot at each step
+  const snapshots: QuantumState[] = [initialState];
+
+  let currentState = { ...initialState };
+
+  // 3. Loop through each column in the circuit
+  for (const column of columns) {
+    let stateAfterColumn = { ...currentState };
+
+    // 4. Apply every gate in that column
+    for (const gate of column) {
+      stateAfterColumn = simulateGateApplication(
+        stateAfterColumn,
+        gate,
+        numQubits
+      );
+    }
+
+    // 5. Save a snapshot of the state after this column
+    currentState = stateAfterColumn;
+    snapshots.push(currentState);
   }
-  
-  // Sort gates by position
-  const sortedGates = [...gates].sort((a, b) => 
-    (a.position !== undefined ? a.position : 0) - (b.position !== undefined ? b.position : 0)
-  );
-  
-  // Apply each gate in sequence
-  for (const gate of sortedGates) {
-    state = simulateGateApplication(state, gate, numQubits);
-  }
-  
-  // Calculate final probabilities
-  return calculateProbabilities(state);
+
+  // 6. Return the full list of snapshots
+  return snapshots;
 };
-*/
+
+
+// -----------------------------------------------------------------
+// NEW HACKATHON CODE - This is the worker logic for Task (d)
+// -----------------------------------------------------------------
+
+/**
+ * Runs the state snapshot simulation in a WebWorker.
+ * This is the new "main" function that the app will call.
+ *
+ * @param columns The circuit data
+ * @param numQubits The number of qubits
+ * @returns A Promise that will resolve with the array of snapshots
+ */
+export const computeStateSnapshotsInWorker = (
+  columns: CircuitData,
+  numQubits: number
+): Promise<QuantumState[]> => {
+  return new Promise((resolve, reject) => {
+    // Create a new worker instance
+    // The ?url suffix is a special ViteJS feature
+    const worker = new Worker(new URL('./stateWorker.ts', import.meta.url), {
+      type: 'module',
+    });
+
+    // 1. Listen for messages *from* the worker
+    worker.onmessage = (event) => {
+      if (event.data.success) {
+        resolve(event.data.snapshots); // Success!
+      } else {
+        reject(new Error(event.data.error)); // Failed
+      }
+      worker.terminate(); // Clean up the worker
+    };
+
+    // 2. Handle any errors
+    worker.onerror = (error) => {
+      reject(new Error(`Worker error: ${error.message}`));
+      worker.terminate();
+    };
+
+    // 3. Send the circuit data *to* the worker to start the job
+    worker.postMessage({
+      circuit: columns,
+      numQubits: numQubits,
+    });
+  });
+};

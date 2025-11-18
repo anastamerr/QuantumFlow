@@ -2,12 +2,16 @@ import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack } 
 import { useDispatch, useSelector } from 'react-redux'
 import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
 import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
+// ⬇️ NEW: Import debug action and selector ⬇️
+import { toggleSnapshots, selectShowSnap } from '../../store/slices/debugSlice' 
 
 const Header = () => {
   const dispatch = useDispatch()
   const activePanel = useSelector(selectActivePanel)
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
+  // ⬇️ NEW: Select the state for the snapshots toggle ⬇️
+  const showSnap = useSelector(selectShowSnap) 
 
   const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms') => {
     dispatch(setActivePanel(panel))
@@ -21,6 +25,11 @@ const Header = () => {
 
   const handleToggleTutorial = () => {
     dispatch(toggleTutorial())
+  }
+  
+  // ⬇️ NEW: Handler function to toggle the snapshot feature ⬇️
+  const handleToggleSnapshots = () => {
+    dispatch(toggleSnapshots())
   }
 
   return (
@@ -73,6 +82,18 @@ const Header = () => {
           >
             Algorithms
           </Button>
+          
+          {/* ⬇️ NEW TOGGLE BUTTON FOR SHOW STATE AFTER EACH GATE ⬇️ */}
+          <Button
+            size="sm"
+            variant={showSnap ? 'solid' : 'outline'} // 'solid' when ON, 'outline' when OFF
+            onClick={handleToggleSnapshots}
+            colorScheme="yellow" // Using yellow for visibility as a debug/development tool
+          >
+            {showSnap ? 'Snapshots ON' : 'Snapshots OFF'}
+          </Button>
+          {/* ⬆️ END OF NEW TOGGLE BUTTON ⬆️ */}
+
           <Button
             size="sm"
             variant="ghost"
