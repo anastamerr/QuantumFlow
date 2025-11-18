@@ -138,6 +138,18 @@ const CircuitCanvas: React.FC = () => {
       const isMultiQubitGate = (gateDefinition.targets && gateDefinition.targets > 0) || 
                                (gateDefinition.controls && gateDefinition.controls > 0);
 
+      // Special validation for Toffoli gate - requires at least 3 qubits
+      if (gateDefinition.id === 'toffoli' && qubits.length < 3) {
+        toast({
+          title: "Not enough qubits for Toffoli",
+          description: "Toffoli (CCNOT) gate requires at least 3 qubits. Add more qubits to use this gate.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
       if (isMultiQubitGate && qubits.length < 2) {
         toast({
           title: "Not enough qubits",
@@ -166,9 +178,12 @@ const CircuitCanvas: React.FC = () => {
       
       // For multi-qubit gates, set targets and controls
       if (gateDefinition.targets && gateDefinition.targets > 0) {
-        // Two-qubit special case: If we have exactly 2 qubits, set the other one as target
-        if (qubits.length === 2) {
-          // The target should be the qubit that is not the current one
+        if (gateDefinition.id === 'toffoli') {
+          // For Toffoli, treat the dropped qubit as the initial target so the
+          // gate visually and logically aligns with that wire.
+          newGate.targets = [position.qubit];
+        } else if (qubits.length === 2 && gateDefinition.targets === 1) {
+          // Two-qubit special case: If we have exactly 2 qubits, set the other one as target
           const targetQubit = position.qubit === 0 ? 1 : 0;
           newGate.targets = [targetQubit];
         } else {
