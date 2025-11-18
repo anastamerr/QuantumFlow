@@ -32,23 +32,24 @@ interface ProjectIdea {
   title: string;
   difficulty: "Beginner" | "Intermediate" | "Advanced";
   description?: string;
+  image?: string;
 }
 
 const PROJECT_IDEAS: ProjectIdea[] = [
   // Beginner
-  { id: "quantum-randomness", title: "Quantum Random Number Generator", difficulty: "Beginner", description: "Use a single qubit to generate true quantum randomness!" },
-  { id: "quantum-music", title: "Quantum Music Generator", difficulty: "Beginner", description: "Maps random qubits to a C major scale and plays music! (Preferably 2 qubits)" },
-  { id: "quantum-classic-gates", title: "Classical Gates in the Quantum World", difficulty: "Beginner", description: "Discover how to build classical gates using quantum gates!" },
+  { id: "quantum-randomness", title: "Quantum Random Number Generator", difficulty: "Beginner", description: "Use a single qubit to generate true quantum randomness!", image: "/images/project images/dice.png" },
+  { id: "quantum-music", title: "Quantum Music Generator", difficulty: "Beginner", description: "Maps random qubits to a C major scale and plays music! (Preferably 2 qubits)", image: "/images/project images/music.png" },
+  { id: "quantum-classic-gates", title: "Classical Gates in the Quantum World", difficulty: "Beginner", description: "Discover how to build classical gates using quantum gates!", image: "/images/project images/gates.png" },
   
   // Intermediate
-  { id: "quantum-half-adder", title: "Quantum Half Adder", difficulty: "Intermediate", description: "Simulate half adders using quantum gates!" },
-  { id: "quantum-teleportation-demo", title: "Quantum Teleportation Tutorial", difficulty: "Intermediate", description: "Interactive teleportation demo." },
-  { id: "quantum-comparator", title: "Quantum Comparator", difficulty: "Intermediate", description: "Implement a classical comparator using quantum gates!" },
+  { id: "quantum-half-adder", title: "Quantum Half Adder", difficulty: "Intermediate", description: "Simulate half adders using quantum gates!", image: "/images/project images/adder.png" },
+  { id: "quantum-teleportation-demo", title: "Quantum Teleportation Tutorial", difficulty: "Intermediate", description: "Interactive teleportation demo.", image: "/images/project images/teleport.png" },
+  { id: "quantum-comparator", title: "Quantum Comparator", difficulty: "Intermediate", description: "Implement a classical comparator using quantum gates!", image: "/images/project images/scale.png" },
 
   // Advanced
-  { id: "vqe-molecule", title: "VQE for Small Molecules (H2)", difficulty: "Advanced", description: "Variational approach for H2 energy." },
-  { id: "error-mitigation-playground", title: "Noise Mitigation Playground", difficulty: "Advanced", description: "Tools to mitigate simulated noise." },
-  { id: "quantum-chemistry-gui", title: "Quantum Chemistry Simulation App", difficulty: "Advanced", description: "Visualize simple molecular simulations." },
+  { id: "grover-oracle", title: "Grover Oracle Builder", difficulty: "Advanced", description: "Design a marked item oracle with MCX and run Grover.", image: "/images/project images/oracle.png" },
+  { id: "phase-kickback-lab", title: "Phase Kickback Lab", difficulty: "Advanced", description: "Explore phase kickback using CZ and superposition states.", image: "/images/project images/quantum.png" },
+  { id: "subtractor-2bit", title: "2-bit Subtractor (a−b)", difficulty: "Advanced", description: "Compute difference and borrow using CX/CCX with clean ancillas.", image: "/images/project images/subtract.png" },
 ];
 
 const ProjectPanel: React.FC = () => {
@@ -275,6 +276,7 @@ const ProjectPanel: React.FC = () => {
   const getProjectSteps = (id: string) => {
     if (id === 'quantum-randomness') {
       return [
+        { text: 'Goal: Create a true random number generator using quantum superposition and measurement!' },
         {text: 'Start with a single qubit (Q0). Its initial state is |0⟩, meaning it is definitely 0!'},
         {text: 'Drag and drop an H gate (Hadamard) onto Q0. Now the qubit is 50% chance 0, 50% chance 1 and is in superposition!.'},
         {text: 'Add a Measure (M) gate to Q0, after the H gate.Measurement collapses the superposition randomly into 0 or 1!' },
@@ -287,6 +289,7 @@ const ProjectPanel: React.FC = () => {
 
     if (id === 'quantum-music') {
       return [
+        { text: 'Goal: Build a quantum music generator using 2 qubits!' },
         { text: 'Start by adding Hadamard (H) gates to 2 qubits!' },
         { text: 'Add a Measure (M) after the H gates!' },
         { text: 'Click on Simulation from the top bar!' },
@@ -299,6 +302,7 @@ const ProjectPanel: React.FC = () => {
 
     if (id === 'quantum-classic-gates') {
       return [
+        { text: 'Goal: Build classical AND, OR, NOT, NAND, NOR, XOR, XNOR gates using quantum gates!' },
         {text: 'Let\'s build an AND gate first! Start by adding 3 qubits to the circuit, A, B and C respectively!' },
         { text: 'To build a classical AND gate, add a Toffoli (CCNOT) gate with A and B as controls and a new qubit C as target!' },
         { text: 'Add Measure (M) gates to all qubits!' },
@@ -324,6 +328,7 @@ const ProjectPanel: React.FC = () => {
 
     if (id === 'quantum-half-adder') {
       return [
+        { text: 'Goal: Add two 1-bit numbers A and B, output Carry and Sum.' },
         { text: 'Start by adding 4 qubits to the circuit, Carry, Sum, A and B respectively (the order matters) !' },
         { text: 'Add Hadamard (H) gates to q2 and q3, A and B respectively!' },
         { text: 'Apply a CNOT gate between q2 (A) and Sum, with A as control!' },
@@ -337,6 +342,75 @@ const ProjectPanel: React.FC = () => {
         { text: 'Congratulations! You have built a quantum half-adder!' }
       ]
     }
+
+    if (id === 'quantum-comparator') {
+      return [
+        {text: 'Goal: Compare two 2-bit numbers A1A0 and B1B0, output 1 if A>B else 0.'},
+        { text: 'Start by adding 5 qubits to the circuit, A1, A0, B1 and B0, and OUT! Rename the qubits for an easier implementation!' },
+        { text: 'Add Hadamard (H) gates to all qubits to create superposition!' },
+        { text: 'First, add CNOT gates from A0 to OUT and B0 to OUT!' },
+        { text: 'Next, add a Toffoli gate with A1 and B1 as controls and OUT as target!' },
+        { text: 'Add Measure (M) gates to all qubits!' },
+        { text: 'Click on Simulation from the top bar!' },
+        { text: 'Click Run Simulation!' },
+        { text: 'Check the states of the measured qubits and verify the comparator output!' },
+        { text: 'Congratulations! You have built a quantum comparator!' }
+
+      ]
+    }
+
+    if (id === 'grover-oracle') {
+      return [
+        { text: 'Goal: mark one 3-qubit basis state and amplify it via Grover.' },
+        { text: 'Add 3 qubits q2,q1,q0 as the search register and 1 ancilla qA (init 1) for phase kickback.' },
+        { text: 'Prepare uniform superposition: apply H to q2,q1,q0. Set ancilla to |-> by applying X then H on qA.' },
+        { text: 'Choose the marked state (e.g., 101). Add X to any register qubit that should be 0 in the marked pattern (for 101, add X to q1 only).' },
+        { text: 'Implement the phase oracle: apply multi-controlled Z using H on qA, then MCX with controls q2,q1,q0 targeting qA, then H on qA.' },
+        { text: 'Unflip the pattern prep X on any qubits you toggled in step 4 (undo the X on q1 for 101).' },
+        { text: 'Diffusion operator: apply H to q2,q1,q0; then X to q2,q1,q0; then H on q0, CCX(q2,q1->q0) or MCX for 3 controls; then H on q0; finally X to q2,q1,q0 and H to q2,q1,q0.' },
+        { text: 'Measure q2,q1,q0. The marked bitstring should dominate in the Output tab. Increase shots to see amplification clearly.' },
+      ]
+    }
+
+    if (id === 'phase-kickback-lab') {
+      return [
+        { text: 'Goal: observe phase kickback using CZ and superposition states.' },
+        { text: 'Add two qubits qC (control) and qT (target).' },
+        { text: 'Apply H to qC to prepare superposition.' },
+        { text: 'Apply X to qT to prepare |1⟩.' },
+        { text: 'Apply H to qT to prepare |−⟩.' },
+        { text: 'Apply CZ between qC and qT.' },
+        { text: 'Apply H to qT to return to Z-basis.' },
+        { text: 'Apply H to qC to interfere the kicked phase.' },
+        { text: 'Measure qC and qT and inspect outcomes.' },
+        { text: 'Replace CZ with H on qT, then CX qC→qT, then H on qT.' },
+        { text: 'Insert Z or P(φ) on qT before CZ and observe qC distribution changes.' },
+      ]
+    }
+
+    if (id === 'subtractor-2bit') {
+      return [
+        { text: 'Add seven qubits: b2, d1, d0, a1, a0, b1, b0 (top→bottom).' },
+        { text: 'Set input bits by applying X to a1,a0,b1,b0 as needed.' },
+        { text: 'Ensure ancillas b2,d1,d0 are initialized to |0⟩.' },
+        { text: 'Apply CX a0→d0.' },
+        { text: 'Apply CX b0→d0.' },
+        { text: 'Apply X to a0.' },
+        { text: 'Apply CCX a0,b0→d1.' },
+        { text: 'Apply X to a0.' },
+        { text: 'Apply CX a1→d1.' },
+        { text: 'Apply CX b1→d1.' },
+        { text: 'Apply X to a1.' },
+        { text: 'Apply CCX a1,b1→b2.' },
+        { text: 'Apply X to a1.' },
+        { text: 'Apply CCX d1,a1→b2.' },
+        { text: 'Measure b2,d1,d0,a1,a0,b1,b0.' },
+        { text: 'Verify 01−00=01 (b2=0).' },
+        { text: 'Verify 10−01=01 (b2=0).' },
+        { text: 'Verify 00−01=11 (b2=1).' },
+      ]
+    }
+    
 
 
     // default placeholder
@@ -375,7 +449,16 @@ const ProjectPanel: React.FC = () => {
                     {ideas.map((idea) => (
                       <Card key={idea.id} borderRadius="md" overflow="hidden" _hover={{ transform: 'translateY(-4px)', boxShadow: 'lg' }} transition="all 0.15s">
                         <CardHeader p={0}>
-                          <Image alt={`${idea.title} placeholder`} src={"/placeholder-image.png"} fallbackSrc={"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='200'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='16'>Image</text></svg>"} objectFit="cover" w="100%" h="120px" />
+                          <Box w="100%" h="120px" p={3} boxSizing="border-box">
+                            <Image
+                              alt={`${idea.title} image`}
+                              src={idea.image || "/images/project images/<add-filename-here>.png"}
+                              fallbackSrc={"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='200'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='16'>Image</text></svg>"}
+                              objectFit="contain"
+                              w="100%"
+                              h="100%"
+                            />
+                          </Box>
                         </CardHeader>
                         <CardBody>
                           <HStack justify="space-between" align="start">
