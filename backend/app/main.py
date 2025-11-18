@@ -17,7 +17,8 @@ app = FastAPI(title="QuantumFlow Backend", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ["*"] else ["*"],
+    # FIX: Hardcode to allow all origins, bypassing the .env file
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

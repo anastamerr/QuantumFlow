@@ -31,6 +31,7 @@ export const uiSlice = createSlice({
   name: 'ui',
   initialState,
   reducers: {
+    // --- EXISTING REDUCERS ---
     selectGate: (state, action: PayloadAction<string | null>) => {
       state.selectedGateId = action.payload
       state.showGateParams = action.payload !== null

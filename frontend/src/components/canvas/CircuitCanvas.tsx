@@ -2,6 +2,9 @@ import { Box, Text, VStack, HStack, Heading, Divider, useColorModeValue, Slider,
 import { useSelector, useDispatch } from 'react-redux'
 import { selectQubits, selectGates, selectMaxPosition, addGate, removeGate, Gate } from '../../store/slices/circuitSlice'
 import { selectSelectedGateId, selectGate, selectZoomLevel, setZoomLevel } from '../../store/slices/uiSlice'
+// NEW: Simulation selectors for the VCR
+import { selectCurrentStep, selectSimulationHistory } from '../../store/slices/simulationSlice'
+
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { CircuitPosition, DroppedGate, Gate as CircuitGate } from '../../types/circuit'
 import { gateLibrary } from '../../utils/gateLibrary'
@@ -21,6 +24,12 @@ const CircuitCanvas: React.FC = () => {
   const maxPosition = useSelector(selectMaxPosition)
   const selectedGateId = useSelector(selectSelectedGateId)
   const zoomLevel = useSelector(selectZoomLevel)
+  
+  // NEW: VCR State
+  const currentStep = useSelector(selectCurrentStep)
+  const history = useSelector(selectSimulationHistory)
+  const isVcrActive = history.length > 0
+
   const toast = useToast()
   
   // Local state
@@ -39,15 +48,13 @@ const CircuitCanvas: React.FC = () => {
   const headingColor = useColorModeValue('gray.700', 'gray.200')
   const controlsBg = useColorModeValue('gray.100', 'gray.700')
   
-  // Convert SliceGate[] to CircuitGate[] for GridCell compatibility - with error protection
+  // Convert SliceGate[] to CircuitGate[] for GridCell compatibility
   const circuitGates = useMemo(() => {
     try {
       return gates.map(gate => {
-        // Find the gate definition for additional properties
         const gateDefinition = gateLibrary.find(g => g.id === gate.type);
         
         if (!gateDefinition) {
-          console.warn(`Gate type "${gate.type}" not found in library`);
           return {
             ...gate,
             name: gate.type,
@@ -58,7 +65,6 @@ const CircuitCanvas: React.FC = () => {
           } as CircuitGate;
         }
         
-        // Return a compatible gate object
         return {
           ...gate,
           name: gateDefinition.name,
@@ -74,57 +80,44 @@ const CircuitCanvas: React.FC = () => {
     }
   }, [gates]);
   
-  // Update SVG representation when circuit changes, with debounce for better performance
+  // Update SVG representation
   useEffect(() => {
-    // Don't update SVG for empty circuits
     if (qubits.length === 0) return;
     
     const debounceTimer = setTimeout(() => {
       try {
-        // Use circuitGates instead of gates for proper typing
         const svg = renderCircuitSvg(qubits, circuitGates);
-        
-        // Apply SVG to the container
         if (svgContainerRef.current) {
           svgContainerRef.current.innerHTML = svg;
         }
       } catch (err) {
         console.error('Error rendering circuit SVG:', err);
-        // Show error toast to user
-        toast({
-          title: 'Visualization Error',
-          description: 'Could not render the circuit visualization.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
       }
-    }, 100); // 100ms debounce
+    }, 100);
     
     return () => clearTimeout(debounceTimer);
-  }, [qubits, circuitGates, toast]); // Updated dependency array
+  }, [qubits, circuitGates]); 
   
   // Handle zoom level changes
   const handleZoomIn = useCallback(() => {
     const newZoom = Math.min(zoomLevel + 0.1, 2.0);
     dispatch(setZoomLevel(newZoom));
-    setCellSize(60 * newZoom); // Adjust cell size based on zoom
+    setCellSize(60 * newZoom); 
   }, [zoomLevel, dispatch]);
   
   const handleZoomOut = useCallback(() => {
     const newZoom = Math.max(zoomLevel - 0.1, 0.5);
     dispatch(setZoomLevel(newZoom));
-    setCellSize(60 * newZoom); // Adjust cell size based on zoom
+    setCellSize(60 * newZoom); 
   }, [zoomLevel, dispatch]);
   
   const handleZoomChange = useCallback((value: number) => {
     dispatch(setZoomLevel(value));
-    setCellSize(60 * value); // Adjust cell size based on zoom
+    setCellSize(60 * value); 
   }, [dispatch]);
   
   /**
-   * Handle dropping a gate onto the circuit - Fixed to ensure valid multi-qubit gate configurations
-   * with special handling for two-qubit scenarios
+   * Handle dropping a gate onto the circuit
    */
   const handleDrop = useCallback((item: DroppedGate, position: CircuitPosition): void => {
     try {
@@ -149,7 +142,7 @@ const CircuitCanvas: React.FC = () => {
         return;
       }
       
-      // Create a new gate instance with required properties and proper typing
+      // Create a new gate instance
       const newGate: Omit<Gate, "id"> = {
         type: gateDefinition.id,
         qubit: position.qubit,
@@ -157,52 +150,46 @@ const CircuitCanvas: React.FC = () => {
         params: {},
       };
       
-      // For gates with parameters, initialize with defaults
+      // Initialize params with defaults
       if (gateDefinition.params && gateDefinition.params.length > 0) {
         newGate.params = gateDefinition.params.reduce((acc, param) => {
           return { ...acc, [param.name]: param.default };
         }, {});
       }
       
-      // For multi-qubit gates, set targets and controls
+      // Handle Targets
       if (gateDefinition.targets && gateDefinition.targets > 0) {
-        // Two-qubit special case: If we have exactly 2 qubits, set the other one as target
+        // Special case: exactly 2 qubits
         if (qubits.length === 2) {
-          // The target should be the qubit that is not the current one
           const targetQubit = position.qubit === 0 ? 1 : 0;
           newGate.targets = [targetQubit];
         } else {
-          // For more qubits, find the first available qubit that's not the current one
           const availableQubits = qubits
             .filter(q => q.id !== position.qubit)
             .map(q => q.id);
           
-          if (availableQubits.length < gateDefinition.targets) { // Check against required targets
+          if (availableQubits.length < gateDefinition.targets) { 
             toast({
               title: "No available target qubits",
-              description: `This gate requires ${gateDefinition.targets} target qubit(s). Add more qubits or adjust gate placement.`,
+              description: `This gate requires ${gateDefinition.targets} target qubit(s).`,
               status: "warning",
               duration: 3000,
               isClosable: true,
             });
             return;
           }
-          
-          // Set default target to the first available qubit(s)
           newGate.targets = availableQubits.slice(0, gateDefinition.targets);
         }
       }
       
+      // Handle Controls
       if (gateDefinition.controls && gateDefinition.controls > 0) {
         const mainQubit = position.qubit;
         const targetQubits = newGate.targets || [];
         
-        // For CNOT and CZ, the control is implicitly the qubit the gate is dropped on,
-        // and the target is set in the previous block. We don't need to find additional control qubits.
         if (gateDefinition.id === 'cnot' || gateDefinition.id === 'cz') {
-          // Ensure the target is different from the control for CNOT/CZ
           if (targetQubits.includes(mainQubit)) {
-             toast({
+              toast({
                 title: "Invalid CNOT/CZ placement",
                 description: "Control and target qubits cannot be the same.",
                 status: "warning",
@@ -212,7 +199,6 @@ const CircuitCanvas: React.FC = () => {
               return;
           }
         } else {
-          // For other multi-control gates (e.g., Toffoli)
           const availableControlQubits = qubits
             .filter(q => q.id !== mainQubit && !targetQubits.includes(q.id))
             .map(q => q.id);
@@ -231,19 +217,11 @@ const CircuitCanvas: React.FC = () => {
         }
       }
       
-      // Add the gate to the circuit
       dispatch(addGate(newGate));
       
     } catch (err) {
-      // More specific error handling
       let errorMessage = 'Could not add the gate to the circuit.';
-      
-      if (err instanceof Error) {
-        console.error(`Error adding gate: ${err.message}`);
-        errorMessage = `Error: ${err.message}`;
-      } else {
-        console.error('Unknown error adding gate:', err);
-      }
+      if (err instanceof Error) errorMessage = `Error: ${err.message}`;
       
       toast({
         title: 'Error Adding Gate',
@@ -255,16 +233,10 @@ const CircuitCanvas: React.FC = () => {
     }
   }, [dispatch, qubits, toast]);
   
-  /**
-   * Handle clicking on a gate in the circuit
-   */
   const handleGateClick = useCallback((gateId: string): void => {
     dispatch(selectGate(gateId));
   }, [dispatch]);
   
-  /**
-   * Handle removing a gate from the circuit
-   */
   const handleGateRemove = useCallback((gateId: string): void => {
     dispatch(removeGate(gateId));
   }, [dispatch]);
@@ -283,6 +255,9 @@ const CircuitCanvas: React.FC = () => {
       
       // For each position, create a cell
       for (let position = 0; position < maxPosition; position++) {
+        // --- NEW LOGIC: Check if this column is the current VCR step ---
+        const isCurrentStep = isVcrActive && (position === currentStep);
+
         cells.push(
           <GridCell
             key={`cell-${qubit}-${position}`}
@@ -295,6 +270,8 @@ const CircuitCanvas: React.FC = () => {
             onDrop={handleDrop}
             onGateClick={handleGateClick}
             onGateRemove={handleGateRemove}
+            // Pass the new highlighting prop
+            isCurrentStep={isCurrentStep} 
             width={`${cellSize}px`}
             height={`${cellSize}px`}
           />
@@ -333,11 +310,14 @@ const CircuitCanvas: React.FC = () => {
     gridBorderColor, 
     gridBg, 
     qubitLabelBg, 
-    qubitLabelColor,
-    handleDrop,
-    handleGateClick,
-    handleGateRemove,
-    cellSize
+    qubitLabelColor, 
+    handleDrop, 
+    handleGateClick, 
+    handleGateRemove, 
+    cellSize,
+    // New dependencies for VCR
+    currentStep,
+    isVcrActive
   ]);
   
   // If no qubits, show a message
@@ -416,6 +396,7 @@ const CircuitCanvas: React.FC = () => {
             <VStack spacing={0} align="stretch">
               {renderGrid}
             </VStack>
+            {/* Floating green box REMOVED. Highlighting is now inside GridCell. */}
           </Box>
         </Box>
       </ResizablePanel>

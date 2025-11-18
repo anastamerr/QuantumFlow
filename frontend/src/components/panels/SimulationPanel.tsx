@@ -30,6 +30,7 @@ import {
   Stack,
   Tag,
   useBreakpointValue
+  
 } from '@chakra-ui/react';
 import { useSelector } from 'react-redux';
 import { selectQubits, selectGates } from '../../store/slices/circuitSlice';
