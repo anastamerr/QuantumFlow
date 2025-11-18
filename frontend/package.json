@@ -18,7 +18,7 @@
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@react-three/drei": "^9.80.3",
-    "@react-three/fiber": "^8.15.10",
+    "@react-three/fiber": "^8.18.0",
     "@reduxjs/toolkit": "^1.9.5",
     "@types/react-syntax-highlighter": "^15.5.13",
     "d3": "^7.8.5",
@@ -28,9 +28,10 @@
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.2.0",
     "react-redux": "^8.1.2",
-    "react-syntax-highlighter": "^15.6.6",
+    "react-syntax-highlighter": "^16.1.0",
     "recharts": "^3.4.1",
-    "slices": "^0.1.4"
+    "slices": "^0.1.4",
+    "three": "^0.181.1"
   },
   "devDependencies": {
     "@types/d3": "^7.4.0",
