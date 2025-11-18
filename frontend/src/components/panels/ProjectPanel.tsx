@@ -392,11 +392,10 @@ const ProjectPanel: React.FC = () => {
       return [
         { text: 'Add seven qubits: b2, d1, d0, a1, a0, b1, b0 (top→bottom).' },
         { text: 'Set input bits by applying X to a1,a0,b1,b0 as needed.' },
-        { text: 'Ensure ancillas b2,d1,d0 are initialized to |0⟩.' },
         { text: 'Apply CX a0→d0.' },
         { text: 'Apply CX b0→d0.' },
         { text: 'Apply X to a0.' },
-        { text: 'Apply CCX a0,b0→d1.' },
+        { text: 'Apply CCX a0, b0→d1.' },
         { text: 'Apply X to a0.' },
         { text: 'Apply CX a1→d1.' },
         { text: 'Apply CX b1→d1.' },
@@ -431,7 +430,7 @@ const ProjectPanel: React.FC = () => {
             <HStack justify="space-between" w="100%">
               <VStack align="start" spacing={0}>
                 <Text fontSize="xl" fontWeight="bold">Project Ideas</Text>
-                <Text fontSize="sm" color={textColor}>Browse grouped project ideas and placeholders</Text>
+                <Text fontSize="sm" color={textColor}>Browse mini-project ideas and have fun!</Text>
               </VStack>
             </HStack>
           </ModalHeader>
@@ -507,7 +506,7 @@ const ProjectPanel: React.FC = () => {
           >
             <VStack align="start" spacing={0} flex={1}>
               <Text fontWeight="bold">{floatingProject.title}</Text>
-              <Text fontSize="xs">Flashcards</Text>
+              <Text fontSize="xs">Drag this window around!</Text>
             </VStack>
             <Button size="sm" onClick={closeFloating}>Close</Button>
           </HStack>
