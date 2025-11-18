@@ -8,20 +8,27 @@ import RightSidebar from './components/layout/RightSidebar' // <--- Import the n
 import CircuitCanvas from './components/canvas/CircuitCanvas'
 import CodePanel from './components/panels/CodePanel'
 import { useSelector } from 'react-redux'
-import { selectActivePanel, selectIsFullView } from './store/slices/uiSlice'
+import { selectIsFullView } from './store/slices/uiSlice'
+import type { RootState } from './store'
+import type { UiState } from './store/slices/uiSlice'
+
+type PanelKey = UiState['activePanel'] | 'statistics'
 import SimulationPanel from './components/panels/SimulationPanel'
+import MplCircuitPanel from './components/panels/MplCircuitPanel'
 import ExportPanel from './components/panels/ExportPanel'
 import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
+import StatsPanel from './components/panels/StatsPanel'
 
 function App() {
   // --- STATES ---
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true)
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true) // <--- New State
 
-  const activePanel = useSelector(selectActivePanel)
+  //const activePanel = useSelector(selectActivePanel)
+  const activePanel = useSelector((state: RootState) => state.ui.activePanel) as PanelKey
   const isFullView = useSelector(selectIsFullView)
   const toast = useToast()
   const panelBg = useColorModeValue('white', 'gray.800')
@@ -135,8 +142,10 @@ function App() {
               >
                 {activePanel === 'code' && <CodePanel />}
                 {activePanel === 'simulation' && <SimulationPanel />}
+                {activePanel === 'mpl' && <MplCircuitPanel />}
                 {activePanel === 'export' && <ExportPanel />}
                 {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                {activePanel === 'statistics' && <StatsPanel />}
               </ResizablePanel>
             </Flex>
           </Box>

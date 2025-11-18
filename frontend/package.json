@@ -19,7 +19,6 @@
     "@emotion/styled": "^11.11.0",
     "@reduxjs/toolkit": "^1.9.5",
     "@types/react-syntax-highlighter": "^15.5.13",
-    "@types/three": "^0.176.0",
     "d3": "^7.8.5",
     "framer-motion": "^10.15.0",
     "react": "^18.2.0",
@@ -28,8 +27,8 @@
     "react-dom": "^18.2.0",
     "react-redux": "^8.1.2",
     "react-syntax-highlighter": "^15.6.6",
-    "slices": "^0.1.4",
-    "three": "^0.176.0"
+    "recharts": "^3.4.1",
+    "slices": "^0.1.4"
   },
   "devDependencies": {
     "@types/d3": "^7.4.0",

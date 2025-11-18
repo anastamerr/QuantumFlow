@@ -4,3 +4,4 @@ pydantic==2.9.2
 python-dotenv==1.0.1
 qiskit==1.2.4
 qiskit-aer==0.15.1
+pylatexenc

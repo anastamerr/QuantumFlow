@@ -99,7 +99,7 @@ const TutorialPanel = () => {
             <VStack>
               <Icon as={ViewIcon} boxSize={8} color="green.500" />
               <Text fontWeight="bold">3D Visualization</Text>
-              <Text fontSize="sm" textAlign="center">Bloch sphere & state vectors</Text>
+              <Text fontSize="sm" textAlign="center">State vectors & visualization</Text>
             </VStack>
             <VStack>
               <Icon as={DownloadIcon} boxSize={8} color="blue.500" />
@@ -388,7 +388,7 @@ const TutorialPanel = () => {
                 <HStack>
                   <Icon as={ViewIcon} color="green.500" />
                   <VStack align="start" spacing={0}>
-                    <Text fontWeight="bold">Bloch Sphere Visualization</Text>
+                    <Text fontWeight="bold">Quantum State Visualization</Text>
                     <Text fontSize="sm" color={codeColor}>
                       Interactive 3D visualization of single-qubit states
                     </Text>

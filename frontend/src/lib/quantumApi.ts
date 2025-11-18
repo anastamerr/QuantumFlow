@@ -26,38 +26,31 @@ export type StoreGate = {
   controls?: number[];
 };
 
-export type ExecutePayload = {
+// NOTE: executeCircuit and checkHealth have been removed - all measurement is now local
+// Only optimizeCircuitApi remains for circuit optimization (used in Sidebar.tsx)
+
+export type OptimizePayload = {
   num_qubits: number;
   gates: StoreGate[];
-  shots?: number;
-  memory?: boolean;
-  backend?: string;
 };
 
-export async function executeCircuit(payload: ExecutePayload) {
+export async function optimizeCircuitApi(payload: OptimizePayload) {
   const base = getApiBaseUrl();
   
   if (!base) throw new Error("API base URL is not configured");
 
-  // The 'base' is now guaranteed to have a slash at the end
-  const res = await fetch(`${base}api/v1/execute`, {
+  const res = await fetch(`${base}/api/v1/optimize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Backend error ${res.status}: ${text}`);
   }
-  
   return res.json() as Promise<{
-    backend: string;
-    shots: number;
-    counts: Record<string, number>;
-    probabilities: Record<string, number>;
-    memory?: string[] | null;
-    status: string;
+    num_qubits: number;
+    gates: StoreGate[];
   }>;
 }
 

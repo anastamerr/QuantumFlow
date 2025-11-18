@@ -1,22 +1,67 @@
-import { Box, VStack, Heading, Divider, Text, useColorModeValue, InputGroup, Input, InputLeftElement, Icon } from '@chakra-ui/react'
+import { Box, VStack, Heading, Divider, Text, useColorModeValue, InputGroup, Input, InputLeftElement, Icon, HStack, Button, useToast } from '@chakra-ui/react'
 import { useDispatch, useSelector } from 'react-redux'
-import { addQubit, removeQubit, selectQubits } from '../../store/slices/circuitSlice'
+import { addQubit, removeQubit, selectQubits, selectGates, addGates } from '../../store/slices/circuitSlice'
+import { setActivePanel, selectActivePanel } from '../../store/slices/uiSlice'
+import type { UiState } from '../../store/slices/uiSlice'
 import GateItem from '../gates/GateItem'
 import { gateLibrary } from '../../utils/gateLibrary'
-import { SearchIcon } from '@chakra-ui/icons'
-import { useState, useEffect, useMemo } from 'react'
+import { SearchIcon, RepeatIcon, ExternalLinkIcon, SettingsIcon, EditIcon, StarIcon } from '@chakra-ui/icons'
+import { useState, useEffect, useMemo, type ComponentType } from 'react'
+import type { IconProps } from '@chakra-ui/react'
+import { optimizeCircuitApi } from '../../lib/quantumApi'
+
+const BarChartIcon = (props: IconProps) => (
+  <Icon viewBox="0 0 24 24" {...props}>
+    <path
+      fill="currentColor"
+      d="M5 21h2V11H5v10zm6 0h2V3h-2v18zm6 0h2v-7h-2v7z"
+    />
+  </Icon>
+)
 
 const Sidebar = () => {
   const dispatch = useDispatch()
   const qubits = useSelector(selectQubits)
+  const gates = useSelector(selectGates)
+  const activePanel = useSelector(selectActivePanel)
   const bg = useColorModeValue('gray.50', 'gray.700')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const searchBg = useColorModeValue('white', 'gray.800')
   const searchBorder = useColorModeValue('gray.300', 'gray.600')
+  const panelBg = useColorModeValue('white', 'gray.800')
+  const panelHoverBg = useColorModeValue('blue.50', 'gray.700')
+  const toast = useToast()
   
   // State for search functionality
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState(gateLibrary)
+  const [isOptimizing, setIsOptimizing] = useState(false)
+
+  const ImageIcon = (props: IconProps) => (
+    <Icon viewBox="0 0 24 24" {...props}>
+      <path
+        fill="currentColor"
+        d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+      />
+    </Icon>
+  )
+
+  const panelShortcuts: Array<{
+    key: UiState['activePanel']
+    label: string
+    icon: ComponentType<IconProps>
+  }> = [
+    { key: 'code', label: 'Code', icon: EditIcon },
+    { key: 'simulation', label: 'Simulation', icon: RepeatIcon },
+    { key: 'mpl', label: 'MPL View', icon: ImageIcon },
+    { key: 'export', label: 'Export', icon: ExternalLinkIcon },
+    { key: 'algorithms', label: 'Algorithms', icon: SettingsIcon },
+    { key: 'statistics', label: 'Statistics', icon: BarChartIcon },
+  ]
+
+  const handlePanelSelect = (panel: UiState['activePanel']) => {
+    dispatch(setActivePanel(panel))
+  }
 
   const handleAddQubit = () => {
     dispatch(addQubit())
@@ -59,6 +104,60 @@ const Sidebar = () => {
     return grouped
   }, [searchResults])
 
+  const handleOptimizeCircuit = async () => {
+    if (gates.length === 0) {
+      toast({
+        status: 'info',
+        title: 'No gates to optimize',
+        description: 'Add some gates to the canvas before running the optimizer.',
+      })
+      return
+    }
+
+    setIsOptimizing(true)
+    try {
+      const response = await optimizeCircuitApi({
+        num_qubits: qubits.length,
+        gates: gates.map(({ id, ...gate }) => ({
+          type: gate.type,
+          qubit: gate.qubit,
+          position: gate.position,
+          params: gate.params,
+          targets: gate.targets,
+          controls: gate.controls,
+        })),
+      })
+
+      if (response?.gates) {
+        dispatch(
+          addGates(
+            response.gates.map((gate, index) => ({
+              type: gate.type,
+              qubit: gate.qubit ?? 0,
+              position: typeof gate.position === 'number' ? gate.position : index,
+              params: gate.params,
+              targets: gate.targets,
+              controls: gate.controls,
+            })),
+          ),
+        )
+        toast({
+          status: 'success',
+          title: 'Circuit optimized',
+          description: 'Circuit optimized! Gate count reduced.',
+        })
+      }
+    } catch (error) {
+      toast({
+        status: 'error',
+        title: 'Optimization failed',
+        description: error instanceof Error ? error.message : 'Unable to optimize the circuit.',
+      })
+    } finally {
+      setIsOptimizing(false)
+    }
+  }
+
   return (
     <Box
       w="250px"
@@ -71,6 +170,32 @@ const Sidebar = () => {
     >
       <VStack spacing={4} align="stretch">
         <Heading size="md">Gate Palette</Heading>
+
+        <Box>
+          <Heading size="sm" mb={2}>Panels</Heading>
+          <VStack spacing={2} align="stretch">
+            {panelShortcuts.map(({ key, label, icon: PanelIcon }) => (
+              <Box
+                key={key}
+                p={2}
+                borderWidth={1}
+                borderRadius="md"
+                cursor="pointer"
+                bg={activePanel === key ? 'blue.500' : panelBg}
+                color={activePanel === key ? 'white' : 'inherit'}
+                _hover={{ bg: activePanel === key ? 'blue.600' : panelHoverBg }}
+                onClick={() => handlePanelSelect(key)}
+              >
+                <HStack spacing={2}>
+                  <PanelIcon boxSize={4} />
+                  <Text fontSize="sm" fontWeight="medium">
+                    {label}
+                  </Text>
+                </HStack>
+              </Box>
+            ))}
+          </VStack>
+        </Box>
         
         {/* Search Bar */}
         <InputGroup size="sm">
@@ -117,6 +242,16 @@ const Sidebar = () => {
             >
               Remove Last Qubit
             </Box>
+            <Button
+              leftIcon={<StarIcon />}
+              colorScheme="purple"
+              variant="solid"
+              onClick={handleOptimizeCircuit}
+              isLoading={isOptimizing}
+              loadingText="Optimizing..."
+            >
+              Optimize Circuit
+            </Button>
           </VStack>
         </Box>
 
