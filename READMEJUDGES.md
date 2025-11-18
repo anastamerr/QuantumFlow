@@ -1,3 +1,5 @@
+NOTE: Here is the video url for the demo: https://drive.google.com/file/d/1yWZA98vQG8fdakRsK-Oj0ubBudOz2PDT/view?usp=sharing
+
 Courtesy Update: Made the whole website Mobile friendly, Tested all parts of the website to make sure the full website is mobile friendly, hope you like it :),this increases accessibility to all user types, in terms of UI not much has changed, some new elements yes but nothing too serious in terms of UI, Oh and I also implemented dark mode into the code and i added a toggle for it, works like a charm ;) Also i have redesigned the header completely to make it look better and cleaner, all functionality still works the same
 
 Actual Feature:
