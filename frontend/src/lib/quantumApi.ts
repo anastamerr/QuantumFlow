@@ -17,51 +17,31 @@ export type StoreGate = {
   controls?: number[];
 };
 
-export type ExecutePayload = {
+// NOTE: executeCircuit and checkHealth have been removed - all measurement is now local
+// Only optimizeCircuitApi remains for circuit optimization (used in Sidebar.tsx)
+
+export type OptimizePayload = {
   num_qubits: number;
   gates: StoreGate[];
-  shots?: number;
-  memory?: boolean;
-  backend?: string;
 };
 
-export async function executeCircuit(payload: ExecutePayload) {
+export async function optimizeCircuitApi(payload: OptimizePayload) {
   const base = getApiBaseUrl();
   if (!base) throw new Error("API base URL is not configured (VITE_API_BASE_URL)");
 
-  const res = await fetch(`${base}/api/v1/execute`, {
+  const res = await fetch(`${base}/api/v1/optimize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Backend error ${res.status}: ${text}`);
   }
-  return res.json() as Promise<{
-    backend: string;
-    shots: number;
-    counts: Record<string, number>;
-    probabilities: Record<string, number>;
-    memory?: string[] | null;
-    status: string;
-  }>;
-}
 
-export async function checkHealth(): Promise<boolean> {
-  const base = getApiBaseUrl();
-  if (!base) return false;
-  try {
-    const res = await fetch(`${base}/health`, { method: 'GET' });
-    if (!res.ok) return false;
-    // Optional: verify JSON status
-    try {
-      const data = await res.json();
-      return !!data && (data.status === 'ok' || data.qiskit !== false);
-    } catch {
-      return true;
-    }
-  } catch {
-    return false;
-  }
+  return res.json() as Promise<{
+    num_qubits: number;
+    gates: StoreGate[];
+  }>;
 }

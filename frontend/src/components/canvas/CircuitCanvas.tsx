@@ -1,6 +1,7 @@
 import { Box, Text, VStack, HStack, Heading, Divider, useColorModeValue, Slider, SliderTrack, SliderFilledTrack, SliderThumb, Flex, IconButton, Tooltip, useToast } from '@chakra-ui/react'
 import { useSelector, useDispatch } from 'react-redux'
-import { selectQubits, selectGates, selectMaxPosition, addGate, removeGate, Gate } from '../../store/slices/circuitSlice'
+import { selectQubits, selectGates, selectMaxPosition, addGate, removeGate, Gate, importCircuit } from '../../store/slices/circuitSlice'
+import type { CircuitState } from '../../store/slices/circuitSlice'
 import { selectSelectedGateId, selectGate, selectZoomLevel, setZoomLevel } from '../../store/slices/uiSlice'
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { CircuitPosition, DroppedGate, Gate as CircuitGate } from '../../types/circuit'
@@ -8,7 +9,20 @@ import { gateLibrary } from '../../utils/gateLibrary'
 import { renderCircuitSvg } from '../../utils/circuitRenderer'
 import GridCell from './GridCell'
 import ResizablePanel from '../layout/ResizablePanel'
-import { AddIcon, MinusIcon } from '@chakra-ui/icons'
+import { AddIcon, MinusIcon, ArrowBackIcon, ArrowForwardIcon } from '@chakra-ui/icons'
+import type { RootState } from '../../store'
+import { simulateGateApplication, QuantumState } from '../../utils/stateEvolution'
+
+const cloneCircuitState = (state: CircuitState): CircuitState => ({
+  ...state,
+  qubits: state.qubits.map((qubit) => ({ ...qubit })),
+  gates: state.gates.map((gate) => ({
+    ...gate,
+    params: gate.params ? { ...gate.params } : undefined,
+    targets: gate.targets ? [...gate.targets] : undefined,
+    controls: gate.controls ? [...gate.controls] : undefined,
+  })),
+})
 
 /**
  * CircuitCanvas component displays the quantum circuit grid and visualization
@@ -21,6 +35,7 @@ const CircuitCanvas: React.FC = () => {
   const maxPosition = useSelector(selectMaxPosition)
   const selectedGateId = useSelector(selectSelectedGateId)
   const zoomLevel = useSelector(selectZoomLevel)
+  const currentCircuit = useSelector((state: RootState) => state.circuit)
   const toast = useToast()
   
   // Local state
@@ -28,6 +43,11 @@ const CircuitCanvas: React.FC = () => {
   const [gridHeight, setGridHeight] = useState(300)
   const [visualizationHeight, setVisualizationHeight] = useState(300)
   const [cellSize, setCellSize] = useState(60) // Default cell size
+  const undoStackRef = useRef<CircuitState[]>([])
+  const redoStackRef = useRef<CircuitState[]>([])
+  const isApplyingHistoryRef = useRef(false)
+  const initializedHistoryRef = useRef(false)
+  const [historyStatus, setHistoryStatus] = useState({ canUndo: false, canRedo: false })
   
   // Theme colors
   const gridBg = useColorModeValue('gray.50', 'gray.700')
@@ -38,6 +58,34 @@ const CircuitCanvas: React.FC = () => {
   const canvasBorder = useColorModeValue('gray.200', 'gray.600')
   const headingColor = useColorModeValue('gray.700', 'gray.200')
   const controlsBg = useColorModeValue('gray.100', 'gray.700')
+  const mutedText = useColorModeValue('gray.600', 'gray.400')
+
+  useEffect(() => {
+    const snapshot = cloneCircuitState(currentCircuit)
+    if (!initializedHistoryRef.current) {
+      undoStackRef.current = [snapshot]
+      redoStackRef.current = []
+      initializedHistoryRef.current = true
+      setHistoryStatus({ canUndo: false, canRedo: false })
+      return
+    }
+
+    if (isApplyingHistoryRef.current) {
+      isApplyingHistoryRef.current = false
+      setHistoryStatus({
+        canUndo: undoStackRef.current.length > 1,
+        canRedo: redoStackRef.current.length > 0,
+      })
+      return
+    }
+
+    undoStackRef.current.push(snapshot)
+    redoStackRef.current = []
+    setHistoryStatus({
+      canUndo: undoStackRef.current.length > 1,
+      canRedo: false,
+    })
+  }, [currentCircuit])
   
   // Convert SliceGate[] to CircuitGate[] for GridCell compatibility - with error protection
   const circuitGates = useMemo(() => {
@@ -121,6 +169,43 @@ const CircuitCanvas: React.FC = () => {
     dispatch(setZoomLevel(value));
     setCellSize(60 * value); // Adjust cell size based on zoom
   }, [dispatch]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStackRef.current.length <= 1) {
+      return
+    }
+
+    const currentSnapshot = undoStackRef.current.pop()
+    if (!currentSnapshot) return
+
+    const previousSnapshot = undoStackRef.current[undoStackRef.current.length - 1]
+    if (!previousSnapshot) return
+
+    redoStackRef.current.push(cloneCircuitState(currentSnapshot))
+    isApplyingHistoryRef.current = true
+    dispatch(importCircuit(cloneCircuitState(previousSnapshot)))
+    setHistoryStatus({
+      canUndo: undoStackRef.current.length > 1,
+      canRedo: redoStackRef.current.length > 0,
+    })
+  }, [dispatch])
+
+  const handleRedo = useCallback(() => {
+    if (redoStackRef.current.length === 0) {
+      return
+    }
+
+    const nextSnapshot = redoStackRef.current.pop()
+    if (!nextSnapshot) return
+
+    undoStackRef.current.push(cloneCircuitState(nextSnapshot))
+    isApplyingHistoryRef.current = true
+    dispatch(importCircuit(cloneCircuitState(nextSnapshot)))
+    setHistoryStatus({
+      canUndo: undoStackRef.current.length > 1,
+      canRedo: redoStackRef.current.length > 0,
+    })
+  }, [dispatch])
   
   /**
    * Handle dropping a gate onto the circuit - Fixed to ensure valid multi-qubit gate configurations
@@ -261,6 +346,34 @@ const CircuitCanvas: React.FC = () => {
   const handleGateClick = useCallback((gateId: string): void => {
     dispatch(selectGate(gateId));
   }, [dispatch]);
+
+  /**
+   * Compute quantum state by evolving gates
+   */
+  const computeQuantumState = useMemo((): QuantumState => {
+    if (qubits.length === 0) {
+      return { '0': [1, 0] }
+    }
+
+    // Initialize state vector: all qubits in |0⟩ state
+    let state: QuantumState = {
+      ['0'.repeat(qubits.length)]: [1, 0]
+    }
+
+    // Apply each gate in order
+    const sortedGates = [...gates].sort((a, b) => (a.position || 0) - (b.position || 0))
+    
+    for (const gate of sortedGates) {
+      try {
+        state = simulateGateApplication(state, gate, qubits.length)
+      } catch (err) {
+        console.error('Error applying gate:', err)
+      }
+    }
+
+    return state
+  }, [qubits, gates])
+
   
   /**
    * Handle removing a gate from the circuit
@@ -391,6 +504,29 @@ const CircuitCanvas: React.FC = () => {
         </Tooltip>
         
         <Text fontSize="sm" ml={2}>{Math.round(zoomLevel * 100)}%</Text>
+
+        <Divider orientation="vertical" mx={3} h="24px" borderColor={gridBorderColor} />
+
+        <Tooltip label="Undo">
+          <IconButton
+            aria-label="Undo"
+            icon={<ArrowBackIcon />}
+            size="sm"
+            onClick={handleUndo}
+            isDisabled={!historyStatus.canUndo}
+            mr={2}
+          />
+        </Tooltip>
+
+        <Tooltip label="Redo">
+          <IconButton
+            aria-label="Redo"
+            icon={<ArrowForwardIcon />}
+            size="sm"
+            onClick={handleRedo}
+            isDisabled={!historyStatus.canRedo}
+          />
+        </Tooltip>
       </Flex>
       
       {/* Circuit Grid */}

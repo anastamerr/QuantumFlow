@@ -27,3 +27,13 @@ class ExecuteResponse(BaseModel):
     probabilities: Dict[str, float]
     memory: Optional[List[str]] = None
     status: str = "success"
+
+
+class OptimizeRequest(BaseModel):
+    num_qubits: int = Field(..., ge=1, description="Number of qubits in the circuit")
+    gates: List[GateModel]
+
+
+class OptimizeResponse(BaseModel):
+    num_qubits: int
+    gates: List[GateModel]

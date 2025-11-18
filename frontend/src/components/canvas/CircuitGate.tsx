@@ -3,6 +3,23 @@ import { CloseIcon } from '@chakra-ui/icons'
 import { Gate } from '../../types/circuit'
 import { gateLibrary } from '../../utils/gateLibrary'
 
+const formatParam = (value: number): string => {
+  if (!Number.isFinite(value)) return ''
+
+  const PI = Math.PI
+  const HALF_PI = Math.PI / 2
+  const EPSILON = 1e-3
+  const isClose = (target: number) => Math.abs(value - target) < EPSILON
+
+  if (isClose(0)) return '0'
+  if (isClose(PI)) return 'π'
+  if (isClose(-PI)) return '-π'
+  if (isClose(HALF_PI)) return 'π/2'
+  if (isClose(-HALF_PI)) return '-π/2'
+
+  return value.toFixed(4)
+}
+
 /**
  * CircuitGate component represents a quantum gate in the circuit
  */
@@ -33,6 +50,19 @@ const CircuitGate: React.FC<CircuitGateProps> = ({
   const textColor = 'white'
   const shadowColor = useColorModeValue('rgba(0, 0, 0, 0.1)', 'rgba(0, 0, 0, 0.4)')
   
+  const formattedParam = (() => {
+    if (!gate.params || Object.keys(gate.params).length === 0) return ''
+    const rawValue = Object.values(gate.params)[0]
+    const numericValue =
+      typeof rawValue === 'number' ? rawValue : typeof rawValue === 'string' ? parseFloat(rawValue) : NaN
+
+    if (Number.isFinite(numericValue)) {
+      return formatParam(numericValue)
+    }
+
+    return rawValue?.toString() ?? ''
+  })()
+
   return (
     <Tooltip 
       label={gateDefinition.description} 
@@ -71,7 +101,7 @@ const CircuitGate: React.FC<CircuitGateProps> = ({
         </Text>
         
         {/* Parameter display if applicable */}
-        {gate.params && Object.keys(gate.params).length > 0 && (
+        {formattedParam && (
           <Text 
             position="absolute" 
             bottom="-18px" 
@@ -82,7 +112,7 @@ const CircuitGate: React.FC<CircuitGateProps> = ({
             borderRadius="sm"
             zIndex={3}
           >
-            {Object.values(gate.params)[0]}
+            {formattedParam}
           </Text>
         )}
         

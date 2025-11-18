@@ -29,20 +29,30 @@ import {
   Progress,
   Stack,
   Tag,
-  useBreakpointValue
+  useBreakpointValue,
+  Switch
 } from '@chakra-ui/react';
 import { useSelector } from 'react-redux';
 import { selectQubits, selectGates } from '../../store/slices/circuitSlice';
 import { useState, useCallback, useEffect } from 'react';
 // import QuantumStateVisualizer from '../visualization/QuantumStateVisualizer'; // removed
 import QubitVisualization from '../visualization/QubitVisualizer';
-import BlochSphereVisualization from '../visualization/BlochSphereVisualizer';
-// Local mock measurement removed in favor of backend
-import { executeCircuit, checkHealth } from '@/lib/quantumApi';
 import { transformStoreGatesToCircuitGates } from '../../utils/circuitUtils';
-import { stateVectorToBloch } from '../../utils/blochSphereUtils';
+import { simulateGateApplication, QuantumState } from '../../utils/stateEvolution';
+import { getProbabilitiesFromQuantumState, getStateMatrixFromQuantumState } from '../../utils/localMeasurement';
+import StateMatrixPanel from './StateMatrixPanel';
 import { InfoIcon, RepeatIcon, ChevronRightIcon, StarIcon } from '@chakra-ui/icons';
 import FullViewToggle from '../common/FullViewToggle';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  CartesianGrid,
+} from 'recharts';
+import CircuitTimelineGraph from '../visualization/CircuitTimelineGraph';
 
 const SimulationPanel = () => {
   const qubits = useSelector(selectQubits);
@@ -53,13 +63,12 @@ const SimulationPanel = () => {
   const [error, setError] = useState<string | null>(null);
   const [shots, setShots] = useState<number>(1024);
   const [method, setMethod] = useState<string>('statevector');
-  const [serverConnected, setServerConnected] = useState<boolean | null>(null);
-  // Real-time visualization removed: backend-only measurements
-  // const [showRealTimeVisualization, setShowRealTimeVisualization] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<number>(0);
   // const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   // const [autoPlay, setAutoPlay] = useState<boolean>(false);
   const [simulationComplete, setSimulationComplete] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'histogram' | 'timeline'>('histogram');
+  const [stateMatrix, setStateMatrix] = useState<Array<{state: string; amplitude: number | string; probability: number}> | null>(null);
   
   // Store visualization instance reference
   // const visualizerRef = useRef<any>(null);
@@ -75,6 +84,9 @@ const SimulationPanel = () => {
   const accentColor = useColorModeValue('blue.600', 'blue.300');
   const warningBg = useColorModeValue('orange.50', 'orange.900');
   const warningColor = useColorModeValue('orange.600', 'orange.300');
+  const tooltipBgColor = useColorModeValue('white', 'gray.700');
+  const tooltipPrimaryText = useColorModeValue('gray.800', 'gray.100');
+  const tooltipSecondaryText = useColorModeValue('gray.600', 'gray.300');
   
   // Responsive design
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -84,22 +96,11 @@ const SimulationPanel = () => {
   useEffect(() => {
     if (results !== null || simulationComplete) {
       setResults(null);
+      setStateMatrix(null);
       setSimulationComplete(false);
       setActiveTab(0); // Reset to simulation tab when circuit changes
     }
   }, [qubits, storeGates]);
-
-  // Check server connectivity on mount and periodically
-  useEffect(() => {
-    let timer: any;
-    const ping = async () => {
-      const ok = await checkHealth();
-      setServerConnected(ok);
-    };
-    ping();
-    timer = setInterval(ping, 15000);
-    return () => clearInterval(timer);
-  }, []);
   
   // Check if circuit has a Hadamard gate (creates superposition)
   const hasHadamard = gates.some(gate => gate.type === 'h');
@@ -119,8 +120,33 @@ const SimulationPanel = () => {
     return stats;
   }, [gates]);
   
+  // Compute quantum state locally
+  const computeQuantumState = useCallback((): QuantumState => {
+    if (qubits.length === 0) {
+      return { '0': [1, 0] };
+    }
+
+    // Initialize state vector: all qubits in |0⟩ state
+    let state: QuantumState = {
+      ['0'.repeat(qubits.length)]: [1, 0]
+    };
+
+    // Apply each gate in order
+    const sortedGates = [...gates].sort((a, b) => (a.position || 0) - (b.position || 0));
+    
+    for (const gate of sortedGates) {
+      try {
+        state = simulateGateApplication(state, gate, qubits.length);
+      } catch (err) {
+        console.error('Error applying gate:', err);
+      }
+    }
+
+    return state;
+  }, [qubits, gates]);
+
   // Function to run the simulation
-  const runSimulation = async () => {
+  const runSimulation = () => {
     // Reset state
     setIsSimulating(true);
     setSimulationComplete(false);
@@ -133,34 +159,27 @@ const SimulationPanel = () => {
         throw new Error('Cannot simulate an empty circuit. Add gates to the circuit first.');
       }
       
-      // Execute on backend (Qiskit) for measurement probabilities
-      try {
-        const response = await executeCircuit({
-          num_qubits: qubits.length,
-          gates: storeGates,
-          shots,
-          memory: false,
-        });
-        setServerConnected(true);
-        setResults(response.probabilities);
-        setSimulationComplete(true);
-        setActiveTab(1);
-      } catch (err) {
-        console.error('Backend execution error:', err);
-        setServerConnected(false);
-        setError('Server issue: failed to retrieve measurements');
-        setSimulationComplete(false);
-        toast({
-          title: 'Server issue',
-          description: 'Unable to reach measurement backend',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-          position: 'top-right',
-        });
-      } finally {
-        setIsSimulating(false);
-      }
+      // Compute quantum state locally
+      const quantumState = computeQuantumState();
+      
+      // Calculate probabilities from quantum state
+      const probabilities = getProbabilitiesFromQuantumState(quantumState);
+      
+      // Calculate state matrix from quantum state
+      const stateMatrixData = getStateMatrixFromQuantumState(quantumState, qubits.length);
+      
+      console.log('Local simulation results:', {
+        probabilities,
+        stateMatrix: stateMatrixData,
+        qubits: qubits.length,
+        gates: gates.length,
+      });
+      
+      setResults(probabilities);
+      setStateMatrix(stateMatrixData);
+      setSimulationComplete(true);
+      setActiveTab(1);
+      setIsSimulating(false);
       
       // Log simulation details to help with debugging
       console.log('Circuit simulation:', {
@@ -175,11 +194,9 @@ const SimulationPanel = () => {
     } catch (err) {
       console.error('Simulation error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred during simulation.');
-      setIsSimulating(false); // Make sure we're not stuck in simulating state
+      setIsSimulating(false);
     }
   };
-  
-  // Real-time visualization removed; measurements must come from backend
   
   // Make sure tabs are enabled after simulation completes
   useEffect(() => {
@@ -189,74 +206,40 @@ const SimulationPanel = () => {
     }
   }, [simulationComplete, results]);
   
-  // Render the results as a bar chart
-  const renderResultsChart = () => {
-    if (!results) return null;
+  // Convert results to bar chart data format
+  const getBarChartData = () => {
+    if (!results || Object.keys(results).length === 0) {
+      return [];
+    }
     
-    // Sort results by count (descending)
-    const sortedResults = Object.entries(results)
-      .filter(([_, count]) => count > 0.001) // Only show non-zero results
-      .sort((a, b) => b[1] - a[1]);
-    
-    if (sortedResults.length === 0) return <Text>No significant measurement results.</Text>;
-    
-    const maxValue = Math.max(...sortedResults.map(([_, count]) => count));
-    const maxResults = isMobile ? 6 : 10; // Show fewer results on mobile
-    const displayResults = sortedResults.slice(0, maxResults);
-    const hiddenResults = sortedResults.length - displayResults.length;
-    
-    return (
-      <VStack spacing={3} align="stretch" mt={4}>
-        {displayResults.map(([state, prob]) => {
-          const percentage = prob * 100;
-          const count = Math.round(shots * prob);
-          
-          return (
-            <Box key={state} mb={2}>
-              <Flex justify="space-between" align="center" mb={1}>
-                <HStack>
-                  <Text 
-                    fontSize="md" 
-                    fontWeight="medium" 
-                    fontFamily="monospace"
-                    bg={useColorModeValue("gray.100", "gray.700")} 
-                    px={2} 
-                    py={1} 
-                    borderRadius="md"
-                  >
-                    |{state}⟩
-                  </Text>
-                  {prob > 0.2 && <StarIcon color="yellow.400" />}
-                </HStack>
-                <Text fontSize="sm" fontWeight="medium">
-                  {count} shots ({percentage.toFixed(1)}%)
-                </Text>
-              </Flex>
-              <Box
-                h="24px" 
-                bg={barBg}
-                borderRadius="full"
-                overflow="hidden"
-              >
-                <Box
-                  h="100%" 
-                  bg={`linear-gradient(90deg, ${useColorModeValue('#3182CE', '#63B3ED')} 0%, ${useColorModeValue('#805AD5', '#B794F4')} 100%)`}
-                  w={`${(prob / maxValue) * 100}%`}
-                  transition="width 0.3s ease-in-out"
-                  borderRadius="full"
-                />
-              </Box>
-            </Box>
-          );
-        })}
-        
-        {hiddenResults > 0 && (
-          <Text fontSize="sm" color="gray.500" textAlign="center" mt={2}>
-            {hiddenResults} more results not shown
+    return Object.entries(results)
+      .map(([state, probability]) => ({
+        state: `|${state}⟩`,
+        probability: probability,
+      }))
+      .sort((a, b) => a.state.localeCompare(b.state));
+  };
+
+  const barChartData = getBarChartData();
+
+  const BarChartTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <Box bg={tooltipBgColor} p={3} borderRadius="md" boxShadow="lg">
+          <Text fontWeight="bold" mb={2} color={tooltipPrimaryText}>
+            {data.state}
           </Text>
-        )}
-      </VStack>
-    );
+          <Text fontSize="sm" color={tooltipSecondaryText}>
+            Probability: {(data.probability * 100).toFixed(4)}%
+          </Text>
+          <Text fontSize="sm" color={tooltipSecondaryText}>
+            Value: {data.probability.toFixed(6)}
+          </Text>
+        </Box>
+      );
+    }
+    return null;
   };
   
   // Visualization ref removed
@@ -284,7 +267,7 @@ const SimulationPanel = () => {
   };
   
   return (
-    <Box>
+    <Box h="100%" overflowY="auto" overflowX="hidden" pr={{ base: 0, md: 1 }}>
       <Card mb={4} borderRadius="lg" boxShadow="sm" bg={cardBg}>
       <CardHeader pb={0}>
         <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
@@ -295,9 +278,6 @@ const SimulationPanel = () => {
                 Complete
               </Badge>
             )}
-            <Tag colorScheme={serverConnected === null ? 'gray' : (serverConnected ? 'green' : 'red')} variant="subtle" borderRadius="full" px={2}>
-              Server: {serverConnected === null ? 'Checking…' : (serverConnected ? 'Connected' : 'Not Connected')}
-            </Tag>
           </HStack>
             
             <HStack>
@@ -435,7 +415,7 @@ const SimulationPanel = () => {
                 }}
                 fontWeight="medium"
               >
-                Bloch Sphere
+                Visualization
               </Tab>
             </TabList>
             
@@ -580,42 +560,133 @@ const SimulationPanel = () => {
                   }}
                 >
                   <CardBody>
-                    {!simulationComplete || !results ? (
-                      <VStack spacing={4} justify="center" h="300px">
-                        <Text color="gray.500" textAlign="center" fontWeight="medium">
-                          Run the simulation to see measurement results.
-                        </Text>
-                      </VStack>
-                    ) : (
-                      <Box>
-                        <Flex 
-                          justify="space-between" 
-                          mb={4} 
-                          align="center" 
-                          pb={3} 
-                          borderBottomWidth="1px"
-                          borderColor={borderColor}
-                        >
-                          <Heading size="md">Measurement Results</Heading>
-                          <Flex align="center">
-                            <Badge 
-                              colorScheme="blue" 
-                              variant="solid" 
-                              borderRadius="full" 
-                              px={3} 
-                              py={1}
-                              boxShadow="sm"
+                    <Box>
+                      <Flex 
+                        justify="space-between" 
+                        mb={4} 
+                        align="center" 
+                        pb={3} 
+                        borderBottomWidth="1px"
+                        borderColor={borderColor}
+                        wrap="wrap"
+                        gap={2}
+                      >
+                        <Heading size="md">Measurement Results</Heading>
+                        <Flex align="center" wrap="wrap" gap={2}>
+                          <HStack spacing={2}>
+                            <Button
+                              size="sm"
+                              colorScheme={viewMode === 'histogram' ? 'blue' : 'gray'}
+                              variant={viewMode === 'histogram' ? 'solid' : 'outline'}
+                              onClick={() => setViewMode('histogram')}
+                              isDisabled={!simulationComplete || !results}
                             >
-                              {shots} shots
-                            </Badge>
-                            <Text fontSize="sm" color="gray.500" ml={2}>
-                              {method === 'statevector' ? 'State Vector' : 'Noisy Simulator'}
-                            </Text>
-                          </Flex>
+                              Histogram
+                            </Button>
+                            <Button
+                              size="sm"
+                              colorScheme={viewMode === 'timeline' ? 'blue' : 'gray'}
+                              variant={viewMode === 'timeline' ? 'solid' : 'outline'}
+                              onClick={() => setViewMode('timeline')}
+                            >
+                              Timeline
+                            </Button>
+                          </HStack>
+                          {simulationComplete && results && (
+                            <>
+                              <Badge 
+                                colorScheme="blue" 
+                                variant="solid" 
+                                borderRadius="full" 
+                                px={3} 
+                                py={1}
+                                boxShadow="sm"
+                              >
+                                {shots} shots
+                              </Badge>
+                              <Text fontSize="sm" color="gray.500" ml={2}>
+                                {method === 'statevector' ? 'State Vector' : 'Noisy Simulator'}
+                              </Text>
+                            </>
+                          )}
                         </Flex>
-                        
-                        {renderResultsChart()}
-                        
+                      </Flex>
+                      
+                      {viewMode === 'histogram' ? (
+                        !simulationComplete || !results ? (
+                          <VStack spacing={4} justify="center" h="300px">
+                            <Text color="gray.500" textAlign="center" fontWeight="medium">
+                              Run the simulation to see measurement results.
+                            </Text>
+                          </VStack>
+                        ) : barChartData.length === 0 ? (
+                          <VStack spacing={4} justify="center" h="300px">
+                            <Text color="gray.500" textAlign="center" fontWeight="medium">
+                              No Data
+                            </Text>
+                            <Text fontSize="sm" color="gray.400" textAlign="center">
+                              Simulation results are empty. Please run the simulation again.
+                            </Text>
+                          </VStack>
+                        ) : (
+                          <Box height={isMobile ? 300 : 400}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={barChartData} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={useColorModeValue('#E2E8F0', '#2D3748')} />
+                                <XAxis
+                                  dataKey="state"
+                                  tick={{ fill: useColorModeValue('#4A5568', '#CBD5F5') }}
+                                  angle={isMobile ? -45 : -25}
+                                  textAnchor={isMobile ? 'end' : 'end'}
+                                  height={isMobile ? 80 : 60}
+                                />
+                                <YAxis
+                                  domain={[0, 1]}
+                                  tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
+                                  tick={{ fill: useColorModeValue('#4A5568', '#CBD5F5') }}
+                                  label={{
+                                    value: 'Probability',
+                                    angle: -90,
+                                    position: 'insideLeft',
+                                    style: { fill: useColorModeValue('#4A5568', '#CBD5F5'), textAnchor: 'middle' },
+                                  }}
+                                />
+                                <RechartsTooltip
+                                  cursor={{ fill: useColorModeValue('rgba(0, 0, 0, 0.05)', 'rgba(255, 255, 255, 0.05)') }}
+                                  content={<BarChartTooltip />}
+                                />
+                                <Bar
+                                  dataKey="probability"
+                                  fill={useColorModeValue('#3182CE', '#63B3ED')}
+                                  radius={[4, 4, 0, 0]}
+                                  isAnimationActive
+                                  animationDuration={800}
+                                />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        )
+                      ) : (
+                        <>
+                          {gates.length === 0 ? (
+                            <VStack spacing={4} justify="center" h="300px">
+                              <Text color="gray.500" textAlign="center" fontWeight="medium">
+                                Add gates to your circuit to see the timeline visualization.
+                              </Text>
+                            </VStack>
+                          ) : (
+                            <Box height={isMobile ? 300 : 400}>
+                              <CircuitTimelineGraph
+                                circuit={gates}
+                                numQubits={qubits.length}
+                                height={isMobile ? 300 : 400}
+                              />
+                            </Box>
+                          )}
+                        </>
+                      )}
+                      
+                      {viewMode === 'histogram' && simulationComplete && results && (
                         <Box mt={6} p={3} borderRadius="md" bg={accentBg}>
                           <Flex align="center">
                             <Icon as={InfoIcon} color={accentColor} mr={2} />
@@ -625,8 +696,19 @@ const SimulationPanel = () => {
                             </Text>
                           </Flex>
                         </Box>
-                      </Box>
-                    )}
+                      )}
+                      {viewMode === 'timeline' && gates.length > 0 && (
+                        <Box mt={6} p={3} borderRadius="md" bg={accentBg}>
+                          <Flex align="center">
+                            <Icon as={InfoIcon} color={accentColor} mr={2} />
+                            <Text fontSize="sm" color={accentColor}>
+                              This timeline shows how the probability distribution evolves after each gate in your circuit.
+                              Each line represents a basis state, and the Y-axis shows its probability at each step.
+                            </Text>
+                          </Flex>
+                        </Box>
+                      )}
+                    </Box>
                   </CardBody>
                 </Card>
               </TabPanel>
@@ -804,87 +886,6 @@ const SimulationPanel = () => {
                           </CardBody>
                         </Card>
                         
-                        {/* Bloch coordinates for a single qubit case */}
-                        {qubits.length === 1 && results && (
-                          <Card mt={4} borderRadius="md" overflow="hidden" variant="outline">
-                            <CardHeader bg={accentBg} py={2} px={4}>
-                              <Text fontSize="sm" color={accentColor} fontWeight="bold">
-                                Bloch Sphere Coordinates
-                              </Text>
-                            </CardHeader>
-                            <CardBody py={3} px={4}>
-                              {(() => {
-                                // Convert probability results to complex amplitude format for Bloch calculation
-                                const stateVector = Object.fromEntries(
-                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                );
-                                const blochCoords = stateVectorToBloch(stateVector, 0);
-                                return blochCoords;
-                              })() && (
-                                <Grid 
-                                  templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} 
-                                  gap={4}
-                                  textAlign="center"
-                                >
-                                  <Box>
-                                    <Text fontSize="sm" color="gray.500">X COORDINATE</Text>
-                                    <Text 
-                                      fontSize="lg" 
-                                      fontWeight="bold" 
-                                      fontFamily="monospace"
-                                      color="red.500"
-                                    >
-                                      {(() => {
-                                        const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                        );
-                                        return stateVectorToBloch(stateVector, 0)?.x.toFixed(4);
-                                      })()}
-                                    </Text>
-                                  </Box>
-                                  <Box>
-                                    <Text fontSize="sm" color="gray.500">Y COORDINATE</Text>
-                                    <Text 
-                                      fontSize="lg" 
-                                      fontWeight="bold" 
-                                      fontFamily="monospace"
-                                      color="green.500"
-                                    >
-                                      {(() => {
-                                        const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                        );
-                                        return stateVectorToBloch(stateVector, 0)?.y.toFixed(4);
-                                      })()}
-                                    </Text>
-                                  </Box>
-                                  <Box>
-                                    <Text fontSize="sm" color="gray.500">Z COORDINATE</Text>
-                                    <Text 
-                                      fontSize="lg" 
-                                      fontWeight="bold" 
-                                      fontFamily="monospace"
-                                      color="blue.500"
-                                    >
-                                      {(() => {
-                                        const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                        );
-                                        return stateVectorToBloch(stateVector, 0)?.z.toFixed(4);
-                                      })()}
-                                    </Text>
-                                  </Box>
-                                </Grid>
-                              )}
-                              <Divider my={3} />
-                              <Text fontSize="sm" color="gray.500" mt={1}>
-                                These coordinates represent the position of your qubit state on the Bloch sphere.
-                                X, Y, and Z values correspond to the expectation values of the Pauli operators.
-                              </Text>
-                            </CardBody>
-                          </Card>
-                        )}
-                        
                         <Box 
                           mt={4} 
                           p={4} 
@@ -908,7 +909,6 @@ const SimulationPanel = () => {
                 </Card>
               </TabPanel>
               
-              {/* New Bloch Sphere Tab */}
               <TabPanel p={0} pt={3}>
                 <Card 
                   borderRadius="lg" 
@@ -932,93 +932,22 @@ const SimulationPanel = () => {
                     {!simulationComplete || !results ? (
                       <VStack spacing={4} align="stretch" justify="center" h="300px">
                         <Text color="gray.500" textAlign="center" fontWeight="medium">
-                          Run the simulation to see Bloch sphere visualization.
+                          Run the simulation to see quantum state visualization.
                         </Text>
                       </VStack>
                     ) : (
-                      <Box>
-                        <Heading size="md" mb={4}>Qubit Visualization</Heading>
-                        
-                        {qubits.length === 1 ? (
-                          <Flex direction={isMobile ? "column" : "row"} align="center" justify="center">
-                            {/* Single qubit case - Show just the Bloch sphere */}
-                            <Box flex="1">
-                              <BlochSphereVisualization
-                                stateVector={Object.fromEntries(
-                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                )}
-                                width={isMobile ? 300 : 400}
-                                height={isMobile ? 300 : 400}
-                                title="Single Qubit Bloch Sphere"
-                              />
-                            </Box>
-                            
-                            <Box 
-                              flex="1" 
-                              mt={isMobile ? 6 : 0} 
-                              ml={isMobile ? 0 : 6}
-                              p={4}
-                              borderRadius="md"
-                              bg={accentBg}
-                            >
-                              <Heading size="sm" mb={3}>Bloch Sphere Explained</Heading>
-                              <Text fontSize="sm" mb={3}>
-                                The Bloch sphere is a geometrical representation of a single-qubit quantum state.
-                                Any pure state of a qubit can be represented as a point on the surface of the sphere.
-                              </Text>
-                              
-                              <VStack align="start" spacing={2} fontSize="sm">
-                                <HStack>
-                                  <Box 
-                                    w="12px" 
-                                    h="12px" 
-                                    borderRadius="full" 
-                                    bg="red.400" 
-                                  />
-                                  <Text>X-axis: Corresponds to the Pauli-X operator</Text>
-                                </HStack>
-                                <HStack>
-                                  <Box 
-                                    w="12px" 
-                                    h="12px" 
-                                    borderRadius="full" 
-                                    bg="green.400" 
-                                  />
-                                  <Text>Y-axis: Corresponds to the Pauli-Y operator</Text>
-                                </HStack>
-                                <HStack>
-                                  <Box 
-                                    w="12px" 
-                                    h="12px" 
-                                    borderRadius="full" 
-                                    bg="blue.400" 
-                                  />
-                                  <Text>Z-axis: Corresponds to the Pauli-Z operator</Text>
-                                </HStack>
-                              </VStack>
-                              
-                              <Text fontSize="sm" mt={3}>
-                                <strong>North pole (|0⟩):</strong> The standard computational basis state |0⟩
-                              </Text>
-                              <Text fontSize="sm">
-                                <strong>South pole (|1⟩):</strong> The standard computational basis state |1⟩
-                              </Text>
-                              <Text fontSize="sm">
-                                <strong>Equator:</strong> Equal superpositions of |0⟩ and |1⟩, differing by phase
-                              </Text>
-                            </Box>
-                          </Flex>
-                        ) : (
-                          // Multi-qubit case - Show the full QubitVisualization component
-                          <QubitVisualization
-                            stateVector={Object.fromEntries(
-                              Object.entries(results).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                            )}
-                            numQubits={qubits.length}
-                            title="Qubit State Visualization"
-                          />
+                      <VStack spacing={4} align="stretch">
+                        <StateMatrixPanel data={stateMatrix} />
+                        {qubits.length > 0 && (
+                          <Box>
+                            <QubitVisualization
+                              stateVector={computeQuantumState()}
+                              numQubits={qubits.length}
+                              title="Qubit State Visualization"
+                            />
+                          </Box>
                         )}
-                      </Box>
+                      </VStack>
                     )}
                   </CardBody>
                 </Card>

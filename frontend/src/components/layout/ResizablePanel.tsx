@@ -148,14 +148,15 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
     <Box
       ref={panelRef}
       position="relative"
-      overflow="hidden" // Change to hidden to prevent content overflow during resize
       {...(direction === 'horizontal' ? { width: `${size}px` } : { height: `${size}px` })}
       {...boxProps}
     >
       <Box
         height="100%"
         width="100%"
-        overflow="auto" // Add scroll to inner content box
+        minH={0}
+        overflowY="auto"
+        overflowX="hidden"
       >
         {children}
       </Box>

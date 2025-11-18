@@ -1,6 +1,7 @@
 import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack } from '@chakra-ui/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
+import type { UiState } from '../../store/slices/uiSlice'
 import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
 
 const Header = () => {
@@ -9,7 +10,7 @@ const Header = () => {
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
 
-  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms') => {
+  const handlePanelChange = (panel: UiState['activePanel']) => {
     dispatch(setActivePanel(panel))
   }
 

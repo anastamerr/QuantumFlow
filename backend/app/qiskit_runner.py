@@ -1,5 +1,8 @@
 import os
+import hashlib
+import json
 from typing import Dict, Optional, List, Any
+from io import BytesIO
 
 from dotenv import load_dotenv
 
@@ -106,6 +109,310 @@ def _get_aer_backend(backend_name: str):
             raise RuntimeError(f"Unable to get backend '{backend_name}': {e}")
 
 
+DEFAULT_BASIS_GATES = [
+    "h",
+    "x",
+    "y",
+    "z",
+    "cx",
+    "cz",
+    "swap",
+    "s",
+    "t",
+    "rx",
+    "ry",
+    "rz",
+    "id",
+]
+
+
+def _qubit_index(qubit) -> int:
+    # Qiskit Qubit exposes .index referencing its register index
+    return getattr(qubit, "index", getattr(qubit, "_index", 0))
+
+
+def _qc_to_gate_models(qc) -> List[Dict[str, Any]]:
+    supported = set(DEFAULT_BASIS_GATES)
+    gate_models: List[Dict[str, Any]] = []
+
+    for position, (instruction, qargs, _) in enumerate(qc.data):
+        name = instruction.name.lower()
+        if name in {"measure", "barrier", "reset"}:
+            continue
+        if name not in supported:
+            # Skip gates outside of the supported frontend set
+            continue
+
+        gate: Dict[str, Any] = {
+            "id": f"opt_gate_{position}",
+            "type": name,
+            "position": position,
+        }
+
+        if qargs:
+            gate["qubit"] = _qubit_index(qargs[0])
+
+        if name in {"cx", "cz"}:
+            if len(qargs) < 2:
+                continue
+            gate["targets"] = [_qubit_index(qargs[1])]
+        elif name == "swap":
+            if len(qargs) < 2:
+                continue
+            gate["targets"] = [_qubit_index(qargs[1])]
+        elif name == "rx":
+            gate["params"] = {"theta": float(instruction.params[0]) if instruction.params else 0.0}
+        elif name == "ry":
+            gate["params"] = {"theta": float(instruction.params[0]) if instruction.params else 0.0}
+        elif name == "rz":
+            gate["params"] = {"phi": float(instruction.params[0]) if instruction.params else 0.0}
+
+        gate_models.append(gate)
+
+    return gate_models
+
+
+def optimize_circuit(
+    num_qubits: int,
+    gates: List[Dict[str, Any]],
+    basis_gates: Optional[List[str]] = None,
+    optimization_level: int = 3,
+) -> List[Dict[str, Any]]:
+    from qiskit import QuantumCircuit, transpile
+
+    qc = QuantumCircuit(num_qubits)
+
+    def sort_key(g):
+        p = g.get("position")
+        return p if isinstance(p, int) else 0
+
+    for g in sorted(gates, key=sort_key):
+        _apply_gate(qc, g)
+
+    optimized_qc = transpile(
+        qc,
+        basis_gates=basis_gates or DEFAULT_BASIS_GATES,
+        optimization_level=optimization_level,
+    )
+
+    return _qc_to_gate_models(optimized_qc)
+
+
+def get_state_matrix_with_probabilities(statevector) -> List[Dict[str, Any]]:
+    """
+    Extract state matrix with basis states, amplitudes, and probabilities from statevector.
+    Returns list of dictionaries with state, amplitude, and probability.
+    """
+    from qiskit.quantum_info import Statevector
+    import numpy as np
+    
+    sv = Statevector(statevector)
+    amps = sv.data
+    
+    states = []
+    for i, amp in enumerate(amps):
+        prob = np.abs(amp)**2
+        if prob > 1e-6:  # ignore negligible noise
+            binary = format(i, f'0{sv.num_qubits}b')
+            # Format amplitude as real number if imaginary part is negligible, otherwise as complex
+            if abs(amp.imag) < 1e-6:
+                amp_value = float(amp.real)
+            else:
+                # Format complex number as string
+                amp_value = f"{amp.real:.6f}{'+' if amp.imag >= 0 else ''}{amp.imag:.6f}i"
+            
+            states.append({
+                "state": f"|{binary}⟩",
+                "amplitude": amp_value,
+                "probability": float(prob)
+            })
+    
+    return states
+
+
+def _statevector_probabilities(statevector, num_qubits: int) -> Dict[str, float]:
+    from qiskit.quantum_info import Statevector
+
+    sv = Statevector(statevector)
+    probs_dict: Dict[str, float] = {}
+    total_states = 2 ** num_qubits
+    for idx in range(total_states):
+        bitstring = format(idx, f"0{num_qubits}b")
+        amplitude = sv.data[idx] if idx < len(sv.data) else 0
+        probability = abs(amplitude) ** 2
+        probs_dict[bitstring] = float(probability)
+    return probs_dict
+
+
+def _compute_evolution(num_qubits: int, gates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    from qiskit import QuantumCircuit
+    from qiskit.quantum_info import Statevector
+
+    evolution_data: List[Dict[str, Any]] = []
+
+    if num_qubits <= 0:
+        return evolution_data
+
+    try:
+        current_state = Statevector.from_label('0' * num_qubits)
+        evolution_data.append({
+            "step": "Initial",
+            **_statevector_probabilities(current_state, num_qubits),
+        })
+
+        sorted_gates = sorted(gates, key=lambda g: g.get('position') if isinstance(g.get('position'), int) else 0)
+
+        for idx, gate in enumerate(sorted_gates):
+            cumulative_qc = QuantumCircuit(num_qubits)
+            for prev_gate in sorted_gates[: idx + 1]:
+                _apply_gate(cumulative_qc, prev_gate)
+
+            try:
+                cumulative_qc = cumulative_qc.remove_final_measurements()
+            except Exception:
+                pass
+
+            current_state = Statevector.from_label('0' * num_qubits).evolve(cumulative_qc)
+
+            step_label = gate.get("name") or gate.get("type") or f"Step {idx + 1}"
+
+            evolution_data.append({
+                "step": step_label,
+                **_statevector_probabilities(current_state, num_qubits),
+            })
+    except Exception:
+        return []
+
+    return evolution_data
+
+
+# In-memory cache for circuit images (hash -> image bytes)
+_circuit_image_cache: Dict[str, bytes] = {}
+
+
+def _compute_circuit_hash(num_qubits: int, gates: List[Dict[str, Any]]) -> str:
+    """Compute a stable hash of the circuit definition."""
+    # Sort gates by position for consistent hashing
+    sorted_gates = sorted(gates, key=lambda g: g.get('position', 0))
+    circuit_data = {
+        'num_qubits': num_qubits,
+        'gates': sorted_gates
+    }
+    circuit_json = json.dumps(circuit_data, sort_keys=True)
+    return hashlib.sha256(circuit_json.encode()).hexdigest()
+
+
+def _build_quantum_circuit(num_qubits: int, gates: List[Dict[str, Any]]) -> 'QuantumCircuit':
+    """Build a QuantumCircuit from gates."""
+    from qiskit import QuantumCircuit
+    
+    if num_qubits <= 0:
+        raise ValueError("Number of qubits must be greater than 0")
+    
+    qc = QuantumCircuit(num_qubits)
+    
+    # Apply gates sorted by position, stable order
+    def sort_key(g):
+        p = g.get('position')
+        return p if isinstance(p, int) else 0
+    
+    for g in sorted(gates, key=sort_key):
+        _apply_gate(qc, g)
+    
+    return qc
+
+
+def generate_text_circuit(
+    num_qubits: int,
+    gates: List[Dict[str, Any]],
+) -> str:
+    """
+    Generate a text (ASCII) visualization of the quantum circuit.
+    Returns text string.
+    """
+    load_dotenv()
+
+    try:
+        from qiskit import QuantumCircuit
+    except Exception as e:
+        raise RuntimeError(f"Failed to import Qiskit: {e}")
+
+    try:
+        qc = _build_quantum_circuit(num_qubits, gates)
+        text_output = qc.draw("text")
+        return text_output
+    except Exception as e:
+        raise RuntimeError(f"Failed to generate text circuit: {e}")
+
+
+def generate_mpl_circuit_image(
+    num_qubits: int,
+    gates: List[Dict[str, Any]],
+) -> bytes:
+    """
+    Generate an optimized matplotlib visualization of the quantum circuit.
+    Uses caching to avoid regenerating the same circuit.
+    Returns PNG image bytes.
+    """
+    load_dotenv()
+
+    # Check cache first
+    circuit_hash = _compute_circuit_hash(num_qubits, gates)
+    if circuit_hash in _circuit_image_cache:
+        return _circuit_image_cache[circuit_hash]
+
+    try:
+        from qiskit import QuantumCircuit
+        from qiskit.visualization import circuit_drawer
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+    except Exception as e:
+        raise RuntimeError(f"Failed to import Qiskit or Matplotlib: {e}")
+
+    try:
+        qc = _build_quantum_circuit(num_qubits, gates)
+
+        # Generate matplotlib figure with optimized settings
+        try:
+            fig = circuit_drawer(
+                qc,
+                output="mpl",
+                style={
+                    "usepylatex": False,  # MANDATORY: no LaTeX, 10x faster
+                    "dpi": 120,  # Max 150, using 120 for balance
+                    "fontsize": 10
+                }
+            )
+        except Exception:
+            # Fallback to text drawer if MPL fails
+            text_output = qc.draw("text")
+            raise RuntimeError(f"MPL drawer failed, text output: {text_output}")
+        
+        # Save to BytesIO buffer
+        buf = BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight', dpi=120)
+        buf.seek(0)
+        image_bytes = buf.getvalue()
+        buf.close()
+        
+        # Close the figure to free memory
+        plt.close(fig)
+        
+        # Cache the result
+        _circuit_image_cache[circuit_hash] = image_bytes
+        
+        # Limit cache size to prevent memory issues (keep last 50 circuits)
+        if len(_circuit_image_cache) > 50:
+            # Remove oldest entry (simple FIFO, hash-based)
+            oldest_key = next(iter(_circuit_image_cache))
+            del _circuit_image_cache[oldest_key]
+        
+        return image_bytes
+    except Exception as e:
+        raise RuntimeError(f"Failed to generate circuit image: {e}")
+
+
 def run_circuit(
     num_qubits: int,
     gates: List[Dict[str, Any]],
@@ -164,11 +471,37 @@ def run_circuit(
     except Exception:
         memory_out = None
 
-    return {
+    result_payload = {
         "backend": backend_name,
         "shots": int(shots),
         "counts": {str(k): int(v) for k, v in counts.items()},
         "probabilities": {str(k): float(v) for k, v in probabilities.items()},
         "memory": memory_out,
     }
+
+    try:
+        result_payload["evolution"] = _compute_evolution(num_qubits, gates)
+    except Exception:
+        result_payload["evolution"] = []
+
+    # Compute state matrix from statevector
+    try:
+        from qiskit.quantum_info import Statevector
+        import numpy as np
+        
+        # Build circuit without measurements to get statevector
+        qc_state = QuantumCircuit(num_qubits)
+        for g in sorted(gates, key=sort_key):
+            _apply_gate(qc_state, g)
+        
+        # Get statevector
+        statevector = Statevector.from_instruction(qc_state)
+        result_payload["state_matrix"] = get_state_matrix_with_probabilities(statevector)
+    except Exception as e:
+        # If statevector computation fails, return empty list
+        result_payload["state_matrix"] = []
+
+    result_payload["status"] = "success"
+
+    return result_payload
 

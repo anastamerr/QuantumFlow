@@ -277,7 +277,7 @@ const ExportPanel = () => {
   }, [gates, qubits, optimize, optimizationOptions])
   
   return (
-    <Box>
+    <Box h="100%" overflowY="auto" overflowX="hidden" pr={{ base: 0, md: 1 }}>
       <HStack justify="space-between" mb={4}>
         <Heading size="md">Export Circuit</Heading>
         <FullViewToggle />

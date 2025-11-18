@@ -1,6 +1,23 @@
 import { Qubit, Gate } from '../types/circuit'
 import { gateLibrary } from './gateLibrary'
 
+const formatParam = (value: number): string => {
+  if (!Number.isFinite(value)) return ''
+
+  const PI = Math.PI
+  const HALF_PI = Math.PI / 2
+  const EPSILON = 1e-3
+  const isClose = (target: number) => Math.abs(value - target) < EPSILON
+
+  if (isClose(0)) return '0'
+  if (isClose(PI)) return 'π'
+  if (isClose(-PI)) return '-π'
+  if (isClose(HALF_PI)) return 'π/2'
+  if (isClose(-HALF_PI)) return '-π/2'
+
+  return value.toFixed(4)
+}
+
 /**
  * Renders a quantum circuit as an SVG string
  * @param qubits Array of qubits in the circuit
@@ -174,11 +191,14 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
         // Add parameter if present
         if (gateDefinition.params && gateDefinition.params.length > 0 && gate.params) {
           const paramName = gateDefinition.params[0].name
-          const paramValue = gate.params[paramName] !== undefined 
+          const rawValue = gate.params[paramName] !== undefined 
             ? gate.params[paramName] 
             : gateDefinition.params[0].default
+          const numericValue =
+            typeof rawValue === 'number' ? rawValue : typeof rawValue === 'string' ? parseFloat(rawValue) : NaN
+          const formattedParam = Number.isFinite(numericValue) ? formatParam(numericValue) : (rawValue ?? '').toString()
             
-          svg += `<text x="${x}" y="${y + 30}" font-family="sans-serif" font-size="10px" text-anchor="middle">${paramValue}</text>
+          svg += `<text x="${x}" y="${y + 30}" font-family="sans-serif" font-size="10px" text-anchor="middle">${formattedParam}</text>
 `
         }
       }

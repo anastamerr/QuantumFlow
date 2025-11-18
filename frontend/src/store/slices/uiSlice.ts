@@ -4,7 +4,7 @@ import { RootState } from '../index'
 // Define types for UI state
 export interface UiState {
   selectedGateId: string | null
-  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms'
+  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'statistics' | 'mpl'
   showGateParams: boolean
   codeFormat: 'qiskit' | 'cirq' | 'json'
   isDragging: boolean
@@ -79,7 +79,7 @@ export const {
 
 // Export selectors
 export const selectSelectedGateId = (state: RootState) => state.ui.selectedGateId
-export const selectActivePanel = (state: RootState) => state.ui.activePanel
+export const selectActivePanel = (state: RootState): UiState['activePanel'] => state.ui.activePanel
 export const selectShowGateParams = (state: RootState) => state.ui.showGateParams
 export const selectCodeFormat = (state: RootState) => state.ui.codeFormat
 export const selectIsDragging = (state: RootState) => state.ui.isDragging

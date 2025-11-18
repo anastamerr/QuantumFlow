@@ -112,7 +112,7 @@ const CodePanel = () => {
   }
   
   return (
-    <Box>
+    <Box h="100%" overflowY="auto" overflowX="hidden" pr={{ base: 0, md: 1 }}>
       <VStack spacing={4} align="stretch">
         <HStack justify="space-between" mb={2}>
           <Heading size="md">Generated Code</Heading>
