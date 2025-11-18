@@ -3135,9 +3135,18 @@ const LibraryPanel: React.FC = () => {
   };
 
   return (
-    <HStack h="100%" w="100%" spacing={0} align="stretch">
+    <HStack 
+      h="100%" 
+      w="100%" 
+      spacing={0} 
+      align="stretch" 
+      overflow="hidden"
+      maxW="100vw"
+      position="relative"
+    >
       <VStack
-        w="250px"
+        w={["200px", "250px", "300px"]}
+        minW="200px"
         h="100%"
         bg={listBg}
         borderRightWidth={0}
@@ -3145,6 +3154,7 @@ const LibraryPanel: React.FC = () => {
         spacing={0}
         align="stretch"
         overflowY="hidden"
+        flexShrink={0}
       >
         <Box p={3} borderBottomWidth={1} borderColor={listBorderColor}>
           <HStack justify="space-between" mb={2}>
@@ -3259,10 +3269,13 @@ const LibraryPanel: React.FC = () => {
       <VStack 
         flex={1} 
         h="100%" 
-        p={selectedTopic ? 6 : 0} 
+        w="100%"
+        minW={0}
+        p={selectedTopic ? [2, 4, 6] : 0} 
         spacing={selectedTopic ? 4 : 0} 
         align="stretch" 
         overflowY={selectedTopic ? "auto" : "hidden"}
+        overflowX="hidden"
         sx={{
           "&::-webkit-scrollbar": { 
             width: "12px",
@@ -3295,14 +3308,18 @@ const LibraryPanel: React.FC = () => {
             </Box>
             <Divider />
             <Text fontWeight="bold" color={textColor} mb={-2}>Overview:</Text>
-            <VStack align="start" spacing={4} flex={1} overflowY="auto">
+            <VStack align="start" spacing={4} flex={1} overflowY="auto" w="100%" maxW="100%">
               <Box
-                p={6}
+                p={[3, 4, 6]}
                 borderWidth={1}
                 borderColor={listBorderColor}
                 borderRadius="md"
                 w="100%"
                 bg={itemBg}
+                minW={0}
+                maxW="100%"
+                overflow="hidden"
+                wordBreak="break-word"
               >
                 {selectedTopic.id === "controlled-gates" ? (
                   <>
@@ -3312,6 +3329,9 @@ const LibraryPanel: React.FC = () => {
                       whiteSpace="pre-wrap"
                       lineHeight={2}
                       fontFamily="system-ui"
+                      wordBreak="break-word"
+                      overflowWrap="anywhere"
+                      maxWidth="100%"
                     >
                       {selectedTopic.content}
                     </Text>
@@ -3350,6 +3370,9 @@ const LibraryPanel: React.FC = () => {
                       whiteSpace="pre-wrap"
                       lineHeight={2}
                       fontFamily="system-ui"
+                      wordBreak="break-word"
+                      overflowWrap="anywhere"
+                      maxWidth="100%"
                     >
                       {selectedTopic.content}
                     </Text>
@@ -3388,6 +3411,9 @@ const LibraryPanel: React.FC = () => {
                         whiteSpace="pre-wrap"
                         lineHeight={2}
                         fontFamily="system-ui"
+                        wordBreak="break-word"
+                        overflowWrap="anywhere"
+                        maxWidth="100%"
                         mt={4}
                       >
                         {selectedTopic.contentAfterImage}
@@ -3590,8 +3616,10 @@ const LibraryPanel: React.FC = () => {
               spacing={8} 
               position="relative" 
               zIndex={10}
-              px={8}
-              pt="10vh"
+              px={[4, 6, 8]}
+              pt={["5vh", "8vh", "10vh"]}
+              w="100%"
+              overflow="hidden"
             >
               <VStack spacing={4} textAlign="center">
                 <Heading 
@@ -3606,15 +3634,17 @@ const LibraryPanel: React.FC = () => {
                 </Heading>
               </VStack>
               
-              <VStack spacing={8} w="100%" maxW="600px">
+              <VStack spacing={8} w="100%" maxW={["90%", "500px", "600px"]}>
                 <Box
-                  p={6}
+                  p={[4, 5, 6]}
                   borderWidth={1}
                   borderColor={useColorModeValue('gray.200', 'gray.700')}
                   borderRadius="xl"
                   bg={useColorModeValue('white', 'gray.800')}
                   boxShadow={useColorModeValue('lg', 'dark-lg')}
                   backdropFilter="blur(10px)"
+                  w="100%"
+                  minW={0}
                 >
                   <VStack spacing={4}>
                     <Text 
@@ -3702,9 +3732,6 @@ const LibraryPanel: React.FC = () => {
                     <Text color={textColor} fontSize="sm">
                       {currentLevelQuiz.description}
                     </Text>
-                    <Badge colorScheme={getDifficultyColor(currentLevelQuiz.level)} fontSize="xs">
-                      {currentLevelQuiz.level} Level
-                    </Badge>
                   </VStack>
                   <Button
                     size="sm"
@@ -3717,9 +3744,9 @@ const LibraryPanel: React.FC = () => {
                 </HStack>
                 
                 <HStack justify="space-between">
-                  <Badge colorScheme="blue" fontSize="md" p={2}>
+                  <Text fontSize="md" fontWeight="bold" color={textColor}>
                     Question {levelQuizQuestionIndex + 1} of {currentLevelQuiz.questions.length}
-                  </Badge>
+                  </Text>
                   <Text fontSize="sm" color={textColor}>
                     Topic: {currentLevelQuiz.questions[levelQuizQuestionIndex].topic}
                   </Text>
@@ -3826,9 +3853,9 @@ const LibraryPanel: React.FC = () => {
                             <Text fontWeight="bold" fontSize="sm" color="purple.500">
                               Topic: {question.topic}
                             </Text>
-                            <Badge colorScheme={result.correct ? 'green' : 'red'}>
+                            <Text fontSize="sm" fontWeight="bold" color={result.correct ? 'green.500' : 'red.500'}>
                               {result.correct ? '✓ Correct' : '✗ Incorrect'}
-                            </Badge>
+                            </Text>
                           </HStack>
                           <Text fontWeight="bold" mb={2}>Q{index + 1}: {question.question}</Text>
                           <Text fontSize="sm" color={textColor} mb={2}>
