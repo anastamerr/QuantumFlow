@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useDispatch } from 'react-redux'
+import { setActivePanel } from '../../store/slices/uiSlice'
 
 // Lightweight wrapper to load Plotly from CDN when needed
 const loadPlotly = () => {
@@ -90,21 +92,32 @@ const makeAxes = () => {
     { type: 'scatter3d', mode: 'text', x: [lx], y: [ly], z: [lz], text: [label], textposition: 'top center', showlegend: false, textfont: { size: 16 } }
   ]
 
+  // Use: X axis = red, Y axis = green, Z axis = blue per user preference
   return [
     ...axis(-1.3, 1.3, 'red', '|+⟩', 1.4, 0, 0),
     ...axis(-1.3, 1.3, 'red', '|−⟩', -1.4, 0, 0),
-    ...yaxis(-1.3, 1.3, 'blue', '|+i⟩', 0, 1.4, 0),
-    ...yaxis(-1.3, 1.3, 'blue', '|−i⟩', 0, -1.4, 0),
-    ...zaxis(-1.3, 1.3, 'green', '|0⟩', 0, 0, 1.4),
-    ...zaxis(-1, 1.3, 'green', '|1⟩', 0, 0, -1.4)
+    ...yaxis(-1.3, 1.3, 'green', '|+i⟩', 0, 1.4, 0),
+    ...yaxis(-1.3, 1.3, 'green', '|−i⟩', 0, -1.4, 0),
+    ...zaxis(-1.3, 1.3, 'blue', '|0⟩', 0, 0, 1.4),
+    ...zaxis(-1, 1.3, 'blue', '|1⟩', 0, 0, -1.4)
   ]
 }
 
 const BlochSpherePage: React.FC = () => {
   const plotRef = useRef<HTMLDivElement | null>(null)
+  const dispatch = useDispatch()
   const [theta, setTheta] = useState(0)
   const [phi, setPhi] = useState(0)
   const vectorRef = useRef<any>(setQubitVector(0, 0))
+  // Gate input states (degrees)
+  // keep inputs as strings so users can type (empty placeholder visible)
+  const [rxInput, setRxInput] = useState<string>('')
+  const [ryInput, setRyInput] = useState<string>('')
+  const [rzInput, setRzInput] = useState<string>('')
+  
+  const [activeGate, setActiveGate] = useState<string | null>(null)
+  const [messages, setMessages] = useState<Record<string, string>>({})
+  const [helpTagVisible, setHelpTagVisible] = useState(true)
 
   useEffect(() => {
     let mounted = true
@@ -140,7 +153,7 @@ const BlochSpherePage: React.FC = () => {
       if (plotRef.current) {
         // Attempt to update the last trace (vector) - Plotly expects arrays per-trace
         try {
-          Plotly.update(plotRef.current, { x: [v.x], y: [v.y], z: [v.z] }, {}, [ (plotRef.current.data ? plotRef.current.data.length - 1 : -1) ])
+          Plotly.update(plotRef.current, { x: [v.x], y: [v.y], z: [v.z] }, {}, [ ((plotRef.current as any).data ? (plotRef.current as any).data.length - 1 : -1) ])
         } catch (e) {
           // fallback: redraw entire plot
           const sphere = makeSphereData()
@@ -166,25 +179,51 @@ const BlochSpherePage: React.FC = () => {
     else if (axis === 'Z') { newX = x * c - y * s; newY = x * s + y * c }
     return { x: [0, newX], y: [0, newY], z: [0, newZ] }
   }
-
-  const applyGate = (gate: string) => {
-    let angle = Math.PI / 4
+  const applyGate = (gate: string, angleRad?: number) => {
     if (!vectorRef.current) vectorRef.current = setQubitVector(theta, phi)
+    const a = typeof angleRad === 'number' ? angleRad : Math.PI / 4
     if (gate === 'X') vectorRef.current = rotateVector(vectorRef.current, 'X', Math.PI)
-    else if (gate === 'Rx') vectorRef.current = rotateVector(vectorRef.current, 'X', angle)
-    else if (gate === 'Ry') vectorRef.current = rotateVector(vectorRef.current, 'Y', angle)
-    else if (gate === 'Rz') vectorRef.current = rotateVector(vectorRef.current, 'Z', angle)
+    else if (gate === 'Rx') vectorRef.current = rotateVector(vectorRef.current, 'X', a)
+    else if (gate === 'Ry') vectorRef.current = rotateVector(vectorRef.current, 'Y', a)
+    else if (gate === 'Rz') vectorRef.current = rotateVector(vectorRef.current, 'Z', a)
+    else if (gate === 'Y') vectorRef.current = rotateVector(vectorRef.current, 'Y', Math.PI)
+    else if (gate === 'Z') vectorRef.current = rotateVector(vectorRef.current, 'Z', Math.PI)
+    else if (gate === 'H') {
+      // Hadamard on Bloch sphere: apply Ry(pi/2) then X (π around X)
+      vectorRef.current = rotateVector(vectorRef.current, 'Y', Math.PI / 2)
+      vectorRef.current = rotateVector(vectorRef.current, 'X', Math.PI)
+    }
 
     const x = vectorRef.current.x[1], y = vectorRef.current.y[1], z = vectorRef.current.z[1]
-    const newTheta = Math.acos(z)
+    const newTheta = Math.acos(Math.max(-1, Math.min(1, z)))
     let newPhi = Math.atan2(y, x); if (newPhi < 0) newPhi += 2 * Math.PI
     setTheta(newTheta)
     setPhi(newPhi)
     updatePlotVector(newTheta, newPhi)
-    const thetaSlider = document.getElementById('thetaSlider') as HTMLInputElement | null
-    const phiSlider = document.getElementById('phiSlider') as HTMLInputElement | null
-    if (thetaSlider) thetaSlider.value = String(newTheta)
-    if (phiSlider) phiSlider.value = String(newPhi)
+    // set a human-readable message for the gate
+    if (gate === 'X' || gate === 'H' || gate === 'Y' || gate === 'Z') {
+      const msg = `${gate} gate applied to Qubit`
+      setMessages(prev => ({ ...prev, [gate]: msg }))
+    } else if (gate === 'Rx' || gate === 'Ry' || gate === 'Rz') {
+      const usedA = a
+      const deg = Math.round((usedA * 180) / Math.PI)
+      const axis = gate === 'Rx' ? 'X' : gate === 'Ry' ? 'Y' : 'Z'
+      const msg = `Qubit rotated ${deg}° around ${axis} axis`
+      setMessages(prev => ({ ...prev, [gate]: msg }))
+    }
+  }
+
+  // helper for slider gradient backgrounds (filled portion shows gradient)
+  const sliderBackground = (value: number, min: number, max: number): React.CSSProperties => {
+    const pct = Math.round(((value - min) / (max - min)) * 100)
+    // gradient from baby blue to red; left filled uses gradient, right unfilled is pale
+    return {
+      width: '85%',
+      height: 8,
+      WebkitAppearance: 'none',
+      borderRadius: 4,
+      background: `linear-gradient(90deg, #FFEB3B 0%, #ff6b6b ${pct}%, #FFE082 ${pct}%, #FFE082 100%)`
+    } as React.CSSProperties
   }
 
   // sync slider-driven updates
@@ -192,25 +231,146 @@ const BlochSpherePage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', width: '100%', height: '100%', boxSizing: 'border-box' }}>
-      <div style={{ width: 320, minWidth: 260, margin: '12px', borderRadius: 12, padding: 16, background: 'linear-gradient(180deg,#0044aa,#002b6b)', color: 'white', overflow: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-        <h3 style={{ margin: 0, marginBottom: 12 }}>Controls</h3>
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ marginBottom: 8 }}><span style={{ fontWeight: '700', marginRight: 10 }}>θ (theta):</span><span id="thetaVal">{radToDeg(theta)}</span>°</div>
-          <input id="thetaSlider" value={theta} type="range" min={0} max={3.14159} step={0.01}
-            onInput={(e) => setTheta(parseFloat((e.target as HTMLInputElement).value))}
-            style={{ width: '85%', height: 8, WebkitAppearance: 'none', background: '#cce0ff', borderRadius: 4 }} />
+      <style>{`.deg-input{ background: white; color: #013a63; padding:4px 6px; border-radius:6px; border:none; } .deg-input::placeholder{ color: #9aaec0; } .gate-name{ font-style: italic; cursor: pointer; } .gate-btn{ display:inline-block; padding:6px 10px; border-radius:8px; background:#cfefff; color:#013a63; border:none; font-weight:700; cursor:pointer; font-style:italic; } .apply-btn{ font-weight:700; background:#bfe9ff; color:#013a63; border:none; }`}</style>
+      <div style={{ width: 320, minWidth: 260, margin: '12px', borderRadius: 12, padding: 8, overflow: 'auto' }}>
+        {/* Page title above controls */}
+        <div style={{ marginBottom: 12 }}><h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>The Bloch Sphere</h1></div>
+        {/* Controls label outside box, orange h3 */}
+        <div style={{ marginBottom: 12 }}><h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#ff8c00' }}>Controls</h3></div>
+        <div style={{ marginTop: 16, borderRadius: 12, padding: 12, background: 'linear-gradient(180deg,#ffb74d,#ff8f00)', color: 'white', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', marginBottom: 12 }}>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 8 }}><span style={{ fontWeight: '700', marginRight: 10 }}>θ (theta):</span><span id="thetaVal">{radToDeg(theta)}</span>°</div>
+            <input id="thetaSlider" value={theta} type="range" min={0} max={3.14159} step={0.01}
+              onInput={(e) => setTheta(parseFloat((e.target as HTMLInputElement).value))}
+              style={sliderBackground(theta, 0, Math.PI)} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 8 }}><span style={{ fontWeight: '700', marginRight: 10 }}>φ (phi):</span><span id="phiVal">{radToDeg(phi)}</span>°</div>
+            <input id="phiSlider" value={phi} type="range" min={0} max={6.2832} step={0.01}
+              onInput={(e) => setPhi(parseFloat((e.target as HTMLInputElement).value))}
+              style={sliderBackground(phi, 0, Math.PI * 2)} />
+          </div>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ marginBottom: 8 }}><span style={{ fontWeight: '700', marginRight: 10 }}>φ (phi):</span><span id="phiVal">{radToDeg(phi)}</span>°</div>
-          <input id="phiSlider" value={phi} type="range" min={0} max={6.2832} step={0.01}
-            onInput={(e) => setPhi(parseFloat((e.target as HTMLInputElement).value))}
-            style={{ width: '85%', height: 8, WebkitAppearance: 'none', background: '#cce0ff', borderRadius: 4 }} />
+        
+
+        {/* spaced area between controls and gates */}
+        <div style={{ height: 20 }} />
+
+        {/* Gates box label outside, royal blue h3 */}
+        <div style={{ marginTop: 6 }}><h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#4169E1' }}>Gates</h3></div>
+        <div style={{ marginTop: 16, borderRadius: 12, padding: 12, background: 'linear-gradient(180deg,#4169E1,#27408B)', color: 'white', boxShadow: '0 8px 18px rgba(0,0,0,0.12)' }}>
+          {/* Order: X, Y, Z, H, Rx, Ry, Rz */}
+
+          {/* X */}
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button type="button" className="gate-btn" onClick={() => setActiveGate(activeGate === 'X' ? null : 'X')}>X</button>
+            <div>
+              {activeGate === 'X' && (
+                <>
+                  <button className="apply-btn" onClick={() => { applyGate('X'); setActiveGate(null); }} style={{ padding: '6px 10px', borderRadius: 6 }}>Apply</button>
+                </>
+              )}
+              {messages['X'] && <div style={{ fontSize: 12, marginTop: 6, color: 'rgba(255,255,255,0.9)' }}>{messages['X']}</div>}
+            </div>
+          </div>
+
+          {/* Y */}
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button type="button" className="gate-btn" onClick={() => setActiveGate(activeGate === 'Y' ? null : 'Y')}>Y</button>
+            <div>
+              {activeGate === 'Y' && (
+                <>
+                  <button className="apply-btn" onClick={() => { applyGate('Y'); setActiveGate(null); }} style={{ padding: '6px 10px', borderRadius: 6 }}>Apply</button>
+                </>
+              )}
+              {messages['Y'] && <div style={{ fontSize: 12, marginTop: 6, color: 'rgba(255,255,255,0.9)' }}>{messages['Y']}</div>}
+            </div>
+          </div>
+
+          {/* Z */}
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button type="button" className="gate-btn" onClick={() => setActiveGate(activeGate === 'Z' ? null : 'Z')}>Z</button>
+            <div>
+              {activeGate === 'Z' && (
+                <>
+                  <button className="apply-btn" onClick={() => { applyGate('Z'); setActiveGate(null); }} style={{ padding: '6px 10px', borderRadius: 6 }}>Apply</button>
+                </>
+              )}
+              {messages['Z'] && <div style={{ fontSize: 12, marginTop: 6, color: 'rgba(255,255,255,0.9)' }}>{messages['Z']}</div>}
+            </div>
+          </div>
+
+          {/* H */}
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button type="button" className="gate-btn" onClick={() => setActiveGate(activeGate === 'H' ? null : 'H')}>H</button>
+            <div>
+              {activeGate === 'H' && (
+                <button className="apply-btn" onClick={() => { applyGate('H'); setActiveGate(null); }} style={{ padding: '6px 10px', borderRadius: 6 }}>Apply</button>
+              )}
+              {messages['H'] && <div style={{ fontSize: 12, marginTop: 6, color: 'rgba(255,255,255,0.9)' }}>{messages['H']}</div>}
+            </div>
+          </div>
+
+          {/* Rx */}
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button type="button" className="gate-btn" onClick={() => setActiveGate(activeGate === 'Rx' ? null : 'Rx')} style={{ background: '#ffd6d6', color: '#7a1212' }}>R<sub>x</sub></button>
+            <div>
+              {activeGate === 'Rx' && (
+                <>
+                  <input className="deg-input" placeholder="45°" type="text" value={rxInput} onChange={(e) => setRxInput((e.target as HTMLInputElement).value)} style={{ width: 80, marginRight: 8 }} />
+                  <button className="apply-btn" onClick={() => { const deg = parseFloat(rxInput as any); if (isNaN(deg)) applyGate('Rx'); else applyGate('Rx', (deg * Math.PI) / 180); setActiveGate(null); }} style={{ padding: '6px 10px', borderRadius: 6 }}>Apply</button>
+                </>
+              )}
+              {messages['Rx'] && <div style={{ fontSize: 12, marginTop: 6, color: 'rgba(255,255,255,0.9)' }}>{messages['Rx']}</div>}
+            </div>
+          </div>
+
+          {/* Ry */}
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button type="button" className="gate-btn" onClick={() => setActiveGate(activeGate === 'Ry' ? null : 'Ry')} style={{ background: '#d8f7d8', color: '#0b5d14' }}>R<sub>y</sub></button>
+            <div>
+              {activeGate === 'Ry' && (
+                <>
+                  <input className="deg-input" placeholder="45°" type="text" value={ryInput} onChange={(e) => setRyInput((e.target as HTMLInputElement).value)} style={{ width: 80, marginRight: 8 }} />
+                  <button className="apply-btn" onClick={() => { const deg = parseFloat(ryInput as any); if (isNaN(deg)) applyGate('Ry'); else applyGate('Ry', (deg * Math.PI) / 180); setActiveGate(null); }} style={{ padding: '6px 10px', borderRadius: 6 }}>Apply</button>
+                </>
+              )}
+              {messages['Ry'] && <div style={{ fontSize: 12, marginTop: 6, color: 'rgba(255,255,255,0.9)' }}>{messages['Ry']}</div>}
+            </div>
+          </div>
+
+          {/* Rz */}
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button type="button" className="gate-btn" onClick={() => setActiveGate(activeGate === 'Rz' ? null : 'Rz')} style={{ background: '#dbe9ff', color: '#0b2f66' }}>R<sub>z</sub></button>
+            <div>
+              {activeGate === 'Rz' && (
+                <>
+                  <input className="deg-input" placeholder="45°" type="text" value={rzInput} onChange={(e) => setRzInput((e.target as HTMLInputElement).value)} style={{ width: 80, marginRight: 8 }} />
+                  <button className="apply-btn" onClick={() => { const deg = parseFloat(rzInput as any); if (isNaN(deg)) applyGate('Rz'); else applyGate('Rz', (deg * Math.PI) / 180); setActiveGate(null); }} style={{ padding: '6px 10px', borderRadius: 6 }}>Apply</button>
+                </>
+              )}
+              {messages['Rz'] && <div style={{ fontSize: 12, marginTop: 6, color: 'rgba(255,255,255,0.9)' }}>{messages['Rz']}</div>}
+            </div>
+          </div>
         </div>
-        <div id="gates" style={{ textAlign: 'center', paddingTop: 8 }}>
-          <button onClick={() => applyGate('X')} style={{ margin: 5, padding: '6px 12px', borderRadius: 6 }}>X</button>
-          <button onClick={() => applyGate('Rx')} style={{ margin: 5, padding: '6px 12px', borderRadius: 6 }}>Rx(π/4)</button>
-          <button onClick={() => applyGate('Ry')} style={{ margin: 5, padding: '6px 12px', borderRadius: 6 }}>Ry(π/4)</button>
-          <button onClick={() => applyGate('Rz')} style={{ margin: 5, padding: '6px 12px', borderRadius: 6 }}>Rz(π/4)</button>
+        {/* Help card: opens Library -> Bloch Sphere Representation (placed after Controls and Gates) */}
+        <div
+          onClick={() => {
+            dispatch(setActivePanel('library'))
+            window.dispatchEvent(new CustomEvent('openLibraryTopic', { detail: { topicId: 'bloch-sphere' } }))
+            // hide the tag text after click
+            setHelpTagVisible(false)
+          }}
+          role="button"
+          tabIndex={0}
+          style={{ marginTop: 12, borderRadius: 12, padding: 12, background: 'linear-gradient(90deg,#ffffff,#f0f9ff)', color: '#013a63', boxShadow: '0 6px 18px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div style={{ fontWeight: 700, fontSize: 13, textAlign: 'center' }}>
+            How are Quantum Bits represented on the Bloch Sphere?
+            {helpTagVisible && (
+              <span style={{ marginLeft: 6, color: '#ff4d4f' }}>Read Here.</span>
+            )}
+          </div>
         </div>
       </div>
 
