@@ -20,7 +20,6 @@ import {
   CardHeader,
   Image,
   Stack,
-  Tag,
   useBreakpointValue,
 } from "@chakra-ui/react";
 import { useDispatch, useSelector } from 'react-redux'
@@ -49,7 +48,7 @@ const PROJECT_IDEAS: ProjectIdea[] = [
   // Advanced
   { id: "grover-oracle", title: "Grover Oracle Builder", difficulty: "Advanced", description: "Design a marked item oracle with MCX and run Grover.", image: "/images/project images/oracle.png" },
   { id: "phase-kickback-lab", title: "Phase Kickback Lab", difficulty: "Advanced", description: "Explore phase kickback using CZ and superposition states.", image: "/images/project images/quantum.png" },
-  { id: "subtractor-2bit", title: "2-bit Subtractor (a−b)", difficulty: "Advanced", description: "Compute difference and borrow using CX/CCX with clean ancillas.", image: "/images/project images/subtract.png" },
+  { id: "subtractor-2bit", title: "2-bit Subtractor", difficulty: "Advanced", description: "Compute difference and borrow using CX/CCX with clean ancillas.", image: "/images/project images/subtract.png" },
 ];
 
 const ProjectPanel: React.FC = () => {
@@ -279,9 +278,10 @@ const ProjectPanel: React.FC = () => {
         { text: 'Goal: Create a true random number generator using quantum superposition and measurement!' },
         {text: 'Start with a single qubit (Q0). Its initial state is |0⟩, meaning it is definitely 0!'},
         {text: 'Drag and drop an H gate (Hadamard) onto Q0. Now the qubit is 50% chance 0, 50% chance 1 and is in superposition!.'},
-        {text: 'Add a Measure (M) gate to Q0, after the H gate.Measurement collapses the superposition randomly into 0 or 1!' },
+        {text: 'Add a Measure (M) gate to Q0, after the H gate. Measurement collapses the superposition randomly into 0 or 1!' },
+        {text: 'Click on Simulation from the top bar!' },
         {text: 'Press Run!' },
-        {text: 'Set Shots = 50 or 100 and run again to see true statistical randomness!' },
+        {text: 'Check the Results and Output tabs to see the random bits generated!' },
         {text: 'To create an n-bit random number, repeat for more qubits!' },
         {text: 'Congratulations! You created a true random number generator!' }
       ]
@@ -303,17 +303,20 @@ const ProjectPanel: React.FC = () => {
     if (id === 'quantum-classic-gates') {
       return [
         { text: 'Goal: Build classical AND, OR, NOT, NAND, NOR, XOR, XNOR gates using quantum gates!' },
-        {text: 'Let\'s build an AND gate first! Start by adding 3 qubits to the circuit, A, B and C respectively!' },
+        { text: 'Let\'s build an AND gate first! Start by adding 3 qubits to the circuit, A, B and C respectively!' },
+        { text: 'Add Hadamard (H) gates to qubits A and B to create superposition!' },
         { text: 'To build a classical AND gate, add a Toffoli (CCNOT) gate with A and B as controls and a new qubit C as target!' },
         { text: 'Add Measure (M) gates to all qubits!' },
         { text: 'Click on Simulation from the top bar!' },
         { text: 'Click Run Simulation!' },
-        { text: 'Check the states of the measured qubits and verify the AND gate output!' },
+        { text: 'Check the Output tab and verify the AND gate output!' },
 
-        { text: 'To build a classical OR gate, add CNOT gates from A to C and B to C!' },
+        { text: 'To build a classical OR gate, we use DeMorgan\'s laws and apply it to our AND gate!' },
+        { text: 'Add X gates to qubits A and B before the Toffoli, and an X gate to qubit C after the Toffoli!' },
+        { text: 'Add X gates to qubits A and B after the Toffoli gate to return to their original state!' },
         { text: 'Rerun the simulation and verify the OR gate output!' },
 
-        { text: 'The easiest of them all: NOT gate! Just add a X gate to a qubit and measure it!' },
+        { text: 'The easiest of them all: NOT gate! Just add an X gate to a qubit and measure it!' },
         { text: 'Rerun the simulation and verify the NOT gate output!' },
 
         { text: 'To build XOR gates, start by adding 3 gates, A and B as inputs and C as output!'},
@@ -329,12 +332,12 @@ const ProjectPanel: React.FC = () => {
     if (id === 'quantum-half-adder') {
       return [
         { text: 'Goal: Add two 1-bit numbers A and B, output Carry and Sum.' },
-        { text: 'Start by adding 4 qubits to the circuit, Carry, Sum, A and B respectively (the order matters) !' },
-        { text: 'Add Hadamard (H) gates to q2 and q3, A and B respectively!' },
-        { text: 'Apply a CNOT gate between q2 (A) and Sum, with A as control!' },
-        { text: 'Apply a CNOT gate between q3 (B) and Sum, with B as control!' },
-        { text: 'Place a Toffoli CCNOT on q1, which will reflect on the other qubits!' },
-        { text: 'Set the control as q2 and q3 (A and B) and the target as q0 (Carry)!' },
+        { text: 'Start by adding 4 qubits to the circuit, A, B, Carry and Sum!' },
+        { text: 'You can rename the qubits from the sidebar!' },
+        { text: 'Add Hadamard (H) gates to A and B!' },
+        { text: 'Apply a CNOT gate between A and Sum, with A as control!' },
+        { text: 'Apply a CNOT gate between B and Sum, with B as control!' },
+        { text: 'Place a Toffoli CCNOT on Carry, with A and B as controls!' },
         { text: 'Add Measure (M) to all qubits!' },
         { text: 'Click on Simulation from the top bar!' },
         { text: 'Click Run Simulation!' },
@@ -345,9 +348,9 @@ const ProjectPanel: React.FC = () => {
 
     if (id === 'quantum-comparator') {
       return [
-        {text: 'Goal: Compare two 2-bit numbers A1A0 and B1B0, output 1 if A>B else 0.'},
-        { text: 'Start by adding 5 qubits to the circuit, A1, A0, B1 and B0, and OUT! Rename the qubits for an easier implementation!' },
-        { text: 'Add Hadamard (H) gates to all qubits to create superposition!' },
+        { text: 'Goal: Compare two 2-bit numbers A1,A0  B1,B0, output 1 if A>B else 0.'},
+        { text: 'Start by adding 5 qubits to the circuit, A1, A0, B1, B0, and OUT! Rename the qubits for an easier implementation!' },
+        { text: 'Add Hadamard (H) gates to all input qubits to create superposition!' },
         { text: 'First, add CNOT gates from A0 to OUT and B0 to OUT!' },
         { text: 'Next, add a Toffoli gate with A1 and B1 as controls and OUT as target!' },
         { text: 'Add Measure (M) gates to all qubits!' },
@@ -467,7 +470,14 @@ const ProjectPanel: React.FC = () => {
                               <Text fontWeight="600" mb={1}>{idea.title}</Text>
                               <Text fontSize="sm" color={textColor}>{idea.description ?? 'Short description placeholder.'}</Text>
                             </Box>
-                            <Tag size="sm" colorScheme={getDifficultyColor(idea.difficulty)}>{idea.difficulty}</Tag>
+                            <Box
+                              w={3}
+                              h={3}
+                              borderRadius="full"
+                              bg={`${getDifficultyColor(idea.difficulty)}.400`}
+                              title={`${idea.difficulty} difficulty`}
+                              aria-label={`${idea.difficulty} difficulty indicator`}
+                            />
                           </HStack>
                           <HStack mt={4} spacing={2} justify="flex-end">
                             <Button size="sm" colorScheme="blue" onClick={() => { openFloating(idea); }}>Select</Button>
@@ -528,7 +538,13 @@ const ProjectPanel: React.FC = () => {
                   </HStack>
                   {floatingProject.id === 'quantum-music' && (
                     <HStack mt={3} justify="space-between">
-                      <Button size="sm" colorScheme="purple" onClick={playMusic} isDisabled={!simulationBits || isPlaying}>
+                      <Button
+                        size="sm"
+                        colorScheme="purple"
+                        fontSize="xs"
+                        onClick={playMusic}
+                        isDisabled={!simulationBits || isPlaying}
+                      >
                         {isPlaying ? 'Playing…' : 'Play (after simulation)'}
                       </Button>
                       {!simulationBits && (

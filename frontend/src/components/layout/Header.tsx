@@ -93,7 +93,7 @@ const Header = () => {
             size="sm"
             variant={activePanel === 'circuit' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('circuit')}
-            colorScheme="blue"
+            color="#273191ff"
           >
             Circuit
           </Button>
