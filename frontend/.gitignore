@@ -45,3 +45,5 @@ logs/
 quantum-cache/
 
 settings.local.json
+
+.vs/

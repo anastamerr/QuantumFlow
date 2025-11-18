@@ -14,6 +14,9 @@ import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
+import PuzzlesPanel from '@/components/panels/PuzzlesPanel'
+import StatsPanel from '@/components/panels/StatsPanel'
+import type { RootState } from '@/store'
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
@@ -146,6 +149,8 @@ function App() {
                 {activePanel === 'simulation' && <SimulationPanel />}
                 {activePanel === 'export' && <ExportPanel />}
                 {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                {activePanel === 'puzzles' && <PuzzlesPanel />}
+                {activePanel === 'stats' && <StatsPanel />}
               </ResizablePanel>
             </Flex>
           </Box>

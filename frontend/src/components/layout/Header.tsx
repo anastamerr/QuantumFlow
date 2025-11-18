@@ -9,7 +9,7 @@ const Header = () => {
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
 
-  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms') => {
+  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'puzzles' | 'stats') => {
     dispatch(setActivePanel(panel))
   }
 
@@ -64,6 +64,22 @@ const Header = () => {
             colorScheme="blue"
           >
             Export
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handlePanelChange('stats')}
+            colorScheme="blue"
+          >
+            Stats
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handlePanelChange('puzzles')}
+            colorScheme="green"
+          >
+            Puzzles
           </Button>
           <Button
             size="sm"
