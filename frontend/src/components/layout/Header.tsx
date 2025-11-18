@@ -78,13 +78,10 @@ const Header = () => {
     <Box as="header" bg="quantum.primary" color="white" p={3} boxShadow="md">
       {isDesktop ? (
         <Flex align="center" gap={3} minH="56px">
-          <Flex align="center" minW={0} flex="1">
-            <Heading size="md" fontWeight="bold" noOfLines={1}>
+          <Flex align="center" minW="200px" flex="0 0 auto">
+            <Heading size="md" fontWeight="bold" color="white">
               QuantumFlow
             </Heading>
-            <Text ml={2} fontSize="sm" opacity={0.8} noOfLines={1}>
-              {circuitName}
-            </Text>
           </Flex>
 
           <HStack spacing={2} flexShrink={0}>
@@ -199,9 +196,6 @@ const Header = () => {
             <Heading size={["xs", "sm"]} fontWeight="bold" noOfLines={1}>
               QuantumFlow
             </Heading>
-            <Text ml={2} fontSize="xs" opacity={0.8} noOfLines={1}>
-              {circuitName}
-            </Text>
           </Flex>
 
           <HStack spacing={1}>
