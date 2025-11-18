@@ -1,5 +1,6 @@
 import os
 from typing import Dict, Optional, List, Any
+import math
 
 from dotenv import load_dotenv
 
@@ -61,6 +62,7 @@ def _apply_gate(qc, gate: Dict[str, Any]):
         if control is None or target is None:
             raise ValueError("CZ requires control and target")
         qc.cz(control, target)
+    
     elif gtype == "swap":
         q1 = qubit if qubit is not None else (targets[0] if targets else None)
         q2 = targets[0] if targets else (controls[0] if controls else None)
@@ -172,3 +174,83 @@ def run_circuit(
         "memory": memory_out,
     }
 
+#Added By Entropix ;)
+
+def _probs_from_statevector(sv) -> Dict[str, float]:
+    n = int(math.log2(len(sv.data)))
+    probs = {}
+    for i, amp in enumerate(sv.data):
+        key = format(i, f"0{n}b")
+        probs[key] = float((abs(amp) ** 2).real)
+    return probs
+
+def _l2_distance(sv1, sv2) -> float:
+    diff = sv1.data - sv2.data
+    return float(math.sqrt((diff.conj() * diff).real.sum()))
+
+def _compute_pairwise_entanglement_stub(sv, n: int):
+    probs = (abs(sv.data) ** 2).tolist()
+    ent = [[0.0]*n for _ in range(n)]
+    for i in range(n):
+        for j in range(i+1, n):
+            s = 0.0
+            for idx, p in enumerate(probs):
+                b = format(idx, f"0{n}b")
+                if b[n-1-i] == b[n-1-j]:
+                    s += p
+            ent[i][j] = ent[j][i] = min(1.0, s)
+    return ent
+
+def run_circuit_snapshots(
+    num_qubits: int,
+    gates: List[Dict[str, Any]],
+    mode: str = "statevector",
+    shots: int = 1024,
+    compute_entanglement: bool = True,
+    compute_impacts: bool = True,
+    max_statevector_qubits: int = 12,
+) -> Dict[str, Any]:
+    try:
+        from qiskit import QuantumCircuit
+        from qiskit.quantum_info import Statevector
+    except Exception as e:
+        raise RuntimeError(f"Qiskit not available: {e}")
+
+    if num_qubits <= 0:
+        raise ValueError("num_qubits must be > 0")
+
+    if mode != "statevector":
+        raise ValueError("Only statevector mode is supported by this endpoint")
+
+    if num_qubits > max_statevector_qubits:
+        raise ValueError(f"Statevector mode limited to <={max_statevector_qubits} qubits")
+
+    qc = QuantumCircuit(num_qubits) 
+    snapshots: List[Dict[str, Any]] = []
+
+    # initial state snapshot
+    sv_prev = Statevector.from_label("0" * num_qubits)
+    snapshots.append({
+        "step": -1,
+        "probabilities": {format(i, f"0{num_qubits}b"): float(1.0 if i == 0 else 0.0) for i in range(2**num_qubits)},
+        "entanglement": [[0.0]*num_qubits for _ in range(num_qubits)] if compute_entanglement else None,
+        "impact": 0.0 if compute_impacts else None,
+    })
+
+    # apply gates one-by-one, capture snapshot after each gate
+    for idx, g in enumerate(sorted(gates, key=lambda x: x.get("position") or 0)):
+        _apply_gate(qc, g)
+        sv = Statevector(qc)
+        probs = _probs_from_statevector(sv)
+        ent = _compute_pairwise_entanglement_stub(sv, num_qubits) if compute_entanglement else None
+        impact = _l2_distance(sv_prev, sv) if compute_impacts else None
+
+        snapshots.append({
+            "step": idx,
+            "probabilities": probs,
+            "entanglement": ent,
+            "impact": impact,
+        })
+        sv_prev = sv
+
+    return {"snapshots": snapshots}

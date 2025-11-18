@@ -27,3 +27,22 @@ class ExecuteResponse(BaseModel):
     probabilities: Dict[str, float]
     memory: Optional[List[str]] = None
     status: str = "success"
+
+
+# Added By Entropix ;)
+class SnapshotModel(BaseModel):
+    step: int
+    probabilities: Dict[str, float]
+    entanglement: Optional[List[List[float]]] = None
+    impact: Optional[float] = None
+
+class SnapshotsRequest(BaseModel):
+    num_qubits: int
+    gates: List[GateModel]           
+    mode: Optional[str] = "statevector"
+    shots: Optional[int] = 1024
+    computeEntanglement: Optional[bool] = True
+    computeImpacts: Optional[bool] = True
+
+class SnapshotsResponse(BaseModel):
+    snapshots: List[SnapshotModel]

@@ -1,13 +1,13 @@
 /* Global styles for QuantumFlow */
 
 :root {
-  --primary-color: #3182CE;
-  --secondary-color: #805AD5;
-  --accent-color: #00B5D8;
-  --background-color: #F7FAFC;
-  --text-color: #2D3748;
-  --light-gray: #EDF2F7;
-  --dark-gray: #4A5568;
+  --primary-color: #3182ce;
+  --secondary-color: #805ad5;
+  --accent-color: #00b5d8;
+  --background-color: #f7fafc;
+  --text-color: #2d3748;
+  --light-gray: #edf2f7;
+  --dark-gray: #4a5568;
 }
 
 * {
@@ -17,8 +17,9 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: var(--text-color);
@@ -26,7 +27,8 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
   background-color: var(--light-gray);
   padding: 0.2em 0.4em;
   border-radius: 3px;
@@ -58,4 +60,16 @@ code {
   stroke: var(--light-gray);
   stroke-width: 1;
   stroke-dasharray: 3, 3;
+  /* Mobile-specific quantum circuit improvements */
+  @media (max-width: 768px) {
+    .circuit-grid-container {
+      min-width: 100vw;
+      overflow-x: auto !important;
+    }
+
+    .circuit-grid-container .circuit-gate {
+      min-width: 30px !important;
+      min-height: 30px !important;
+    }
+  }
 }

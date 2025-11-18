@@ -3,8 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from .models import ExecuteRequest, ExecuteResponse
-from .qiskit_runner import run_circuit
+# Added by Entropix ;)
+from .models import (
+    ExecuteRequest,
+    ExecuteResponse,
+    SnapshotsRequest,
+    SnapshotsResponse,
+)
+from .qiskit_runner import run_circuit, run_circuit_snapshots
 
 
 load_dotenv()
@@ -52,6 +58,24 @@ def execute(req: ExecuteRequest) -> ExecuteResponse:
         return ExecuteResponse(**result, status="success")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+# Added by Entropix ;)
+@app.post("/api/v1/snapshots", response_model=SnapshotsResponse)
+def snapshots_endpoint(req: SnapshotsRequest) -> SnapshotsResponse:
+    try:
+        result = run_circuit_snapshots(
+            num_qubits=req.num_qubits,
+            gates=[g.model_dump() for g in req.gates],
+            mode=req.mode or "statevector",
+            shots=req.shots or 1024,
+            compute_entanglement=bool(req.computeEntanglement),
+            compute_impacts=bool(req.computeImpacts),
+        )
+        return SnapshotsResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    
 
 
 if __name__ == "__main__":
