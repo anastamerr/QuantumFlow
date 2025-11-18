@@ -30,7 +30,8 @@ export const generateQiskitCode = (
   // Combine basic Qiskit imports with additional ones
   const basicImports = [
     'from qiskit import QuantumCircuit, transpile',
-    'from qiskit_aer import AerSimulator',
+    // AerSimulator is provided by the Aer provider module
+    'from qiskit.providers.aer import AerSimulator',
     'from qiskit.visualization import plot_histogram',
     'import numpy as np'
   ];
@@ -107,47 +108,71 @@ function generateGateSection(gates: Gate[]): string {
         break;
       case 'rx':
         // RX gate uses theta parameter (rotation around X-axis)
-        const rxTheta = Number(gate.params?.theta || gate.params?.angle || 0);
-        if (isNaN(rxTheta)) {
-          gateSection += `# Warning: Invalid parameter for RX gate, using 0\n`;
-          gateSection += `qc.rx(0, ${gate.qubit})\n`;
-        } else {
-          // Check if value is already in radians (between -2π and 2π) or degrees  
-          const rxAngle = Math.abs(rxTheta) <= 2 * Math.PI ? rxTheta : rxTheta * Math.PI / 180;
-          gateSection += `qc.rx(${rxAngle}, ${gate.qubit})\n`;
+        {
+          const raw = gate.params?.theta ?? gate.params?.angle
+          if (raw === undefined || raw === null) {
+            gateSection += `# Warning: Missing parameter for RX gate, using 0\n`
+            gateSection += `qc.rx(0, ${gate.qubit})\n`
+          } else if (typeof raw === 'number') {
+            const rxAngle = Math.abs(raw) <= 2 * Math.PI ? raw : raw * Math.PI / 180
+            gateSection += `qc.rx(${rxAngle}, ${gate.qubit})\n`
+          } else {
+            // string expression - try to normalize 'pi' -> 'np.pi' if needed
+            let expr = String(raw).trim()
+            if (/\bpi\b/.test(expr) && !expr.includes('np.')) expr = expr.replace(/\bpi\b/g, 'np.pi')
+            gateSection += `qc.rx(${expr}, ${gate.qubit})\n`
+          }
         }
         break;
       case 'ry':
         // RY gate uses theta parameter (rotation around Y-axis)
-        const ryTheta = Number(gate.params?.theta || gate.params?.angle || 0);
-        if (isNaN(ryTheta)) {
-          gateSection += `# Warning: Invalid parameter for RY gate, using 0\n`;
-          gateSection += `qc.ry(0, ${gate.qubit})\n`;
-        } else {
-          const ryAngle = Math.abs(ryTheta) <= 2 * Math.PI ? ryTheta : ryTheta * Math.PI / 180;
-          gateSection += `qc.ry(${ryAngle}, ${gate.qubit})\n`;
+        {
+          const raw = gate.params?.theta ?? gate.params?.angle
+          if (raw === undefined || raw === null) {
+            gateSection += `# Warning: Missing parameter for RY gate, using 0\n`
+            gateSection += `qc.ry(0, ${gate.qubit})\n`
+          } else if (typeof raw === 'number') {
+            const ryAngle = Math.abs(raw) <= 2 * Math.PI ? raw : raw * Math.PI / 180
+            gateSection += `qc.ry(${ryAngle}, ${gate.qubit})\n`
+          } else {
+            let expr = String(raw).trim()
+            if (/\bpi\b/.test(expr) && !expr.includes('np.')) expr = expr.replace(/\bpi\b/g, 'np.pi')
+            gateSection += `qc.ry(${expr}, ${gate.qubit})\n`
+          }
         }
         break;
       case 'rz':
         // RZ gate uses phi parameter (rotation around Z-axis)
-        const rzPhi = Number(gate.params?.phi || gate.params?.theta || gate.params?.angle || 0);
-        if (isNaN(rzPhi)) {
-          gateSection += `# Warning: Invalid parameter for RZ gate, using 0\n`;
-          gateSection += `qc.rz(0, ${gate.qubit})\n`;
-        } else {
-          const rzAngle = Math.abs(rzPhi) <= 2 * Math.PI ? rzPhi : rzPhi * Math.PI / 180;
-          gateSection += `qc.rz(${rzAngle}, ${gate.qubit})\n`;
+        {
+          const raw = gate.params?.phi ?? gate.params?.theta ?? gate.params?.angle
+          if (raw === undefined || raw === null) {
+            gateSection += `# Warning: Missing parameter for RZ gate, using 0\n`
+            gateSection += `qc.rz(0, ${gate.qubit})\n`
+          } else if (typeof raw === 'number') {
+            const rzAngle = Math.abs(raw) <= 2 * Math.PI ? raw : raw * Math.PI / 180
+            gateSection += `qc.rz(${rzAngle}, ${gate.qubit})\n`
+          } else {
+            let expr = String(raw).trim()
+            if (/\bpi\b/.test(expr) && !expr.includes('np.')) expr = expr.replace(/\bpi\b/g, 'np.pi')
+            gateSection += `qc.rz(${expr}, ${gate.qubit})\n`
+          }
         }
         break;
       case 'p':
         // Phase gate uses phi parameter
-        const phasePhi = Number(gate.params?.phi || gate.params?.phase || 0);
-        if (isNaN(phasePhi)) {
-          gateSection += `# Warning: Invalid parameter for P gate, using 0\n`;
-          gateSection += `qc.p(0, ${gate.qubit})\n`;
-        } else {
-          const phaseAngle = Math.abs(phasePhi) <= 2 * Math.PI ? phasePhi : phasePhi * Math.PI / 180;
-          gateSection += `qc.p(${phaseAngle}, ${gate.qubit})\n`;
+        {
+          const raw = gate.params?.phi ?? gate.params?.phase
+          if (raw === undefined || raw === null) {
+            gateSection += `# Warning: Missing parameter for P gate, using 0\n`
+            gateSection += `qc.p(0, ${gate.qubit})\n`
+          } else if (typeof raw === 'number') {
+            const phaseAngle = Math.abs(raw) <= 2 * Math.PI ? raw : raw * Math.PI / 180
+            gateSection += `qc.p(${phaseAngle}, ${gate.qubit})\n`
+          } else {
+            let expr = String(raw).trim()
+            if (/\bpi\b/.test(expr) && !expr.includes('np.')) expr = expr.replace(/\bpi\b/g, 'np.pi')
+            gateSection += `qc.p(${expr}, ${gate.qubit})\n`
+          }
         }
         break;
       case 'cnot':

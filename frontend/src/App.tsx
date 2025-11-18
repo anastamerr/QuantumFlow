@@ -13,6 +13,7 @@ import ExportPanel from './components/panels/ExportPanel'
 import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
+import OptimizationPanel from './components/panels/OptimizationPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
 
 function App() {
@@ -146,6 +147,7 @@ function App() {
                 {activePanel === 'simulation' && <SimulationPanel />}
                 {activePanel === 'export' && <ExportPanel />}
                 {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                {activePanel === 'optimization' && <OptimizationPanel />}
               </ResizablePanel>
             </Flex>
           </Box>

@@ -14,6 +14,19 @@ export interface Gate {
   controls?: number[] // For controlled gates
 }
 
+// Define StoreGate to match your slice
+export interface StoreGate {
+  id: string
+  type: string
+  qubit?: number       // optional because decoder may not assign
+  position?: number    // optional
+  targets?: (number | string)[]
+  controls?: (number | string)[]
+  params?: { [key: string]: number | string }  // <-- match slice
+}
+
+
+
 export interface Qubit {
   id: number
   name: string
