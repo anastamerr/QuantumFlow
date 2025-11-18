@@ -3,9 +3,9 @@ from qiskit.quantum_info import Operator
 
 def get_target_unitary(label: str, circuit_qubits: int) -> Operator:
     base_targets = {
-        "Pauli X": Operator.from_label("X"),
-        "Pauli Z": Operator.from_label("Z"),
-        "Identity": Operator.from_label("I"),
+        "Pauli X": Operator.from_label('X'),
+        "Pauli Z": Operator.from_label('Z'),
+        "Identity": Operator.from_label('I'),
     }
     
     if label in base_targets:
@@ -40,17 +40,6 @@ def get_target_unitary(label: str, circuit_qubits: int) -> Operator:
             identity_op = Operator(identity_qc)
             return toffoli_op.expand(identity_op)
         return toffoli_op
-    
-    if label == "Controlled Rz":
-        if circuit_qubits < 2:
-            raise ValueError(f"Controlled Rz requires at least 2 qubits")
-        crz_op = Operator([[1, 0, 0, 0],[0, 1, 0, 0],[0, 0, (0.9238795 - 0.3826834j), 0],[0, 0, 0, (0.9238795 + 0.3826834j)]])
-        if circuit_qubits > 2:
-            remaining_qubits = circuit_qubits - 2
-            identity_qc = QuantumCircuit(remaining_qubits)
-            identity_op = Operator(identity_qc)
-            return crz_op.expand(identity_op)
-        return crz_op
     
     raise ValueError(f"Unknown target label: {label}")
 
