@@ -1,4 +1,22 @@
-import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack, Badge } from '@chakra-ui/react'
+import { 
+  Box, 
+  Flex, 
+  Heading, 
+  IconButton, 
+  Spacer, 
+  useColorMode, 
+  Button, 
+  HStack, 
+  Badge,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  useBreakpointValue,
+  VStack,
+  Text
+} from '@chakra-ui/react'
+import { HamburgerIcon } from '@chakra-ui/icons'
 import { keyframes } from '@emotion/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
@@ -15,6 +33,9 @@ const Header = () => {
   const activePanel = useSelector(selectActivePanel)
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
+  
+  // Show full navigation on larger screens
+  const showFullNav = useBreakpointValue({ base: false, lg: true })
 
   const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms') => {
     dispatch(setActivePanel(panel))
@@ -115,59 +136,256 @@ const Header = () => {
           </Button>
 
 
-          <Button
-            size="sm"
-            variant={activePanel === 'export' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('export')}
-            colorScheme="blue"
-          >
-            Export
-          </Button>
+            {/* Center Section - Left Navigation */}
+            <HStack spacing={2} flex="2" justify="flex-start" ml={-19}>
+              <Button
+                size="sm"
+                variant={activePanel === 'projects' ? 'solid' : 'ghost'}
+                colorScheme="blue"
+                onClick={() => dispatch(setActivePanel('projects'))}
+              >
+                Projects
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => dispatch(setActivePanel('library'))}
+              >
+                Library
+              </Button>
+              <Button
+                size="sm"
+                variant={activePanel === 'blochSphere' ? 'solid' : 'ghost'}
+                colorScheme="cyan"
+                onClick={() => dispatch(setActivePanel('blochSphere'))}
+                position="relative"
+              >
+                <Box position="relative" display="inline-flex" alignItems="center">
+                  Bloch Sphere
+                  <Box
+                    position="absolute"
+                    top={-2}
+                    right={-2}
+                    bg="#FFD400"
+                    color="black"
+                    borderRadius="full"
+                    px={1}
+                    py={0}
+                    fontWeight={700}
+                    fontSize="xs"
+                    boxShadow="md"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    zIndex={2}
+                    animation={`${pulse} 1.6s ease-in-out infinite`}
+                  >
+                    NEW
+                  </Box>
+                </Box>
+              </Button>
+            </HStack>
 
-        
-          <Button
-            size="sm"
-            variant={activePanel === 'ai' ? 'solid' : 'ghost'}
-            onClick={() => dispatch(setActivePanel('ai'))}
-            colorScheme="yellow"
-            color="orange"
-          >
-            AI
-          </Button>
+            {/* Right Section - Main Tools and Actions */}
+            <HStack spacing={2} flex="2" justify="flex-end">
+              <Button
+                size="sm"
+                variant={activePanel === 'circuit' ? 'solid' : 'ghost'}
+                onClick={() => handlePanelChange('circuit')}
+                colorScheme="blue"
+              >
+                Circuit
+              </Button>
+              <Button
+                size="sm"
+                variant={activePanel === 'code' ? 'solid' : 'ghost'}
+                onClick={() => handlePanelChange('code')}
+                colorScheme="blue"
+              >
+                Code
+              </Button>
+              <Button
+                size="sm"
+                variant={activePanel === 'simulation' ? 'solid' : 'ghost'}
+                onClick={() => handlePanelChange('simulation')}
+                colorScheme="blue"
+              >
+                Simulation
+              </Button>
+              <Button
+                size="sm"
+                variant={activePanel === 'export' ? 'solid' : 'ghost'}
+                onClick={() => handlePanelChange('export')}
+                colorScheme="blue"
+              >
+                Export
+              </Button>
+              <Button
+                size="sm"
+                variant={activePanel === 'ai' ? 'solid' : 'ghost'}
+                onClick={() => dispatch(setActivePanel('ai'))}
+                colorScheme="yellow"
+              >
+                AI
+              </Button>
+              <Button
+                size="sm"
+                variant={activePanel === 'algorithms' ? 'solid' : 'ghost'}
+                onClick={() => handlePanelChange('algorithms')}
+                colorScheme="purple"
+              >
+                Algorithms
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleClearCircuit}
+                colorScheme="red"
+              >
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleToggleTutorial}
+                colorScheme="teal"
+              >
+                Tutorial
+              </Button>
+              <IconButton
+                aria-label="Toggle color mode"
+                icon={colorMode === 'light' ? <span>🌙</span> : <span>☀️</span>}
+                size="sm"
+                onClick={toggleColorMode}
+                variant="ghost"
+              />
+            </HStack>
+          </Flex>
+        ) : (
+          /* Mobile Layout */
+          <Flex align="center" justify="space-between">
+            {/* Logo */}
+            <Flex align="center" flex="1" minW={0}>
+              <Heading size={["xs", "sm"]} fontWeight="bold" noOfLines={1}>
+                QuantumFlow
+              </Heading>
+            </Flex>
 
-          <Button
-            size="sm"
-            variant={activePanel === 'algorithms' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('algorithms')}
-            colorScheme="purple"
-          >
-            Algorithms
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleClearCircuit}
-            colorScheme="red"
-          >
-            Clear
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleToggleTutorial}
-            colorScheme="teal"
-          >
-            Tutorial
-          </Button>
-          <IconButton
-            aria-label="Toggle color mode"
-            icon={colorMode === 'light' ? <span>🌙</span> : <span>☀️</span>}
-            size="sm"
-            onClick={toggleColorMode}
-            variant="ghost"
-          />
-        </HStack>
-      </Flex>
+            {/* Mobile Controls */}
+            <HStack spacing={1}>
+              <IconButton
+                aria-label="Toggle color mode"
+                icon={colorMode === 'light' ? <span>🌙</span> : <span>☀️</span>}
+                size="sm"
+                onClick={toggleColorMode}
+                variant="ghost"
+              />
+              <Menu>
+                <MenuButton
+                  as={IconButton}
+                  aria-label="Navigation menu"
+                  icon={<HamburgerIcon />}
+                  size="sm"
+                  variant="ghost"
+                  color="white"
+                  _hover={{ bg: "whiteAlpha.200" }}
+                />
+                <MenuList 
+                  bg="quantum.primary" 
+                  borderColor="whiteAlpha.300" 
+                  color="white" 
+                  minW="220px"
+                  maxH="80vh"
+                  overflowY="auto"
+                >
+                  <MenuItem
+                    bg={activePanel === 'projects' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => dispatch(setActivePanel('projects'))}
+                  >
+                    📁 Projects
+                  </MenuItem>
+                  <MenuItem
+                    bg={activePanel === 'library' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => dispatch(setActivePanel('library'))}
+                  >
+                    📚 Library
+                  </MenuItem>
+                  <MenuItem
+                    bg={activePanel === 'blochSphere' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => dispatch(setActivePanel('blochSphere'))}
+                  >
+                    <Flex align="center" justify="space-between" w="100%">
+                      <Text>🌐 Bloch Sphere</Text>
+                      <Badge colorScheme="yellow" fontSize="xs" ml={2}>NEW</Badge>
+                    </Flex>
+                  </MenuItem>
+                  <MenuItem
+                    bg={activePanel === 'circuit' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => handlePanelChange('circuit')}
+                  >
+                    🔧 Circuit
+                  </MenuItem>
+                  <MenuItem
+                    bg={activePanel === 'code' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => handlePanelChange('code')}
+                  >
+                    💻 Code
+                  </MenuItem>
+                  <MenuItem
+                    bg={activePanel === 'simulation' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => handlePanelChange('simulation')}
+                  >
+                    ⚡ Simulation
+                  </MenuItem>
+                  <MenuItem
+                    bg={activePanel === 'export' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => handlePanelChange('export')}
+                  >
+                    📤 Export
+                  </MenuItem>
+                  <MenuItem
+                    bg={activePanel === 'ai' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => dispatch(setActivePanel('ai'))}
+                  >
+                    🤖 AI
+                  </MenuItem>
+                  <MenuItem
+                    bg={activePanel === 'algorithms' ? 'whiteAlpha.200' : 'transparent'}
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={() => handlePanelChange('algorithms')}
+                  >
+                    🧮 Algorithms
+                  </MenuItem>
+                  <MenuItem
+                    bg="transparent"
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={handleClearCircuit}
+                    color="white"
+                  >
+                    🗑️ Clear
+                  </MenuItem>
+                  <MenuItem
+                    bg="transparent"
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    onClick={handleToggleTutorial}
+                    color="white"
+                  >
+                    🎓 Tutorial
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+            </HStack>
+          </Flex>
+        )}
+      </Box>
     </Box>
   )
 }
