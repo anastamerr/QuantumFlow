@@ -137,6 +137,8 @@ const CircuitCanvas: React.FC = () => {
       
       const isMultiQubitGate = (gateDefinition.targets && gateDefinition.targets > 0) || 
                                (gateDefinition.controls && gateDefinition.controls > 0);
+      const isMCXGate = gateDefinition.id === 'mcx';
+      const minControlsForGate = gateDefinition.minControls ?? gateDefinition.controls ?? 0;
 
       // Special validation for Toffoli gate - requires at least 3 qubits
       if (gateDefinition.id === 'toffoli' && qubits.length < 3) {
@@ -148,6 +150,20 @@ const CircuitCanvas: React.FC = () => {
           isClosable: true,
         });
         return;
+      }
+
+      if (isMCXGate) {
+        const requiredQubits = (minControlsForGate || 2) + 1; // controls + target
+        if (qubits.length < requiredQubits) {
+          toast({
+            title: "Not enough qubits for MCX",
+            description: `MCX gate needs at least ${requiredQubits} qubits (controls + target). Add more qubits to continue.`,
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+          return;
+        }
       }
 
       if (isMultiQubitGate && qubits.length < 2) {
@@ -178,7 +194,7 @@ const CircuitCanvas: React.FC = () => {
       
       // For multi-qubit gates, set targets and controls
       if (gateDefinition.targets && gateDefinition.targets > 0) {
-        if (gateDefinition.id === 'toffoli') {
+        if (gateDefinition.id === 'toffoli' || isMCXGate) {
           // For Toffoli, treat the dropped qubit as the initial target so the
           // gate visually and logically aligns with that wire.
           newGate.targets = [position.qubit];
@@ -227,22 +243,38 @@ const CircuitCanvas: React.FC = () => {
               return;
           }
         } else {
-          // For other multi-control gates (e.g., Toffoli)
+          // For other multi-control gates (e.g., Toffoli, MCX)
           const availableControlQubits = qubits
             .filter(q => q.id !== mainQubit && !targetQubits.includes(q.id))
             .map(q => q.id);
-            
-          if (gateDefinition.controls > availableControlQubits.length) {
+          const desiredControlCount = (() => {
+            if (isMCXGate) {
+              const defaultControls = gateDefinition.defaultControls ?? gateDefinition.controls ?? 2;
+              return Math.min(
+                Math.max(defaultControls, minControlsForGate || 2),
+                availableControlQubits.length
+              );
+            }
+            return gateDefinition.controls ?? 0;
+          })();
+
+          if (desiredControlCount > availableControlQubits.length || desiredControlCount === 0) {
             toast({
               title: "Not enough qubits for controls",
-              description: `This gate requires ${gateDefinition.controls} control qubit(s).`,
+              description: `This gate requires ${isMCXGate ? 'additional' : gateDefinition.controls} control qubit(s).`,
               status: "warning",
               duration: 3000,
               isClosable: true,
             });
             return;
           }
-          newGate.controls = availableControlQubits.slice(0, gateDefinition.controls);
+          newGate.controls = availableControlQubits.slice(0, desiredControlCount);
+          if (isMCXGate) {
+            newGate.params = {
+              ...(newGate.params || {}),
+              controlCount: desiredControlCount,
+            };
+          }
         }
       }
       

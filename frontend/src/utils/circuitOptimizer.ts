@@ -313,7 +313,7 @@ const hasParameters = (gate: Gate): boolean => {
  * Check if a gate is a controlled gate
  */
 const isControlledGate = (gate: Gate): boolean => {
-  return ['cnot', 'cz', 'toffoli'].includes(gate.type) || 
+  return ['cnot', 'cz', 'toffoli', 'mcx'].includes(gate.type) || 
          (!!gate.controls && gate.controls.length > 0);
 };
 

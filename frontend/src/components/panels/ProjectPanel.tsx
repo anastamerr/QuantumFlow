@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   VStack,
   HStack,
@@ -43,15 +43,12 @@ const PROJECT_IDEAS: ProjectIdea[] = [
   // Intermediate
   { id: "quantum-half-adder", title: "Quantum Half Adder", difficulty: "Intermediate", description: "Simulate half adders using quantum gates!" },
   { id: "quantum-teleportation-demo", title: "Quantum Teleportation Tutorial", difficulty: "Intermediate", description: "Interactive teleportation demo." },
- 
+  { id: "quantum-comparator", title: "Quantum Comparator", difficulty: "Intermediate", description: "Implement a classical comparator using quantum gates!" },
 
   // Advanced
   { id: "vqe-molecule", title: "VQE for Small Molecules (H2)", difficulty: "Advanced", description: "Variational approach for H2 energy." },
-  { id: "qaoa-optimizer", title: "QAOA for Max-Cut Problems", difficulty: "Advanced", description: "Apply QAOA to combinatorial problems." },
   { id: "error-mitigation-playground", title: "Noise Mitigation Playground", difficulty: "Advanced", description: "Tools to mitigate simulated noise." },
   { id: "quantum-chemistry-gui", title: "Quantum Chemistry Simulation App", difficulty: "Advanced", description: "Visualize simple molecular simulations." },
-  { id: "quantum-ml-demos", title: "Quantum Machine Learning Demos", difficulty: "Advanced", description: "Small QML examples and experiments." },
-  { id: "multi-backend-runner", title: "Multi-backend Experiment Runner", difficulty: "Advanced", description: "Run experiments across different backends." },
 ];
 
 const ProjectPanel: React.FC = () => {
@@ -120,11 +117,17 @@ const ProjectPanel: React.FC = () => {
     setFloatingOpen(true)
   }
 
-  const closeFloating = () => {
+  const closeFloating = useCallback(() => {
     setFloatingOpen(false)
     setFloatingProject(null)
     setFloatingStep(0)
-  }
+  }, [])
+
+  useEffect(() => {
+    if (activePanel === 'projects' && floatingOpen) {
+      closeFloating()
+    }
+  }, [activePanel, floatingOpen, closeFloating])
 
   // Music playback state
   const [isPlaying, setIsPlaying] = useState(false)

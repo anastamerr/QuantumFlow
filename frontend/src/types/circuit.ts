@@ -25,6 +25,10 @@ export interface GateDefinition {
   description: string
   category: string
   color: string
+  supportsDynamicControls?: boolean
+  minControls?: number
+  maxControls?: number
+  defaultControls?: number
   params?: {
     name: string
     type: 'number' | 'angle' | 'select'

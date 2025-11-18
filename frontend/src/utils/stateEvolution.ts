@@ -178,6 +178,37 @@ export const applyThreeQubitGate = (
   return newState;
 };
 
+export const applyMultiControlledXGate = (
+  state: QuantumState,
+  gate: Gate,
+  numQubits: number
+): QuantumState => {
+  const newState: QuantumState = {};
+  if (gate.type !== 'mcx' || !gate.controls || gate.controls.length < 2) {
+    Object.entries(state).forEach(([basisState, amplitude]) => {
+      newState[basisState] = [...amplitude];
+    });
+    return newState;
+  }
+
+  const target = gate.targets && gate.targets.length > 0
+    ? gate.targets[0]
+    : (gate.qubit !== undefined ? gate.qubit : undefined);
+
+  if (target === undefined) {
+    Object.entries(state).forEach(([basisState, amplitude]) => {
+      newState[basisState] = [...amplitude];
+    });
+    return newState;
+  }
+
+  Object.entries(state).forEach(([basisState, amplitude]) => {
+    applyMultiControlledX(basisState, amplitude, gate.controls as number[], target, newState);
+  });
+
+  return newState;
+};
+
 /**
  * Main function to simulate applying a quantum gate to a state
  */
@@ -193,6 +224,8 @@ export const simulateGateApplication = (
     return applyTwoQubitGate(state, gate, numQubits);
   } else if (gate.type === 'toffoli') {
     return applyThreeQubitGate(state, gate, numQubits);
+  } else if (gate.type === 'mcx') {
+    return applyMultiControlledXGate(state, gate, numQubits);
   } else {
     // Unsupported gate type - just return the original state
     return { ...state };
@@ -271,6 +304,23 @@ const applyPauliY = (
   amplitude: Complex, 
   targetQubit: number, 
   newState: QuantumState
+
+const applyMultiControlledX = (
+  basisState: string,
+  amplitude: Complex,
+  controls: number[],
+  target: number,
+  newState: QuantumState
+) => {
+  const n = basisState.length;
+  const controlsActive = controls.every(control => basisState[n - 1 - control] === '1');
+  if (controlsActive) {
+    const flippedState = flipBit(basisState, target);
+    addToState(newState, flippedState, amplitude);
+  } else {
+    addToState(newState, basisState, amplitude);
+  }
+};
 ) => {
   // Y gate flips the target bit and applies a phase based on the bit value
   const n = basisState.length;
