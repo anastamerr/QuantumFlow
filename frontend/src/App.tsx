@@ -1,4 +1,5 @@
 import { Box, Flex, VStack, useColorModeValue, useToast, Button } from '@chakra-ui/react'
+import QSphereTest from './components/visualization/qspheretest';//temp
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useEffect, useState } from 'react'
@@ -124,6 +125,7 @@ function App() {
               {!isFullView && (
                 <Box flex={1} mb={4}>
                   <CircuitCanvas />
+                  <QSphereTest />         
                 </Box>
               )}
               {/* Existing Bottom Panel */}
