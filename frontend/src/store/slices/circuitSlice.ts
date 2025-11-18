@@ -4,9 +4,14 @@ import { RootState } from '../index'
 // Define types for our state
 export interface Gate {
   id: string
+  name: string
+  symbol: string
+  description: string
+  category: string
+  color: string
   type: string
-  qubit: number
-  position: number
+  qubit?: number
+  position?: number
   params?: {
     [key: string]: number | string
   }
