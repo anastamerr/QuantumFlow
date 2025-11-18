@@ -4,7 +4,7 @@ import { RootState } from '../index'
 // Define types for UI state
 export interface UiState {
   selectedGateId: string | null
-  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms'
+  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'optimization'
   showGateParams: boolean
   codeFormat: 'qiskit' | 'cirq' | 'json' | 'qasm'
   isDragging: boolean
