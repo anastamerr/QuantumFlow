@@ -3652,7 +3652,7 @@ const LibraryPanel: React.FC = () => {
                     borderRadius="50%"
                   />
                   <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')} fontWeight="500">
-                    Warning: Contents may entangle your brain (in a good way)
+                    Warning: Contents may entangle your brain (in a good way).
                   </Text>
                   <Box 
                     w="2px" 
