@@ -3595,89 +3595,70 @@ const LibraryPanel: React.FC = () => {
             >
               <VStack spacing={4} textAlign="center">
                 <Heading 
-                  size="4xl" 
+                  size="5xl" 
                   color={titleColor} 
-                  fontWeight="800"
-                  letterSpacing="-0.02em"
-                  animation="enhanced-title-glow 3s ease-in-out infinite alternate"
-                  css={{
-                    '@keyframes enhanced-title-glow': {
-                      '0%': { 
-                        textShadow: `0 0 10px ${useColorModeValue('rgba(59, 130, 246, 0.4)', 'rgba(59, 130, 246, 0.7)')}, 0 0 20px ${useColorModeValue('rgba(59, 130, 246, 0.2)', 'rgba(59, 130, 246, 0.4)')}` 
-                      },
-                      '100%': { 
-                        textShadow: `0 0 20px ${useColorModeValue('rgba(147, 51, 234, 0.6)', 'rgba(147, 51, 234, 0.9)')}, 0 0 40px ${useColorModeValue('rgba(16, 185, 129, 0.4)', 'rgba(16, 185, 129, 0.6)')}, 0 0 60px ${useColorModeValue('rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.5)')}` 
-                      },
-                    },
-                  }}
+                  fontWeight="700"
+                  letterSpacing="-0.03em"
+                  fontSize={['3xl', '4xl', '5xl']}
+                  mb={2}
                 >
                   Welcome to QuantumFlow Library!
                 </Heading>
-                
-                <Text 
-                  color={textColor} 
-                  fontSize="2xl" 
-                  fontWeight="400"
-                  pt="2vh"
-                  maxW="600px"
-                  lineHeight="1.6"
-                  animation="content-fade 2s ease-in-out infinite alternate"
-                  
-                  css={{
-                    '@keyframes content-fade': {
-                      '0%': { opacity: 0.7 },
-                      '100%': { opacity: 1 },
-                    },
-                  }}
-                >
-                  Explore the fascinating world of quantum computing!
-                </Text>
               </VStack>
               
-              <VStack spacing={6} w="100%" maxW="500px">
-                <Text 
-                  color={titleColor} 
-                  fontSize="2xl" 
-                  fontStyle="italic" 
-                  textAlign="center"
-                  fontWeight="500"
-                  animation="enhanced-text-glow 4s ease-in-out infinite alternate"
-                  css={{
-                    '@keyframes enhanced-text-glow': {
-                      '0%': { textShadow: `0 0 15px ${useColorModeValue('rgba(59, 130, 246, 0.5)', 'rgba(59, 130, 246, 0.8)')}` },
-                      '100%': { textShadow: `0 0 25px ${useColorModeValue('rgba(147, 51, 234, 0.7)', 'rgba(147, 51, 234, 0.9)')}, 0 0 35px ${useColorModeValue('rgba(16, 185, 129, 0.5)', 'rgba(16, 185, 129, 0.7)')}` },
-                    },
-                  }}
+              <VStack spacing={8} w="100%" maxW="600px">
+                <Box
+                  p={6}
+                  borderWidth={1}
+                  borderColor={useColorModeValue('gray.200', 'gray.700')}
+                  borderRadius="xl"
+                  bg={useColorModeValue('white', 'gray.800')}
+                  boxShadow={useColorModeValue('lg', 'dark-lg')}
+                  backdropFilter="blur(10px)"
                 >
-                  Select a topic to begin your quantum journey
-                </Text>
+                  <VStack spacing={4}>
+                    <Text 
+                      color={useColorModeValue('gray.800', 'gray.200')} 
+                      fontSize="md" 
+                      fontWeight="600"
+                      textAlign="center"
+                    >
+                      Begin Your Quantum Journey
+                    </Text>
+                    <Text 
+                      color={useColorModeValue('gray.600', 'gray.400')} 
+                      fontSize="sm" 
+                      textAlign="center"
+                      lineHeight="1.6"
+                    >
+                      Select a topic from the left sidebar to explore more about quantum computing. 
+                      The library is organized into three levels: Beginner, Intermediate, and Advanced. 
+                      You can test your knowledge with a quiz at the end of each level.
+                    </Text>
+                  </VStack>
+                </Box>
                 
                 {/* Enhanced Arrow with Animation */}
                 <HStack
                   spacing={3}
-                  animation="enhanced-arrow-bounce 2.5s ease-in-out infinite"
-                  css={{
-                    '@keyframes enhanced-arrow-bounce': {
-                      '0%, 100%': { transform: 'translateX(0px)', opacity: 0.8 },
-                      '50%': { transform: 'translateX(-15px)', opacity: 1 },
-                    },
-                  }}
+                  opacity={0.7}
+                  _hover={{ opacity: 1 }}
+                  transition="opacity 0.3s ease"
                 >
-                  <Text fontSize="lg" color={textColor} opacity={0.8} fontWeight="500">
-                    ← Dive into topics on the left
+                  <Box 
+                    w="2px" 
+                    h="2px" 
+                    bg={useColorModeValue('blue.500', 'blue.400')} 
+                    borderRadius="50%"
+                  />
+                  <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')} fontWeight="500">
+                    Warning: Contents may entangle your brain (in a good way)
                   </Text>
                   <Box 
-                    w="3px" 
-                    h="3px" 
-                    bg={titleColor} 
+                    w="2px" 
+                    h="2px" 
+                    bg={useColorModeValue('blue.500', 'blue.400')} 
                     borderRadius="50%"
-                    animation="pulse 2s ease-in-out infinite"
-                    css={{
-                      '@keyframes pulse': {
-                        '0%, 100%': { transform: 'scale(1)', opacity: 0.6 },
-                        '50%': { transform: 'scale(1.5)', opacity: 1 },
-                      },
-                    }}
                   />
                 </HStack>
               </VStack>
