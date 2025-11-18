@@ -8,16 +8,21 @@ import CircuitCanvas from './components/canvas/CircuitCanvas'
 import CodePanel from './components/panels/CodePanel'
 import { useSelector } from 'react-redux'
 import { selectActivePanel, selectIsFullView } from './store/slices/uiSlice'
+import { selectChatVisible } from './store/slices/aiChatSlice'
 import SimulationPanel from './components/panels/SimulationPanel'
 import ExportPanel from './components/panels/ExportPanel'
 import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
+import QMLPanel from './components/panels/QMLPanel'
+import { LessonPanel } from './components/panels/LessonPanel'
+import AIChatbot from './components/ai/AIChatbot'
 import ResizablePanel from './components/layout/ResizablePanel'
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
   const isFullView = useSelector(selectIsFullView)
+  const isChatVisible = useSelector(selectChatVisible)
   const toast = useToast()
   const panelBg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
@@ -146,12 +151,17 @@ function App() {
                 {activePanel === 'simulation' && <SimulationPanel />}
                 {activePanel === 'export' && <ExportPanel />}
                 {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                {activePanel === 'qml' && <QMLPanel />}
+                {activePanel === 'lessons' && <LessonPanel />}
               </ResizablePanel>
             </Flex>
           </Box>
             {/* Gate parameters panel - will only render when a gate is selected */}
           <GateParamsPanel />
         </Flex>
+        
+        {/* AI Chatbot - floating draggable */}
+        {isChatVisible && <AIChatbot />}
         
         {/* Tutorial panel - modal overlay */}
         <TutorialPanel />
