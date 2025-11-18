@@ -1,7 +1,9 @@
 import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack } from '@chakra-ui/react'
+import { ChatIcon } from '@chakra-ui/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
 import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
+import { toggleChatVisibility } from '../../store/slices/aiChatSlice'
 
 const Header = () => {
   const dispatch = useDispatch()
@@ -9,7 +11,7 @@ const Header = () => {
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
 
-  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms') => {
+  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'qml') => {
     dispatch(setActivePanel(panel))
   }
 
@@ -21,6 +23,10 @@ const Header = () => {
 
   const handleToggleTutorial = () => {
     dispatch(toggleTutorial())
+  }
+
+  const handleToggleChat = () => {
+    dispatch(toggleChatVisibility())
   }
 
   return (
@@ -73,6 +79,21 @@ const Header = () => {
           >
             Algorithms
           </Button>
+          <Button
+            size="sm"
+            variant={activePanel === 'qml' ? 'solid' : 'ghost'}
+            onClick={() => handlePanelChange('qml')}
+            colorScheme="purple"
+          >
+            QML
+          </Button>
+          <IconButton
+            aria-label="Toggle AI Chat"
+            icon={<ChatIcon />}
+            size="sm"
+            onClick={handleToggleChat}
+            colorScheme="cyan"
+          />
           <Button
             size="sm"
             variant="ghost"
