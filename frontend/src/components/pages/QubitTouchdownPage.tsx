@@ -28,8 +28,8 @@ import { playCard, startNewGame,selectQubitTouchdown } from '@/store/slices/qubi
 const NODE_POSITIONS: Record<QubitPosition, { top: string; left: string }> = {
   '+': { top: '5%', left: '50%' },
   '0': { top: '30%', left: '25%' },
-  '+i': { top: '30%', left: '75%' },
-  '-i': { top: '60%', left: '25%' },
+  '-i': { top: '30%', left: '75%' },
+  '+i': { top: '60%', left: '25%' },
   '1': { top: '60%', left: '75%' },
   '-': { top: '85%', left: '50%' },
 }
@@ -40,17 +40,27 @@ type Edge = {
   label: string
 }
 
-// very rough: not every single edge from the real board, but enough to show idea
 const EDGES: Edge[] = [
   { from: '0', to: '+', label: 'H' },
+  { from: '0', to: '-i', label: '√x' },
+  { from: '0', to: '1', label: 'X,Y' },
+
+  { from: '+', to: '0', label: 'H' },
+
+  { from: '-i', to: '+', label: 'S' },
+  { from: '-i', to: '+i', label: 'X,Z,H' },
+  { from: '-i', to: '1', label: '√x' },
+
+  { from: '1', to: '0', label: 'X,Y' },
+  { from: '1', to: '+i', label: '√x' },
   { from: '1', to: '-', label: 'H' },
-  { from: '0', to: '1', label: 'X' },
-  { from: '1', to: '0', label: 'X' },
-  { from: '+', to: '+i', label: 'S' },
-  { from: '-', to: '-i', label: 'S' },
-  { from: '+i', to: '-i', label: 'X/Y' },
-  { from: '-i', to: '+i', label: 'X/Y' },
-  // add more if you like
+
+  { from: '-', to: '1', label: 'H' },
+
+  { from: '+i', to: '0', label: '√x' },
+  { from: '+i', to: '-i', label: 'X,Z,H' },
+  { from: '+i', to: '-', label: 'S' },
+
 ]
 
 function BoardNode({ pos }: { pos: QubitPosition }) {
@@ -84,52 +94,89 @@ function BoardNode({ pos }: { pos: QubitPosition }) {
     </Box>
   )
 }
-
 function EdgeArrow({ edge }: { edge: Edge }) {
   const from = NODE_POSITIONS[edge.from]
   const to = NODE_POSITIONS[edge.to]
 
-  // convert top/left percentages to approximate numbers [0,100]
-  const fx = parseFloat(from.left)
-  const fy = parseFloat(from.top)
-  const tx = parseFloat(to.left)
-  const ty = parseFloat(to.top)
+  // 1. Parse positions to numbers
+  const x1 = parseFloat(from.left)
+  const y1 = parseFloat(from.top)
+  const x2 = parseFloat(to.left)
+  const y2 = parseFloat(to.top)
 
-  const dx = tx - fx
-  const dy = ty - fy
-  const length = Math.sqrt(dx * dx + dy * dy)
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI
+  // Check if there is a reverse edge (from B back to A)
+  const isBidirectional = EDGES.some(e => e.from === edge.to && e.to === edge.from)
 
-  const midTop = (fy + ty) / 2
-  const midLeft = (fx + tx) / 2
+  const t = isBidirectional ? 0.3 : 0.5
+
+  // Linear Interpolation to find the exact percentage coordinate
+  const labelLeft = x1 + (x2 - x1) * t
+  const labelTop = y1 + (y2 - y1) * t
+
+  // Create a unique ID for the marker
+  const markerId = `arrowhead-${edge.from}-${edge.to}`
 
   return (
-    <Box
-      position="absolute"
-      top={`${midTop}%`}
-      left={`${midLeft}%`}
-      w={`${length}%`}
-      h="2px"
-      bg="whiteAlpha.700"
-      transform={`translate(-50%, -50%) rotate(${angle}deg)`}
-      transformOrigin="center"
-    >
-      <Text
-        fontSize="xs"
+    <>
+      {/* Layer 1: The Line (SVG) */}
+      <Box
         position="absolute"
-        top="-14px"
-        left="50%"
-        transform="translateX(-50%)"
-        color="white"
-        fontWeight="bold"
+        top="0"
+        left="0"
+        w="100%"
+        h="100%"
+        pointerEvents="none"
+        zIndex={0}
       >
-        {edge.label}
-      </Text>
-    </Box>
+        <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+          <defs>
+            <marker
+              id={markerId}
+              markerWidth="10"
+              markerHeight="7"
+              refX="28" 
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" fill="white" />
+            </marker>
+          </defs>
+          <line
+            x1={from.left}
+            y1={from.top}
+            x2={to.left}
+            y2={to.top}
+            stroke="white"
+            strokeWidth="2"
+            opacity="0.9" // Line transperanty 
+            markerEnd={`url(#${markerId})`}
+          />
+        </svg>
+      </Box>
+
+      {/* Layer 2: The Label (HTML) */}
+      <Box
+        position="absolute"
+        top={`${labelTop}%`}
+        left={`${labelLeft}%`}
+        transform="translate(-50%, -50%)"
+        zIndex={1}
+      >
+        <Text
+          fontSize="xs"
+          fontWeight="bold"
+          color="white"
+          bg="blackAlpha.900"
+          px={1}
+          borderRadius="sm"
+          whiteSpace="nowrap" 
+        >
+          {edge.label}
+        </Text>
+      </Box>
+    </>
   )
 }
-
-    
 
 interface QubitTouchdownPageProps {
   onBack: () => void
