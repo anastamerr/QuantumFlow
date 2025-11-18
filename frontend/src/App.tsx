@@ -1,3 +1,5 @@
+import QSphereTest from './components/visualization/qspheretest';//temp
+
 import { Box, Flex, VStack, useColorModeValue, useToast } from '@chakra-ui/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
@@ -127,6 +129,7 @@ function App() {
               {!isFullView && (
                 <Box flex={1} mb={4}>
                   <CircuitCanvas />
+                  <QSphereTest />         
                 </Box>
               )}
               <ResizablePanel 
