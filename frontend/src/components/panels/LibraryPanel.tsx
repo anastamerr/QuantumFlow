@@ -2029,6 +2029,23 @@ const LibraryPanel: React.FC = () => {
     }
   }, [selectedTopic]);
 
+  // Listen for external requests to open a specific topic (e.g. from other UI components)
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      try {
+        const e = ev as CustomEvent;
+        const topicId = e?.detail?.topicId;
+        if (!topicId) return;
+        const found = QUANTUM_TOPICS.find(t => t.id === topicId);
+        if (found) setSelectedTopic(found);
+      } catch (err) {
+        // ignore
+      }
+    };
+    window.addEventListener('openLibraryTopic', handler as EventListener);
+    return () => window.removeEventListener('openLibraryTopic', handler as EventListener);
+  }, []);
+
   // Reset quiz when topic changes
   useEffect(() => {
     setShowQuiz(false);
