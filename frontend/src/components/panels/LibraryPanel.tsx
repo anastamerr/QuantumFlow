@@ -2822,6 +2822,68 @@ const LibraryPanel: React.FC = () => {
   const titleColor = useColorModeValue("blue.600", "blue.300");
   const contentFontSize = "md";
 
+  const renderFormattedContent = (raw?: string) => {
+    if (!raw) return null;
+    const lines = raw.split(/\r?\n/);
+    return lines.map((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return <Box key={`line-${idx}`} h={2} />;
+      }
+
+      const headingMatch = trimmed.match(/^(#{1,3})\s+(.*)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const content = headingMatch[2];
+        const size = level === 1 ? "lg" : level === 2 ? "md" : "sm";
+        return (
+          <Heading key={`heading-${idx}`} size={size} color={titleColor} mt={4} mb={1}>
+            {content}
+          </Heading>
+        );
+      }
+
+      const looksLikeTitle =
+        /^[A-Z][A-Za-z0-9\s'()\-]+$/.test(trimmed) &&
+        trimmed.length >= 4 &&
+        trimmed.length <= 64 &&
+        trimmed.split(" ").length <= 6;
+      if (looksLikeTitle) {
+        return (
+          <Heading key={`title-${idx}`} size="md" color={titleColor} mt={4} mb={1}>
+            {trimmed}
+          </Heading>
+        );
+      }
+
+      const looksLikeSubtitle =
+        trimmed.endsWith(":") &&
+        trimmed.length <= 80 &&
+        /^[A-Za-z0-9\s'()\-]+:$/.test(trimmed) &&
+        !trimmed.includes(".") &&
+        !trimmed.includes(",");
+      if (looksLikeSubtitle) {
+        return (
+          <Text key={`subtitle-${idx}`} fontWeight="bold" color={textColor} mt={3}>
+            {trimmed}
+          </Text>
+        );
+      }
+
+      return (
+        <Text
+          key={`text-${idx}`}
+          fontSize={contentFontSize}
+          color={textColor}
+          lineHeight={2}
+          fontFamily="system-ui"
+        >
+          {trimmed}
+        </Text>
+      );
+    });
+  };
+
   const getDifficultyColor = (d: string) =>
     d === "Beginner" ? "green" : d === "Intermediate" ? "blue" : d === "Advanced" ? "orange" : "gray";
 
@@ -3135,16 +3197,17 @@ const LibraryPanel: React.FC = () => {
   };
 
   return (
-    <HStack h="100%" w="100%" spacing={0} align="stretch">
+    <HStack h="100vh" w="100%" spacing={0} align="stretch">
       <VStack
         w="250px"
-        h="100%"
+        h="100vh"
         bg={listBg}
         borderRightWidth={0}
         borderColor={listBorderColor}
         spacing={0}
         align="stretch"
         overflowY="hidden"
+        flexShrink={0}
       >
         <Box p={3} borderBottomWidth={1} borderColor={listBorderColor}>
           <HStack justify="space-between" mb={2}>
@@ -3258,11 +3321,12 @@ const LibraryPanel: React.FC = () => {
 
       <VStack 
         flex={1} 
-        h="100%" 
+        h="100vh" 
         p={selectedTopic ? 6 : 0} 
         spacing={selectedTopic ? 4 : 0} 
         align="stretch" 
         overflowY={selectedTopic ? "auto" : "hidden"}
+        overflowX="hidden"
         sx={{
           "&::-webkit-scrollbar": { 
             width: "12px",
@@ -3295,26 +3359,24 @@ const LibraryPanel: React.FC = () => {
             </Box>
             <Divider />
             <Text fontWeight="bold" color={textColor} mb={-2}>Overview:</Text>
-            <VStack align="start" spacing={4} flex={1} overflowY="auto">
+            <VStack align="start" spacing={4} flex={1} overflowY="auto" w="100%" maxW="100%">
               <Box
-                p={6}
+                p={[3, 4, 6]}
                 borderWidth={1}
                 borderColor={listBorderColor}
                 borderRadius="md"
                 w="100%"
                 bg={itemBg}
+                minW={0}
+                maxW="100%"
+                overflow="hidden"
+                wordBreak="break-word"
               >
                 {selectedTopic.id === "controlled-gates" ? (
                   <>
-                    <Text
-                      fontSize={contentFontSize}
-                      color={textColor}
-                      whiteSpace="pre-wrap"
-                      lineHeight={2}
-                      fontFamily="system-ui"
-                    >
-                      {selectedTopic.content}
-                    </Text>
+                    <VStack align="stretch" spacing={1}>
+                      {renderFormattedContent(selectedTopic.content)}
+                    </VStack>
                     {selectedTopic.imageUrl && (
                       <Box mt={4} textAlign="center">
                         <img
@@ -3330,29 +3392,16 @@ const LibraryPanel: React.FC = () => {
                       </Box>
                     )}
                     {selectedTopic.contentAfterImage && (
-                      <Text
-                        fontSize={contentFontSize}
-                        color={textColor}
-                        whiteSpace="pre-wrap"
-                        lineHeight={2}
-                        fontFamily="system-ui"
-                        mt={4}
-                      >
-                        {selectedTopic.contentAfterImage}
-                      </Text>
+                      <VStack align="stretch" spacing={1} mt={4}>
+                        {renderFormattedContent(selectedTopic.contentAfterImage)}
+                      </VStack>
                     )}
                   </>
                 ) : (
                   <>
-                    <Text
-                      fontSize={contentFontSize}
-                      color={textColor}
-                      whiteSpace="pre-wrap"
-                      lineHeight={2}
-                      fontFamily="system-ui"
-                    >
-                      {selectedTopic.content}
-                    </Text>
+                    <VStack align="stretch" spacing={1}>
+                      {renderFormattedContent(selectedTopic.content)}
+                    </VStack>
                     {selectedTopic.id === "qubits-basics" && selectedTopic.imageUrl && (
                       <Box mt={3} textAlign="center">
                         <img
@@ -3382,16 +3431,9 @@ const LibraryPanel: React.FC = () => {
                       </Box>
                     )}
                     {selectedTopic.contentAfterImage && (
-                      <Text
-                        fontSize={contentFontSize}
-                        color={textColor}
-                        whiteSpace="pre-wrap"
-                        lineHeight={2}
-                        fontFamily="system-ui"
-                        mt={4}
-                      >
-                        {selectedTopic.contentAfterImage}
-                      </Text>
+                      <VStack align="stretch" spacing={1} mt={4}>
+                        {renderFormattedContent(selectedTopic.contentAfterImage)}
+                      </VStack>
                     )}
                   </>
                 )}
@@ -3591,7 +3633,7 @@ const LibraryPanel: React.FC = () => {
               position="relative" 
               zIndex={10}
               px={8}
-              pt="10vh"
+              // pt="2vh"
             >
               <VStack spacing={4} textAlign="center">
                 <Heading 
@@ -3606,15 +3648,17 @@ const LibraryPanel: React.FC = () => {
                 </Heading>
               </VStack>
               
-              <VStack spacing={8} w="100%" maxW="600px">
+              <VStack spacing={8} w="100%" maxW={["90%", "500px", "600px"]}>
                 <Box
-                  p={6}
+                  p={[4, 5, 6]}
                   borderWidth={1}
                   borderColor={useColorModeValue('gray.200', 'gray.700')}
                   borderRadius="xl"
                   bg={useColorModeValue('white', 'gray.800')}
                   boxShadow={useColorModeValue('lg', 'dark-lg')}
                   backdropFilter="blur(10px)"
+                  w="100%"
+                  minW={0}
                 >
                   <VStack spacing={4}>
                     <Text 
@@ -3702,9 +3746,6 @@ const LibraryPanel: React.FC = () => {
                     <Text color={textColor} fontSize="sm">
                       {currentLevelQuiz.description}
                     </Text>
-                    <Badge colorScheme={getDifficultyColor(currentLevelQuiz.level)} fontSize="xs">
-                      {currentLevelQuiz.level} Level
-                    </Badge>
                   </VStack>
                   <Button
                     size="sm"
@@ -3717,9 +3758,9 @@ const LibraryPanel: React.FC = () => {
                 </HStack>
                 
                 <HStack justify="space-between">
-                  <Badge colorScheme="blue" fontSize="md" p={2}>
+                  <Text fontSize="md" fontWeight="bold" color={textColor}>
                     Question {levelQuizQuestionIndex + 1} of {currentLevelQuiz.questions.length}
-                  </Badge>
+                  </Text>
                   <Text fontSize="sm" color={textColor}>
                     Topic: {currentLevelQuiz.questions[levelQuizQuestionIndex].topic}
                   </Text>
@@ -3826,9 +3867,9 @@ const LibraryPanel: React.FC = () => {
                             <Text fontWeight="bold" fontSize="sm" color="purple.500">
                               Topic: {question.topic}
                             </Text>
-                            <Badge colorScheme={result.correct ? 'green' : 'red'}>
+                            <Text fontSize="sm" fontWeight="bold" color={result.correct ? 'green.500' : 'red.500'}>
                               {result.correct ? '✓ Correct' : '✗ Incorrect'}
-                            </Badge>
+                            </Text>
                           </HStack>
                           <Text fontWeight="bold" mb={2}>Q{index + 1}: {question.question}</Text>
                           <Text fontSize="sm" color={textColor} mb={2}>

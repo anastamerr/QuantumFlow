@@ -2,11 +2,44 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!--<link rel="icon" type="image/svg+xml" href="/quantum-icon.svg" />-->
-    <link rel="icon" type="image/png" href="/public/images/superposition.png" />
+    <link rel="icon" type="image/png" href="/images/Q.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QuantumFlow - Quantum Circuit Designer</title>
     <meta name="description" content="Visual quantum circuit designer with Qiskit code generation" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html, body {
+        overflow-x: hidden;
+        max-width: 100vw;
+      }
+      #root {
+        overflow-x: hidden;
+        max-width: 100vw;
+      }
+      /* Ensure all text content wraps properly while preserving formatting */
+      p, div, span {
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        max-width: 100%;
+      }
+      /* Handle pre-wrap content responsively */
+      [style*="white-space: pre-wrap"], .chakra-text {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+      }
+      /* Prevent mathematical formulas from causing overflow */
+      pre {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-x: hidden !important;
+        max-width: 100%;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
