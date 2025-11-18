@@ -1,4 +1,5 @@
-﻿import React from "react"
+﻿/// <reference types="vite/client" />
+import React from "react"
 import {
   Box,
   Heading,
@@ -9,9 +10,15 @@ import {
   useToast,
   Badge,
   Spinner,
+  Progress,
+  Spacer,
+  IconButton,
+  Collapse,
+  Divider,
+  Tooltip,
 } from "@chakra-ui/react"
 import { useSelector } from "react-redux"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Copy } from "lucide-react"
 import type { RootState } from "@/store"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
@@ -79,19 +86,40 @@ const quantumPuzzles: PuzzleState[] = [
 export default function PuzzlesPanel(): JSX.Element {
   const toast = useToast()
   const [currentPuzzleID, setCurrentPuzzleID] = React.useState(0)
+  const [showTarget, setShowTarget] = React.useState(false)
+  const [showDetails, setShowDetails] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
-  
+
   const puzzle = quantumPuzzles[currentPuzzleID]
   const userCircuitGates = useSelector((state: RootState) => state.circuit.gates)
   const numQubits = useSelector((state: RootState) => state.circuit.qubits.length)
 
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") {
+        setCurrentPuzzleID((id) => (id + 1) % quantumPuzzles.length)
+      } else if (e.key === "ArrowLeft") {
+        setCurrentPuzzleID((id) => (id - 1 + quantumPuzzles.length) % quantumPuzzles.length)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
   const switchPuzzleRight = () => {
     setCurrentPuzzleID((id) => (id + 1) % quantumPuzzles.length)
+    setShowTarget(false)
+    setShowDetails(false)
   }
 
   const switchPuzzleLeft = () => {
     setCurrentPuzzleID((id) => (id - 1 + quantumPuzzles.length) % quantumPuzzles.length)
+    setShowTarget(false)
+    setShowDetails(false)
   }
+
+  const solvedCount = quantumPuzzles.filter((p) => p.isSolved).length
+  const progressPct = Math.round((solvedCount / quantumPuzzles.length) * 100)
 
   const handleCheckSolution = async () => {
     if (userCircuitGates.length === 0) {
@@ -153,51 +181,118 @@ export default function PuzzlesPanel(): JSX.Element {
       })
     } finally {
       setIsLoading(false)
+      setCurrentPuzzleID((id) => id)
     }
+  }
+
+  const handleCopyGoal = async () => {
+    try {
+      await navigator.clipboard.writeText(`${puzzle.description}\nTarget: ${puzzle.targetMatrix}`)
+      toast({
+        title: "Copied",
+        description: "Puzzle goal and target copied to clipboard.",
+        status: "success",
+        duration: 2000,
+      })
+    } catch {
+      toast({
+        title: "Copy failed",
+        description: "Unable to copy to clipboard.",
+        status: "error",
+        duration: 3000,
+      })
+    }
+  }
+
+  const handleMarkSolved = () => {
+    puzzle.isSolved = true
+    toast({
+      title: "Marked solved",
+      description: "Puzzle flagged as solved.",
+      status: "success",
+      duration: 2000,
+    })
+    setCurrentPuzzleID((id) => id)
+  }
+
+  const handleResetPuzzle = () => {
+    puzzle.isSolved = false
+    puzzle.attemptCount = 0
+    toast({
+      title: "Reset",
+      description: "Puzzle attempts cleared and marked active.",
+      status: "info",
+      duration: 2000,
+    })
+    setCurrentPuzzleID((id) => id)
   }
 
   return (
     <Box p={4} height="100%" overflowY="auto">
-      <HStack justify="space-between" mb={4}>
+      <HStack mb={4} align="center">
         <HStack spacing={2}>
-          <Button colorScheme="blue" onClick={switchPuzzleLeft}>
-            Previous
-          </Button>
+          <IconButton aria-label="previous" icon={<ChevronLeft size={18} />} size="sm" onClick={switchPuzzleLeft} />
           <Heading size="md">Puzzle #{currentPuzzleID + 1}</Heading>
-          <Button colorScheme="blue" onClick={switchPuzzleRight}>
-            Next
-          </Button>
+          <IconButton aria-label="next" icon={<ChevronRight size={18} />} size="sm" onClick={switchPuzzleRight} />
+          <Badge colorScheme={puzzle.difficulty === "Beginner" ? "green" : puzzle.difficulty === "Intermediate" ? "orange" : "red"} px={2} py={1} borderRadius="md">
+            {puzzle.difficulty}
+          </Badge>
         </HStack>
-
-        <Badge colorScheme={puzzle.isSolved ? "green" : "red"} fontSize="lg" p={2} borderRadius="md">
-          {puzzle.isSolved ? "SOLVED" : "ACTIVE"}
-        </Badge>
+        <Spacer />
+        <HStack spacing={3} width={{ base: "40%", md: "30%" }}>
+          <Text fontSize="sm" whiteSpace="nowrap">{solvedCount}/{quantumPuzzles.length} solved</Text>
+          <Progress value={progressPct} size="sm" flex="1" borderRadius="md" />
+        </HStack>
       </HStack>
 
       <VStack align="stretch" spacing={4}>
         <Box p={3} bg="gray.50" _dark={{ bg: "gray.700" }} borderRadius="md">
-          <Text fontWeight="bold" mb={1}>
-            Goal:
-          </Text>
-          <Text>{puzzle.description}</Text>
-          <Text mt={2} fontSize="sm" color="gray.600" _dark={{ color: "gray.400" }}>
-            Qubits required: {puzzle.qubits}
-          </Text>
+          <Text fontWeight="bold" mb={2}>Goal</Text>
+          <Text mb={2}>{puzzle.description}</Text>
+          <HStack spacing={3} align="center">
+            <Text fontSize="sm" color="gray.600" _dark={{ color: "gray.400" }}>Qubits required: {puzzle.qubits}</Text>
+            <Tooltip label="Copy puzzle goal and target to clipboard" aria-label="copy">
+              <Button size="sm" leftIcon={<Copy size={14} />} onClick={handleCopyGoal}>Copy</Button>
+            </Tooltip>
+            <Button size="sm" variant="outline" onClick={() => setShowTarget((s) => !s)}>
+              {showTarget ? "Hide Target" : "Show Target"}
+            </Button>
+            <Button size="sm" colorScheme="yellow" variant="ghost" onClick={() => setShowDetails((s) => !s)}>
+              {showDetails ? "Hide Details" : "Details"}
+            </Button>
+          </HStack>
+          <Collapse in={showTarget} animateOpacity>
+            <Box mt={3} p={3} bg="white" _dark={{ bg: "gray.800" }} borderRadius="md" borderWidth={1} borderColor="gray.100">
+              <Text fontSize="sm" fontWeight="semibold">Target Matrix</Text>
+              <Text fontSize="sm" mt={1} whiteSpace="pre-wrap">{puzzle.targetMatrix}</Text>
+            </Box>
+          </Collapse>
+          <Collapse in={showDetails} animateOpacity>
+            <Box mt={3}>
+              <Divider mb={3} />
+              <Text fontSize="sm" color="gray.600" _dark={{ color: "gray.400" }}>
+                Tip: Build and test your circuit on the canvas. When you think it matches the target, click "Check Solution".
+              </Text>
+            </Box>
+          </Collapse>
         </Box>
 
-        <HStack justify="space-between">
+        <HStack justify="space-between" align="center">
           <VStack align="start" spacing={0}>
             <Text fontSize="sm">Circuit Gates: {userCircuitGates.length}</Text>
             <Text fontSize="sm">Attempts: {puzzle.attemptCount}</Text>
+            <HStack>
+              <Text fontSize="sm">Status:</Text>
+              <Badge colorScheme={puzzle.isSolved ? "green" : "red"}>{puzzle.isSolved ? "SOLVED" : "ACTIVE"}</Badge>
+            </HStack>
           </VStack>
-
-          <Button
-            colorScheme="blue"
-            onClick={handleCheckSolution}
-            isDisabled={userCircuitGates.length === 0 || isLoading}
-          >
-            {isLoading ? <Spinner size="sm" /> : "Check Solution"}
-          </Button>
+          <HStack>
+            <Button colorScheme="blue" onClick={handleCheckSolution} isDisabled={userCircuitGates.length === 0 || isLoading}>
+              {isLoading ? <Spinner size="sm" /> : "Check Solution"}
+            </Button>
+            <Button variant="outline" onClick={handleMarkSolved} title="Mark as solved manually">Mark Solved</Button>
+            <Button variant="ghost" colorScheme="red" onClick={handleResetPuzzle}>Reset</Button>
+          </HStack>
         </HStack>
       </VStack>
     </Box>
