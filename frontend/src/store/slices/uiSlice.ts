@@ -37,6 +37,10 @@ export const uiSlice = createSlice({
     },
     setActivePanel: (state, action: PayloadAction<UiState['activePanel']>) => {
       state.activePanel = action.payload
+      // Exit full view when returning to the circuit panel
+      if (action.payload === 'circuit' && state.isFullView) {
+        state.isFullView = false
+      }
       if (action.payload === 'projects' || action.payload === 'library' || action.payload === 'blochSphere') {
         state.showGateParams = false
         state.selectedGateId = null
