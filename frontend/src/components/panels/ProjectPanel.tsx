@@ -404,10 +404,12 @@ const ProjectPanel: React.FC = () => {
         { text: 'Apply CCX a1,b1→b2.' },
         { text: 'Apply X to a1.' },
         { text: 'Apply CCX d1,a1→b2.' },
-        { text: 'Measure b2,d1,d0,a1,a0,b1,b0.' },
-        { text: 'Verify 01−00=01 (b2=0).' },
-        { text: 'Verify 10−01=01 (b2=0).' },
-        { text: 'Verify 00−01=11 (b2=1).' },
+        { text: 'Add Measure (M) gates to all qubits!' },
+        { text: 'Click on Simulation from the top bar!' },
+        { text: 'Click Run Simulation!' },
+        { text: 'Check the states of the measured qubits and verify the output!' },
+        { text: 'Congratulations! You have built a quantum subtractor!' }
+ 
       ]
     }
     
@@ -543,4 +545,5 @@ const ProjectPanel: React.FC = () => {
       )}
 </>
   )}
+
 export default ProjectPanel;
