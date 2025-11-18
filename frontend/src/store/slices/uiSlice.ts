@@ -37,6 +37,10 @@ export const uiSlice = createSlice({
     },
     setActivePanel: (state, action: PayloadAction<UiState['activePanel']>) => {
       state.activePanel = action.payload
+      if (action.payload === 'projects' || action.payload === 'library' || action.payload === 'blochSphere') {
+        state.showGateParams = false
+        state.selectedGateId = null
+      }
     },
     toggleGateParams: (state) => {
       state.showGateParams = !state.showGateParams

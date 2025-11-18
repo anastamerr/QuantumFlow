@@ -185,6 +185,19 @@ function generateGateDefinitions(gates: Gate[]): string {
           gateSection += `# Warning: Toffoli gate needs 2 control qubits and 1 target qubit\n`;
         }
         break;
+      case 'mcx':
+        if (gate.controls && gate.controls.length >= 2) {
+          const target = gate.targets && gate.targets.length > 0 ? gate.targets[0] : gate.qubit;
+          if (target === undefined) {
+            gateSection += `# Warning: MCX gate requires a target qubit\n`;
+          } else {
+            gateSection += `# TODO: Decompose MCX(${gate.controls.length} controls) on Braket; currently unsupported directly\n`;
+            gateSection += `# Controls: [${gate.controls.join(', ')}], Target: ${target}\n`;
+          }
+        } else {
+          gateSection += `# Warning: MCX gate needs at least two control qubits\n`;
+        }
+        break;
       default:
         // Handle custom or unknown gates
         gateSection += `# Unsupported gate: ${gate.type}\n`;

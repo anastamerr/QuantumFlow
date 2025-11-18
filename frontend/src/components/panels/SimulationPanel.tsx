@@ -110,9 +110,9 @@ const SimulationPanel = () => {
   
   // Check if circuit has a Hadamard gate (creates superposition)
   const hasHadamard = gates.some(gate => gate.type === 'h');
-  const hasEntanglement = gates.some(gate => 
-    gate.type === 'cnot' || gate.type === 'cz' || gate.type === 'swap' || gate.type === 'toffoli'
-  );
+  const hasEntanglement = gates.some(gate =>
+    gate.type === 'cnot' || gate.type === 'cz' || gate.type === 'swap' || gate.type === 'toffoli' || gate.type === 'mcx'
+  )
   
   // Get gate counts for analysis
   const getGateStats = useCallback(() => {

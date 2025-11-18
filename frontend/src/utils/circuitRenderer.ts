@@ -135,36 +135,34 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
 `
         svg += `<line x1="${x-10}" y1="${y2+10}" x2="${x+10}" y2="${y2-10}" class="target-x" />
 `
-      } else if (gate.type === 'toffoli') {
-        // Draw Toffoli gate
-        const control1 = gate.controls && gate.controls.length > 0 ? gate.controls[0] : 0
-        const control2 = gate.controls && gate.controls.length > 1 ? gate.controls[1] : 1
+            } else if (gate.type === 'toffoli' || gate.type === 'mcx') {
+        const controls = gate.controls || []
         const target = gate.targets && gate.targets.length > 0
           ? gate.targets[0]
-          : (gate.qubit !== undefined ? gate.qubit : 2)
-        const y1 = padding + (control1 * wireSpacing)
-        const y2 = padding + (control2 * wireSpacing)
-        const y3 = padding + (target * wireSpacing)
+          : (gate.qubit !== undefined ? gate.qubit : undefined)
 
-        // Connect controls and target
-        const minY = Math.min(y1, y2, y3)
-        const maxY = Math.max(y1, y2, y3)
-        svg += `<line x1="${x}" y1="${minY}" x2="${x}" y2="${maxY}" class="connector-line" />
-`
+        if (controls.length >= 1 && target !== undefined) {
+          const involvedQubits = [...controls, target]
+          const yPositions = involvedQubits.map(q => padding + (q * wireSpacing))
+          const minY = Math.min(...yPositions)
+          const maxY = Math.max(...yPositions)
+          svg += `<line x1="${x}" y1="${minY}" x2="${x}" y2="${maxY}" class="connector-line" />
+      `
 
-        // Draw control points
-        svg += `<circle cx="${x}" cy="${y1}" r="5" class="control-point" />
-`
-        svg += `<circle cx="${x}" cy="${y2}" r="5" class="control-point" />
-`
+          controls.forEach(controlId => {
+            const controlY = padding + (controlId * wireSpacing)
+            svg += `<circle cx="${x}" cy="${controlY}" r="5" class="control-point" />
+      `
+          })
 
-        // Draw X gate on target
-        svg += `<circle cx="${x}" cy="${y3}" r="15" class="target-x" />
-`
-        svg += `<line x1="${x-15}" y1="${y3}" x2="${x+15}" y2="${y3}" class="target-x" />
-`
-        svg += `<line x1="${x}" y1="${y3-15}" x2="${x}" y2="${y3+15}" class="target-x" />
-`
+          const targetY = padding + (target * wireSpacing)
+          svg += `<circle cx="${x}" cy="${targetY}" r="15" class="target-x" />
+      `
+          svg += `<line x1="${x-15}" y1="${targetY}" x2="${x+15}" y2="${targetY}" class="target-x" />
+      `
+          svg += `<line x1="${x}" y1="${targetY-15}" x2="${x}" y2="${targetY+15}" class="target-x" />
+      `
+        }
       } else {
         // Draw standard gate
         const gateColorHex = getGateColor(gateColor)

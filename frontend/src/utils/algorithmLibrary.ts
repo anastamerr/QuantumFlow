@@ -37,6 +37,7 @@ const createGate = (
     'cz': { name: 'CZ Gate', symbol: 'CZ', description: 'Controlled Z gate', category: 'Multi-qubit', color: 'teal' },
     'swap': { name: 'SWAP', symbol: 'SWAP', description: 'Swap gate', category: 'Multi-qubit', color: 'pink' },
     'toffoli': { name: 'Toffoli', symbol: 'CCX', description: 'Controlled-controlled-X gate', category: 'Multi-qubit', color: 'brown' },
+    'mcx': { name: 'Multi-Controlled X', symbol: 'MCX', description: 'X gate with multiple controls', category: 'Multi-qubit', color: 'orange' },
     'measure': { name: 'Measure', symbol: 'M', description: 'Measurement', category: 'Measurement', color: 'gray' }
   };
   

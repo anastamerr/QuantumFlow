@@ -210,6 +210,7 @@ The backend supports all standard Qiskit gates:
 | CZ | `qc.cz(control, target)` | None | `{"type": "cz", "qubit": 0, "targets": [1]}` |
 | SWAP | `qc.swap(qubit1, qubit2)` | None | `{"type": "swap", "qubit": 0, "targets": [1]}` |
 | Toffoli | `qc.ccx(c1, c2, target)` | None | `{"type": "toffoli", "qubit": 0, "targets": [1, 2]}` |
+| MCX | `qc.mcx([c0, c1, ...], target)` | 2+ controls | `{"type": "mcx", "controls": [0,1,2], "targets": [3]}` |
 
 ### Circuit Execution Flow
 
