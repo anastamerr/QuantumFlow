@@ -458,17 +458,7 @@ const SimulationPanel = () => {
               >
                 Analysis
               </Tab>
-              <Tab 
-                isDisabled={!simulationComplete || !results}
-                _selected={{ 
-                  color: "white", 
-                  bg: "blue.500",
-                  boxShadow: "md" 
-                }}
-                fontWeight="medium"
-              >
-                Bloch Sphere
-              </Tab>
+              
             </TabList>
             
             <TabPanels>

@@ -43,14 +43,19 @@ const Header = () => {
             variant={activePanel === 'projects' ? 'solid' : 'ghost'}
             colorScheme="blue"
             onClick={() => dispatch(setActivePanel('projects'))}
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#ff0000', color: 'white' }}
           >
             Projects
           </Button>
           <Button
             size="sm"
             variant="ghost"
-            color="#2431a2ff"
             onClick={() => dispatch(setActivePanel('library'))}
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#33cc33', color: 'white' }}
           >
             Library
           </Button>
@@ -60,6 +65,9 @@ const Header = () => {
             colorScheme="cyan"
             onClick={() => dispatch(setActivePanel('blochSphere'))}
             position="relative"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#ff751a', color: 'white' }}
           >
             <Box position="relative" display="inline-flex" alignItems="center" px={2}>
               Bloch Sphere
@@ -94,6 +102,9 @@ const Header = () => {
             variant={activePanel === 'circuit' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('circuit')}
             colorScheme="blue"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#009900', color: 'white' }}
           >
             Circuit
           </Button>
@@ -102,6 +113,9 @@ const Header = () => {
             variant={activePanel === 'code' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('code')}
             colorScheme="blue"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#009900', color: 'white' }}
           >
             Code
           </Button>
@@ -110,6 +124,9 @@ const Header = () => {
             variant={activePanel === 'simulation' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('simulation')}
             colorScheme="blue"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#009900', color: 'white' }}
           >
             Simulation
           </Button>
@@ -120,6 +137,9 @@ const Header = () => {
             variant={activePanel === 'export' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('export')}
             colorScheme="blue"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#999966', color: 'white' }}
           >
             Export
           </Button>
@@ -130,7 +150,9 @@ const Header = () => {
             variant={activePanel === 'ai' ? 'solid' : 'ghost'}
             onClick={() => dispatch(setActivePanel('ai'))}
             colorScheme="yellow"
-            color="orange"
+            color="red"
+            fontWeight="bold"
+            _hover={{ bg: '#ffffff', color: 'red' }}
           >
             AI
           </Button>
@@ -140,6 +162,9 @@ const Header = () => {
             variant={activePanel === 'algorithms' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('algorithms')}
             colorScheme="purple"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#000099', color: 'white' }}
           >
             Algorithms
           </Button>
@@ -148,6 +173,9 @@ const Header = () => {
             variant="ghost"
             onClick={handleClearCircuit}
             colorScheme="red"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: 'red.500', color: 'white' }}
           >
             Clear
           </Button>
@@ -156,6 +184,9 @@ const Header = () => {
             variant="ghost"
             onClick={handleToggleTutorial}
             colorScheme="teal"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: '#990099', color: 'white' }}
           >
             Tutorial
           </Button>
