@@ -52,17 +52,89 @@ const Header = () => {
   }
 
   return (
-    <Box as="header" bg="quantum.primary" color="white" boxShadow="md">
-      <Box px={4} py={3}>
-        {showFullNav ? (
-          /* Desktop Layout */
-          <Flex align="center" justify="space-between">
-            {/* Left Section - Logo and Basic Navigation */}
-            <HStack spacing={4} flex="1">
-              <Heading size="md" fontWeight="bold" whiteSpace="nowrap">
-                QuantumFlow
-              </Heading>
-            </HStack>
+    <Box as="header" bg="quantum.primary" color="white" p={3} boxShadow="md">
+      <Flex align="center">
+        <Heading size="md" fontWeight="bold">QuantumFlow</Heading>
+        <Box ml={2} fontSize="sm" opacity={0.8}>
+          {circuitName}
+        </Box>
+        <HStack ml={4} spacing={2}>
+          <Button
+            size="sm"
+            variant={activePanel === 'projects' ? 'solid' : 'ghost'}
+            colorScheme="blue"
+            onClick={() => dispatch(setActivePanel('projects'))}
+          >
+            Projects
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            color="#2431a2ff"
+            onClick={() => dispatch(setActivePanel('library'))}
+          >
+            Library
+          </Button>
+          <Button
+            size="sm"
+            variant={activePanel === 'blochSphere' ? 'solid' : 'ghost'}
+            colorScheme="cyan"
+            onClick={() => dispatch(setActivePanel('blochSphere'))}
+            position="relative"
+          >
+            <Box position="relative" display="inline-flex" alignItems="center" px={2}>
+              Bloch Sphere
+              <Box
+                position="absolute"
+                top={-3}
+                right={-3}
+                bg="#FFD400"
+                color="black"
+                borderRadius="full"
+                px={2}
+                py={0}
+                fontWeight={700}
+                fontSize="xs"
+                boxShadow="md"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                zIndex={2}
+                animation={`${pulse} 1.6s ease-in-out infinite`}
+              >
+                <span style={{ marginRight: 6 }}>✨</span>NEW
+              </Box>
+            </Box>
+          </Button>
+        </HStack>
+        <Spacer />
+        
+        <HStack spacing={2}>
+          <Button
+            size="sm"
+            variant={activePanel === 'circuit' ? 'solid' : 'ghost'}
+            onClick={() => handlePanelChange('circuit')}
+            color="#273191ff"
+          >
+            Circuit
+          </Button>
+          <Button
+            size="sm"
+            variant={activePanel === 'code' ? 'solid' : 'ghost'}
+            onClick={() => handlePanelChange('code')}
+            colorScheme="blue"
+          >
+            Code
+          </Button>
+          <Button
+            size="sm"
+            variant={activePanel === 'simulation' ? 'solid' : 'ghost'}
+            onClick={() => handlePanelChange('simulation')}
+            colorScheme="blue"
+          >
+            Simulation
+          </Button>
+
 
             {/* Center Section - Left Navigation */}
             <HStack spacing={2} flex="2" justify="flex-start" ml={-19}>

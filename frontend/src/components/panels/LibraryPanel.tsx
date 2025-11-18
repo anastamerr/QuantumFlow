@@ -2822,6 +2822,68 @@ const LibraryPanel: React.FC = () => {
   const titleColor = useColorModeValue("blue.600", "blue.300");
   const contentFontSize = "md";
 
+  const renderFormattedContent = (raw?: string) => {
+    if (!raw) return null;
+    const lines = raw.split(/\r?\n/);
+    return lines.map((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return <Box key={`line-${idx}`} h={2} />;
+      }
+
+      const headingMatch = trimmed.match(/^(#{1,3})\s+(.*)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const content = headingMatch[2];
+        const size = level === 1 ? "lg" : level === 2 ? "md" : "sm";
+        return (
+          <Heading key={`heading-${idx}`} size={size} color={titleColor} mt={4} mb={1}>
+            {content}
+          </Heading>
+        );
+      }
+
+      const looksLikeTitle =
+        /^[A-Z][A-Za-z0-9\s'()\-]+$/.test(trimmed) &&
+        trimmed.length >= 4 &&
+        trimmed.length <= 64 &&
+        trimmed.split(" ").length <= 6;
+      if (looksLikeTitle) {
+        return (
+          <Heading key={`title-${idx}`} size="md" color={titleColor} mt={4} mb={1}>
+            {trimmed}
+          </Heading>
+        );
+      }
+
+      const looksLikeSubtitle =
+        trimmed.endsWith(":") &&
+        trimmed.length <= 80 &&
+        /^[A-Za-z0-9\s'()\-]+:$/.test(trimmed) &&
+        !trimmed.includes(".") &&
+        !trimmed.includes(",");
+      if (looksLikeSubtitle) {
+        return (
+          <Text key={`subtitle-${idx}`} fontWeight="bold" color={textColor} mt={3}>
+            {trimmed}
+          </Text>
+        );
+      }
+
+      return (
+        <Text
+          key={`text-${idx}`}
+          fontSize={contentFontSize}
+          color={textColor}
+          lineHeight={2}
+          fontFamily="system-ui"
+        >
+          {trimmed}
+        </Text>
+      );
+    });
+  };
+
   const getDifficultyColor = (d: string) =>
     d === "Beginner" ? "green" : d === "Intermediate" ? "blue" : d === "Advanced" ? "orange" : "gray";
 
@@ -3135,19 +3197,10 @@ const LibraryPanel: React.FC = () => {
   };
 
   return (
-    <HStack 
-      h="100%" 
-      w="100%" 
-      spacing={0} 
-      align="stretch" 
-      overflow="hidden"
-      maxW="100vw"
-      position="relative"
-    >
+    <HStack h="100vh" w="100%" spacing={0} align="stretch">
       <VStack
-        w={["200px", "250px", "300px"]}
-        minW="200px"
-        h="100%"
+        w="250px"
+        h="100vh"
         bg={listBg}
         borderRightWidth={0}
         borderColor={listBorderColor}
@@ -3268,10 +3321,8 @@ const LibraryPanel: React.FC = () => {
 
       <VStack 
         flex={1} 
-        h="100%" 
-        w="100%"
-        minW={0}
-        p={selectedTopic ? [2, 4, 6] : 0} 
+        h="100vh" 
+        p={selectedTopic ? 6 : 0} 
         spacing={selectedTopic ? 4 : 0} 
         align="stretch" 
         overflowY={selectedTopic ? "auto" : "hidden"}
@@ -3323,18 +3374,9 @@ const LibraryPanel: React.FC = () => {
               >
                 {selectedTopic.id === "controlled-gates" ? (
                   <>
-                    <Text
-                      fontSize={contentFontSize}
-                      color={textColor}
-                      whiteSpace="pre-wrap"
-                      lineHeight={2}
-                      fontFamily="system-ui"
-                      wordBreak="break-word"
-                      overflowWrap="anywhere"
-                      maxWidth="100%"
-                    >
-                      {selectedTopic.content}
-                    </Text>
+                    <VStack align="stretch" spacing={1}>
+                      {renderFormattedContent(selectedTopic.content)}
+                    </VStack>
                     {selectedTopic.imageUrl && (
                       <Box mt={4} textAlign="center">
                         <img
@@ -3350,32 +3392,16 @@ const LibraryPanel: React.FC = () => {
                       </Box>
                     )}
                     {selectedTopic.contentAfterImage && (
-                      <Text
-                        fontSize={contentFontSize}
-                        color={textColor}
-                        whiteSpace="pre-wrap"
-                        lineHeight={2}
-                        fontFamily="system-ui"
-                        mt={4}
-                      >
-                        {selectedTopic.contentAfterImage}
-                      </Text>
+                      <VStack align="stretch" spacing={1} mt={4}>
+                        {renderFormattedContent(selectedTopic.contentAfterImage)}
+                      </VStack>
                     )}
                   </>
                 ) : (
                   <>
-                    <Text
-                      fontSize={contentFontSize}
-                      color={textColor}
-                      whiteSpace="pre-wrap"
-                      lineHeight={2}
-                      fontFamily="system-ui"
-                      wordBreak="break-word"
-                      overflowWrap="anywhere"
-                      maxWidth="100%"
-                    >
-                      {selectedTopic.content}
-                    </Text>
+                    <VStack align="stretch" spacing={1}>
+                      {renderFormattedContent(selectedTopic.content)}
+                    </VStack>
                     {selectedTopic.id === "qubits-basics" && selectedTopic.imageUrl && (
                       <Box mt={3} textAlign="center">
                         <img
@@ -3405,19 +3431,9 @@ const LibraryPanel: React.FC = () => {
                       </Box>
                     )}
                     {selectedTopic.contentAfterImage && (
-                      <Text
-                        fontSize={contentFontSize}
-                        color={textColor}
-                        whiteSpace="pre-wrap"
-                        lineHeight={2}
-                        fontFamily="system-ui"
-                        wordBreak="break-word"
-                        overflowWrap="anywhere"
-                        maxWidth="100%"
-                        mt={4}
-                      >
-                        {selectedTopic.contentAfterImage}
-                      </Text>
+                      <VStack align="stretch" spacing={1} mt={4}>
+                        {renderFormattedContent(selectedTopic.contentAfterImage)}
+                      </VStack>
                     )}
                   </>
                 )}
@@ -3616,10 +3632,8 @@ const LibraryPanel: React.FC = () => {
               spacing={8} 
               position="relative" 
               zIndex={10}
-              px={[4, 6, 8]}
-              pt={["5vh", "8vh", "10vh"]}
-              w="100%"
-              overflow="hidden"
+              px={8}
+              // pt="2vh"
             >
               <VStack spacing={4} textAlign="center">
                 <Heading 
