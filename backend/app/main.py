@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from .models import ExecuteRequest, ExecuteResponse, AIResponse, GateModel
 from .qiskit_runner import run_circuit
+from .qaoa_optimization import QaoaProblem, QaoaResult, run_qaoa
 import math
 
 # optional genai (Gemini) client — try common import paths so environments
@@ -72,6 +73,19 @@ def execute(req: ExecuteRequest) -> ExecuteResponse:
             override_backend=req.backend,
         )
         return ExecuteResponse(**result, status="success")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/qaoa/optimize", response_model=QaoaResult)
+def qaoa_optimize(problem: QaoaProblem) -> QaoaResult:
+    """Run QAOA for a MaxCut or Knapsack instance using Qiskit backend.
+
+    The frontend sends a compact problem description; all QUBO + QAOA math
+    happens here in Python.
+    """
+    try:
+        return run_qaoa(problem)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
