@@ -67,7 +67,7 @@ const Header = () => {
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant={activePanel === 'stats' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('stats')}
             colorScheme="blue"
           >
@@ -75,7 +75,7 @@ const Header = () => {
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant={activePanel === 'puzzles' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('puzzles')}
             colorScheme="green"
           >
@@ -105,13 +105,14 @@ const Header = () => {
           >
             Tutorial
           </Button>
-          <IconButton
-            aria-label="Toggle color mode"
-            // icon={colorMode === 'light' ? '🌙' : '☀️'}
+          <Button
             size="sm"
+            variant="solid"
             onClick={toggleColorMode}
-            variant="ghost"
-          />
+            colorScheme="white"
+          >
+            {colorMode === 'light' ? '☀️' : '🌙'}
+          </Button>
         </HStack>
       </Flex>
     </Box>

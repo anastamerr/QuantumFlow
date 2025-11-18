@@ -28,12 +28,6 @@ export default function StatsPanel(): JSX.Element {
         <StatLabel>Two-qubit Gates</StatLabel>
         <StatNumber>{twoQubit}</StatNumber>
       </Stat>
-
-      <Box mt={4}>
-        <Text fontSize="sm" color="gray.500">
-          Quick stats for the currently loaded circuit.
-        </Text>
-      </Box>
     </Box>
   )
 }
