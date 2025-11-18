@@ -51,11 +51,11 @@ function EdgeArrow({ edge }: { edge: Edge }) {
 
   const labelLeft = x1 + (x2 - x1) * t
   const labelTop = y1 + (y2 - y1) * t
-
   const markerId = `arrowhead-${edge.from}-${edge.to}`
 
   return (
     <>
+      {/* SVG Line */}
       <Box position="absolute" top="0" left="0" w="100%" h="100%" pointerEvents="none" zIndex={0}>
         <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
           <defs>
@@ -83,6 +83,7 @@ function EdgeArrow({ edge }: { edge: Edge }) {
         </svg>
       </Box>
 
+      {/* Label Bubble */}
       <Box
         position="absolute"
         top={`${labelTop}%`}
@@ -117,8 +118,8 @@ function BoardNode({ pos, isBallHere }: { pos: QubitPosition; isBallHere: boolea
       zIndex={2}
     >
       <Box
-        w="70px"
-        h="70px"
+        w="80px" 
+        h="80px"
         borderRadius="full"
         bg={isBallHere ? 'yellow.400' : 'yellow.200'}
         color="black"
@@ -127,8 +128,9 @@ function BoardNode({ pos, isBallHere }: { pos: QubitPosition; isBallHere: boolea
         justifyContent="center"
         borderWidth={3}
         borderColor={isBallHere ? 'orange.500' : 'yellow.600'}
-        fontWeight="bold"
-        boxShadow={isBallHere ? '0 0 15px rgba(255, 200, 0, 0.8)' : 'none'}
+        fontWeight="black" 
+        fontSize="2xl" // Increased font size
+        boxShadow={isBallHere ? '0 0 20px rgba(255, 200, 0, 0.9)' : 'none'}
         transition="all 0.3s ease"
       >
         {pos}
@@ -148,6 +150,7 @@ export const QubitBoard = ({ ballPosition }: QubitBoardProps) => {
     <Box 
         flex="1" 
         w="full" 
+        h="full"
         position="relative" 
         borderRadius="md" 
         borderWidth={1} 
