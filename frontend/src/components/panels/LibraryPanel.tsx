@@ -60,17 +60,46 @@ const QUANTUM_TOPICS: TopicItem[] = [
     imageUrl: "/public/images/superposition.svg",
     content: ` Qubits and Superposition
 
-A qubit is the basic unit of quantum information. Unlike classical bits (0 or 1), qubits can exist in a superposition of both states.
+In classical computing, information is stored in bits—tiny units that can hold a value of either 0 or 1. Quantum computing introduces a new building block called the qubit (quantum bit), which behaves very differently from classical bits and unlocks entirely new computational possibilities.
 
-Key Concepts:
-- Superposition : A qubit can be 0, 1, or both simultaneously
-- Probability Amplitudes: Each state has a complex number associated with it
-- Measurement: When measured, a qubit collapses to either 0 or 1
+What Is a Qubit?
+A qubit is the fundamental unit of information in quantum computing. Unlike a classical bit, which must be either 0 or 1, a qubit is a quantum system—often represented by particles like electrons, photons, or superconducting circuits—that can exist in multiple states at once.
 
-Mathematical Representation:
-  |ψ⟩ = α|0⟩ + β|1⟩
+A qubit has two key properties:
+- |0⟩ and |1⟩ states: These are the quantum equivalent of classical 0 and 1.
+- A continuous range of states in between: A qubit can be in a blend (superposition) of both |0⟩ and |1⟩.
+  Because qubits can hold more complex information than classical bits, even a small number of qubits can represent enormous amounts of data.
 
-Where α and β are probability amplitudes with |α|² + |β|² = 1`,
+Superposition: The Power of “Being Many Things at Once”
+Superposition is one of the most important principles in quantum mechanics and a core feature of qubits.
+
+What Does Superposition Mean?
+A qubit in superposition is not limited to being just 0 or 1. 
+Instead, it exists in a probabilistic mixture of both states at the same time, represented mathematically as:
+∣𝜓⟩=𝛼∣0⟩+𝛽∣1⟩
+Where:
+α and β describe how likely the qubit is to be measured as 0 or 1.
+The qubit remains in this mixed state until it is measured, at which point the superposition “collapses” into either 0 or 1.
+
+Why Superposition Matters
+  Superposition allows quantum computers to:
+    -Process many possibilities simultaneously
+    -Explore multiple computational paths at once
+    -Scale power exponentially as more qubits are added
+This parallelism is what gives quantum computing its extraordinary potential—especially in areas like optimization, cryptography, physics simulations, and machine learning.
+
+Qubits in the Real World
+  Different technologies can be used to build qubits, including:
+    -Superconducting circuits (used by IBM, Google)
+    -Trapped ions
+    -Photonic qubits
+    -Spin qubits in quantum dots
+
+Each platform has strengths and challenges, but all rely on superposition (and other quantum properties like entanglement) to perform computations that classical computers cannot efficiently handle.
+
+Why These Concepts Matter
+Understanding qubits and superposition is the first step toward understanding how quantum computers operate. They form the foundation of all quantum algorithms, from Shor’s algorithm (for factoring) to Grover’s search algorithm and beyond.
+Qubits allow quantum computers to represent richer information, while superposition enables them to explore massive solution spaces in parallel—a combination that makes quantum computing one of the most exciting fields in modern technology.`,
     quiz: [
       {
         id: "q1",
@@ -105,8 +134,12 @@ Where α and β are probability amplitudes with |α|² + |β|² = 1`,
     description: "Visualize single-qubit states on the Bloch sphere",
     content: ` Bloch Sphere Representation
 
-The Bloch sphere is a geometric representation of single-qubit states.
+The Bloch Sphere is a geometric representation of a single qubit’s state in quantum computing. It provides an intuitive way to visualize superposition, phase, and rotations of qubits.
 
+The Bloch Sphere looks like a globe where:
+  -The north pole represents the state |0⟩.
+  -The south pole represents the state |1⟩.
+  -Any point on the surface of the sphere represents a superposition of |0⟩ and |1⟩.
 Properties:
 - Poles: |0⟩ at north pole, |1⟩ at south pole
 - Equator: Superposition states like |+⟩ and |-⟩
@@ -114,8 +147,18 @@ Properties:
 - Interior: Mixed states (not pure quantum states)
 
 Rotation Parameters:
-- θ (theta): Rotation angle from |0⟩
-- φ (phi): Azimuthal angle in the equatorial plane`,
+  Theta (θ) – Polar Angle
+      -θ measures the angle from the north pole (|0⟩) down toward the south pole (|1⟩).
+      -Determines how much the qubit is “tilted” between |0⟩ and |1⟩.
+        Example:
+          θ = 0 → qubit is exactly |0⟩ (north pole)
+          θ = π → qubit is exactly |1⟩ (south pole)
+          θ = π/2 → qubit is an equal superposition of |0⟩ and |1⟩
+
+Phi (φ) – Azimuthal Angle
+  -φ measures the rotation around the vertical axis (like spinning around the north-south pole).
+  -Determines the relative phase between |0⟩ and |1⟩ in a superposition.
+  -Think of it like longitude on a globe: it tells you “where around the equator” the state vector points.`,
   },
   {
     id: "measurement",
@@ -124,16 +167,61 @@ Rotation Parameters:
     description: "Understand quantum measurement and wave function collapse",
     content: ` Quantum Measurement
 
-Quantum measurement is the process of extracting information from a quantum system.
+Quantum measurement describes what happens when we observe or “measure” a quantum system, such as a qubit. Unlike classical measurement, which simply reveals a value, quantum measurement actively changes the system being measured.
 
-Key Points:
-- Wave Function Collapse: Measurement forces a qubit into a definite state
-- Probabilistic: Results are probabilistic, not deterministic
-- Irreversible: After measurement, the quantum state changes
+What Happens During Quantum Measurement?
+Before measurement, a qubit can exist in a superposition—a blend of both |0⟩ and |1⟩.
+However, when we measure the qubit, the superposition collapses into one definite state:
 
- Born Rule:
-The probability of measuring |0⟩ is |α|²
-The probability of measuring |1⟩ is |β|²`,
+It becomes |0⟩ with probability |α|²
+
+It becomes |1⟩ with probability |β|²
+
+Where α and β are the amplitudes describing the superposition state:
+∣ψ⟩=α∣0⟩+β∣1⟩
+
+Collapse of the Wavefunction
+
+This collapse is not gradual—it happens instantly.
+Before measurement, the qubit acts as if it is both 0 and 1.
+After measurement, it becomes one or the other, and the probabilities of these outcomes are determined by its quantum state.
+
+Why Is Quantum Measurement Special?
+1. Measurement Affects the System
+
+In classical physics, observing something doesn’t change it.
+In quantum mechanics, the act of measuring forces the system into a definite state.
+
+2. You Lose Information
+
+After measuring a qubit, the original superposition is gone.
+You cannot “undo” the measurement or learn the previous blend values.
+
+3. Probabilistic Outcomes
+
+Quantum measurements are inherently probabilistic, not predictable.
+You can calculate the probabilities, but not the exact result of a single measurement.
+
+Measurement in Quantum Computing
+
+In quantum computers, measurement is typically performed:
+  -At the end of a quantum algorithm to read the result
+  -Sometimes in the middle to influence the next steps (used in certain advanced algorithms and error correction)
+
+How It Works in Practice
+
+  1. A quantum circuit manipulates qubits using gates.
+  2. Qubits evolve through superposition and entanglement.
+  3. When the algorithm is complete, the qubits are measured, converting quantum states into classical bits (0 or 1).
+  4. Because outcomes can be probabilistic, the circuit is usually run many times to gather meaningful statistics.
+
+Why Quantum Measurement Matters
+
+Quantum measurement links the quantum world to the classical world—the point where mysterious quantum behavior becomes usable information. It is essential for:
+  - Interpreting quantum algorithms
+  - Extracting results from quantum circuits
+  - Understanding quantum physics itself
+Without measurement, quantum computers could perform incredible calculations but never reveal the answer.`,
   },
   {
     id: "pauli-gates",
@@ -142,21 +230,34 @@ The probability of measuring |1⟩ is |β|²`,
     description: "Learn fundamental Pauli operations",
     content: `Pauli Gates (X, Y, Z)
 
-Pauli gates are fundamental single-qubit operations.
+Pauli gates are fundamental single-qubit operations in quantum computing. They rotate or flip the state of a qubit along different axes of the Bloch sphere. Each gate corresponds to one of the three Pauli matrices used in quantum mechanics.
 
- Pauli-X (NOT Gate):
-Flips |0⟩ ↔ |1⟩
-Matrix: [[0, 1], [1, 0]]
+X Gate (Pauli-X)
+  -Also called the “bit-flip” gate.
+  -It flips a qubit’s state: |0⟩ becomes |1⟩ and |1⟩ becomes |0⟩.
+  -Equivalent to a 180° rotation around the X-axis of the Bloch sphere.
 
- Pauli-Y:
-Rotation around Y-axis
-Matrix: [[0, -i], [i, 0]]
+Matrix representation:
 
- Pauli-Z:
-Phase flip
-Matrix: [[1, 0], [0, -1]]
+X = [[0, 1],
+     [1, 0]]
 
-Basis for more complex operations.`,
+Y Gate (Pauli-Y)
+  -Also called the “phase-and-bit flip” gate.
+  -It flips the qubit like the X gate but also adds a phase factor.
+  -Represents a 180° rotation around the Y-axis.
+Matrix representation:
+Y = [[0, -i],
+     [i,  0]]
+
+Z Gate (Pauli-Z)
+
+  -Also called the “phase-flip” gate.
+  -Leaves |0⟩ unchanged and flips the phase of |1⟩ (turns it into -|1⟩).
+  -Represents a 180° rotation around the Z-axis.
+Matrix representation:
+Z = [[1,  0],
+     [0, -1]].`,
   },
   {
     id: "hadamard",
@@ -174,11 +275,9 @@ H|1⟩ = (|0⟩ - |1⟩)/√2
 H = 1/√2 * [[1, 1], [1, -1]]
 
  Properties:
-- Hermitian
-- Unitary
-- Self-inverse
-
-Essential for superpositions.`,
+  -Creates equal superposition from classical states
+  -Used in many quantum algorithms (e.g., Grover’s, Shor’s)
+  -Is its own inverse (applying H twice returns the qubit to its original state)`,
     quiz: [
       {
         id: "q1",
@@ -213,15 +312,49 @@ Essential for superpositions.`,
     description: "Maximally entangled states",
     content: ` Bell States and Entanglement
 
-Four Bell States:
-- |Φ+⟩ = (|00⟩ + |11⟩)/√2
-- |Φ-⟩ = (|00⟩ - |11⟩)/√2
-- |Ψ+⟩ = (|01⟩ + |10⟩)/√2
-- |Ψ-⟩ = (|01⟩ - |10⟩)/√2
+Bell states are specific two-qubit quantum states that represent the strongest form of entanglement. Entanglement is a uniquely quantum phenomenon where two qubits become linked so deeply that the state of one instantly affects the state of the other, even if they are far apart.
 
-Measure one → determines other.
+Bell states are fundamental in quantum communication, teleportation, and many quantum algorithms.
 
-Create via H then CNOT.`,
+What Are Bell States?
+
+There are four Bell states. They form a complete basis for all possible two-qubit entangled states.
+
+|Φ+⟩ = (|00⟩ + |11⟩) / √2
+|Φ−⟩ = (|00⟩ − |11⟩) / √2
+|Ψ+⟩ = (|01⟩ + |10⟩) / √2
+|Ψ−⟩ = (|01⟩ − |10⟩) / √2
+
+Each state contains perfect correlations:
+measuring one qubit instantly tells you something about the other.
+
+What Is Entanglement?
+
+Entanglement occurs when two qubits share a joint state that cannot be separated into individual qubit states.
+
+Key features:
+
+  -Measuring one qubit changes the combined system.
+  -The results are connected even at great distances.
+  -The qubits act as a single unified system.
+Entanglement is not about communication faster than light—it’s about shared quantum information across qubits.
+
+How Bell States Are Created
+
+A Bell state can be created using two simple gates:
+
+  1.Apply a Hadamard (H) gate to qubit 1.
+  2.Apply a CNOT gate, using qubit 1 as control and qubit 2 as target.
+
+This transforms |00⟩ into |Φ+⟩, the most common Bell state.
+
+Why Bell States Matter
+Bell states are crucial for:
+  -Quantum teleportation
+  -Superdense coding
+  -Quantum networking
+  -Testing quantum mechanics (e.g., Bell’s theorem)
+  -They represent the highest level of two-qubit quantum correlation.`,
   },
   {
     id: "quantum-circuit-basics",
@@ -230,16 +363,58 @@ Create via H then CNOT.`,
     description: "Understand circuit diagrams",
     content: ` Quantum Circuit Basics
 
-Components:
-- Qubits
-- Gates
-- Measurements
-- Classical bits
+A quantum circuit is the fundamental model used to design and run computations on a quantum computer. It works by applying a sequence of quantum gates to qubits, transforming their states step by step. Quantum circuits are the blueprint that define how information flows and evolves in a quantum algorithm.
 
-Reading: Left→Right = time.
+Qubits as the Building Blocks
+  -A quantum circuit operates on qubits, which can be in |0⟩, |1⟩, or a superposition of both.
+  -Multiple qubits can also become entangled, allowing complex quantum behavior.
 
-Example:
-Init |0⟩ → H → Measure (≈50% each)`,
+Gates as Operations
+
+Quantum gates modify the state of qubits. They are the quantum equivalent of logical operations in classical circuits.
+
+Common gate types include:
+
+  -Pauli gates (X, Y, Z) – basic rotations or flips
+  -Hadamard (H) – creates superposition
+  -CNOT – generates entanglement
+  -Phase and rotation gates – adjust the phase of qubit states
+
+All quantum gates are reversible and represented by unitary matrices.
+
+Circuit Structure
+
+A quantum circuit is typically drawn from left to right:
+
+  -Each horizontal line represents a qubit.
+  -Boxes or symbols on the line are gates applied to that qubit.
+  -Lines connecting gates (e.g., CNOT) show interactions between qubits.
+  -The circuit ends with measurement, converting quantum states into classical bits.
+
+Example (conceptual):
+
+|0⟩ ── H ────●─────── M
+              │
+|0⟩ ──────────X────── M
+
+
+This creates a Bell state and then measures both qubits.
+
+Measurement
+
+  -Measurement collapses the qubit into either 0 or 1.
+  -Usually done at the end of the circuit, but can appear mid-circuit.
+  -Results are classical values that we can use or analyze.
+
+Why Quantum Circuits Matter
+Quantum circuits allow us to:
+
+- Describe quantum algorithms clearly
+- Visualize operations step by step
+- Implement programs on real quantum hardware
+- Analyze performance and complexity
+
+Every major quantum algorithm—from Grover’s search to Shor’s factoring—starts as a quantum circuit.`,
   },
 
   // Intermediate
@@ -249,16 +424,87 @@ Init |0⟩ → H → Measure (≈50% each)`,
     difficulty: "Intermediate",
     description: "Conditional multi-qubit operations",
     imageUrl: "/images/cnotandccnot.png",
-    content: ` Controlled Gates (CNOT, CCNOT)
+    content: `CNOT and CCNOT Gates
+CNOT Gate (Controlled-NOT)
 
-CNOT: Flips target if control is |1⟩.
-Toffoli (CCNOT): Flips target if both controls |1⟩.
+The CNOT gate is a 2-qubit controlled gate.
+It flips the target qubit only when the control qubit is |1⟩.
 
-Matrix (CNOT):
-[[1,0,0,0],
- [0,1,0,0],
- [0,0,0,1],
- [0,0,1,0]]`,
+How it works:
+  -Control = 0 → Target stays the same
+  -Control = 1 → Target flips (0 ↔ 1)
+
+Truth table:
+
+Control  Target  →  Output
+   0        0    →   00
+   0        1    →   01
+   1        0    →   11
+   1        1    →   10
+
+Matrix:
+
+CNOT = [[1,0,0,0],
+        [0,1,0,0],
+        [0,0,0,1],
+        [0,0,1,0]]
+
+
+Use cases:
+  -Creating entanglement (Bell states)
+  -Quantum teleportation
+  -Many fundamental quantum algorithms
+  
+CCNOT Gate (Toffoli Gate)
+
+The CCNOT gate, also known as the Toffoli gate, is a 3-qubit gate.
+It flips the target qubit only when both control qubits are |1⟩.
+
+How it works:
+  -If Control1 = 1 AND Control2 = 1 → Target flips
+  -Otherwise → Target stays the same
+
+simplified Truth table:
+
+C1  C2  T   →  Output
+0   0   T      0 0 T
+0   1   T      0 1 T
+1   0   T      1 0 T
+1   1   0      1 1 1
+1   1   1      1 1 0
+
+
+Matrix size: 8×8 (since it acts on 3 qubits).
+
+Use cases:
+  -Quantum arithmetic (adders, multipliers)
+  -Reversible classical logic
+  -Building more complex multi-controlled gates
+  -Essential in quantum error correction`,
+    contentAfterImage: `
+Notation Differences: CNOT vs CCNOT
+
+CNOT (Controlled-NOT):
+• Symbol: ⊕ with a control line (•)
+• Circuit notation: Control qubit has a filled circle (•), target has ⊕
+• Text representation: CNOT, CX, or sometimes just X with control
+• Matrix notation: Often written as CX or CNOT
+• Qiskit: cx(control, target)
+• Cirq: CNOT(control, target)
+
+CCNOT (Controlled-Controlled-NOT / Toffoli):
+• Symbol: ⊕ with two control lines (• •)
+• Circuit notation: Two control qubits have filled circles (•), target has ⊕
+• Text representation: CCNOT, CCX, Toffoli, or T
+• Matrix notation: Often written as CCX or Toffoli
+• Qiskit: ccx(control1, control2, target)
+• Cirq: TOFFOLI(control1, control2, target)
+
+Key Visual Differences:
+- CNOT: 1 control dot (•) → 1 target (⊕)
+- CCNOT: 2 control dots (• •) → 1 target (⊕)
+- Control qubits: Always represented by filled circles (•)
+- Target qubits: Always represented by ⊕ (XOR symbol)`,
   },
   {
     id: "phase-gates",
@@ -280,19 +526,46 @@ Used for phase control.`,
     title: "Quantum Fourier Transform",
     difficulty: "Intermediate",
     description: "Core of many algorithms",
-    content: ` Quantum Fourier Transform (QFT)
+    content: `Quantum Fourier Transform (QFT)
 
-Maps |x⟩ → (1/√N) Σ_y e^(2πixy/N)|y⟩
+The Quantum Fourier Transform (QFT) is the quantum version of the classical discrete Fourier transform (DFT). It transforms a quantum state into a new basis where periodic patterns become easy to detect. QFT is one of the most important tools in quantum algorithms.
+What QFT Does
+Given an input quantum state, the QFT maps each basis state |x⟩ to a superposition of all basis states with specific phase factors:
+|x⟩ → (1/√N) Σ(k=0 to N-1) e^(2πixk/N) |k⟩
 
-Classical FFT: O(N log N)
-Quantum: O(log² N) depth (with assumptions)
+Where:
+  - N = 2ⁿ for an n-qubit system
+  - Phase factors encode periodic information
+  This allows quantum algorithms to detect patterns and periodicity extremely fast.
 
-Applications:
-- Shor
-- Phase estimation
-- Simulation
+Why QFT Is Important
+QFT is a core component of several major quantum algorithms:
+  - Shor's Algorithm (factoring and period finding)
+  - Phase Estimation
+  - Quantum chemistry simulations  
+  - Hidden subgroup problems
+  -It enables exponential speedups compared to classical Fourier transforms when used inside these algorithms.
 
-Implemented with Hadamards + controlled phase gates.`,
+How QFT Works in Circuits
+A QFT circuit applies two main operations:
+  - Hadamard gates – create superposition
+  - Controlled phase rotations – add precise phase shifts
+
+A simplified n-qubit QFT circuit looks like this:
+
+q0 ── H ── R2 ── R3 ── ... ────────
+q1 ────── H ── R2 ── ... ────────  
+q2 ─────────── H ── ... ────────
+...
+qn ─────────────────── H ────────
+
+Finally, the circuit ends with qubit swaps to reverse the bit order.
+
+Key Properties
+  - Runs in O(n²) gates (much faster than classical O(N log N))
+  - Uses only Hadamard and controlled rotation gates
+  - Completely reversible and unitary
+  - Essential for extracting periodicity and phase information`,
   },
   {
     id: "phase-kickback",
@@ -301,68 +574,433 @@ Implemented with Hadamards + controlled phase gates.`,
     description: "Eigensystem phase transfer",
     content: `Phase Kickback
 
-If U|ψ⟩ = e^(iθ)|ψ⟩ then controlled-U transfers phase to control.
+Phase kickback is a fundamental quantum phenomenon where phase information from a target qubit "kicks back" to the control qubit in controlled operations. This mechanism is crucial for many quantum algorithms and allows us to extract eigenvalue information.
 
-Used in:
-- Phase estimation
-- Counting
-- Amplitude amplification
+What Is Phase Kickback?
 
-Encodes eigenvalue phases.`,
+When we have a controlled unitary gate CU and the target qubit is in an eigenstate of U, something special happens:
+
+If U|ψ⟩ = e^(iθ)|ψ⟩, then:
+CU(|0⟩|ψ⟩) = |0⟩|ψ⟩  
+CU(|1⟩|ψ⟩) = e^(iθ)|1⟩|ψ⟩
+
+The phase e^(iθ) gets attached to the control qubit instead of staying on the target!
+
+How It Works
+
+1. Eigenstate Condition The target must be in an eigenstate of the unitary U
+2. Controlled Application Apply controlled-U with the eigenstate as target  
+3. Phase Transfer The eigenvalue phase appears on the control qubit
+4. Information Extraction: We can now measure or manipulate this phase
+
+Mathematical Example
+
+Consider a controlled-Z gate with target in |+⟩ = (|0⟩ + |1⟩)/√2:
+
+Z|+⟩ = (|0⟩ - |1⟩)/√2 = -|+⟩
+
+So |+⟩ is an eigenstate of Z with eigenvalue -1.
+
+When we apply CZ:
+CZ|0⟩|+⟩ = |0⟩|+⟩
+CZ|1⟩|+⟩ = -|1⟩|+⟩
+
+The minus sign (phase) kicks back to the control!
+
+Applications in Quantum Algorithms
+
+- Quantum Phase Estimation: Extracts eigenvalue phases for solving linear systems
+- Shor's Algorithm: Uses phase kickback to find periods for factoring
+- Grover's Algorithm: The oracle uses phase kickback to mark target states  
+- Quantum Counting: Counts solutions by estimating phases
+- Amplitude Estimation: Generalizes Grover using phase estimation
+
+Practical Implementation
+
+Phase kickback is typically implemented using:
+- Controlled rotation gates (CRz, CRy, CRx)
+- Controlled-U gates where U has known eigenstates
+- Ancilla qubits prepared in superposition states
+- Phase estimation circuits for extracting the kicked-back phase
+
+Why It's Powerful
+
+Phase kickback allows quantum algorithms to:
+- Extract hidden information about operators
+- Perform computations "in the phase" without disturbing amplitudes  
+- Enable exponential speedups in eigenvalue problems
+- Connect discrete and continuous quantum operations
+
+Understanding phase kickback is essential for mastering advanced quantum algorithms and designing new quantum protocols.`,
   },
   {
     id: "swap-gates",
     title: "SWAP and Fredkin Gates",
     difficulty: "Intermediate",
     description: "Qubit permutation operations",
-    content: `SWAP and Fredkin Gates
+    content: `# SWAP and Fredkin Gates
 
-SWAP: |ab⟩ → |ba⟩
-Decomposition: CNOT₁₂ CNOT₂₁ CNOT₁₂
+SWAP and Fredkin gates are fundamental permutation operations in quantum computing that exchange qubit states and enable complex routing and layout operations.
 
-Fredkin (Controlled-SWAP):
-Swap two targets if control is |1⟩
+## SWAP Gate
 
-Used for routing and layout mapping.`,
+The SWAP gate exchanges the states of two qubits:
+
+Mathematical Definition:
+- SWAP|00⟩ = |00⟩
+- SWAP|01⟩ = |10⟩  
+- SWAP|10⟩ = |01⟩
+- SWAP|11⟩ = |11⟩
+
+Matrix Representation:
+\`\`\`
+SWAP = [1 0 0 0]
+       [0 0 1 0]
+       [0 1 0 0]  
+       [0 0 0 1]
+\`\`\`
+
+Circuit Implementation:
+The SWAP gate can be decomposed into three CNOT gates:
+- CNOT₁₂ (control on qubit 1, target on qubit 2)
+- CNOT₂₁ (control on qubit 2, target on qubit 1)  
+- CNOT₁₂ (control on qubit 1, target on qubit 2)
+
+This decomposition is crucial for hardware implementations that don't have native SWAP gates.
+
+ Fredkin Gate (Controlled-SWAP)
+
+The Fredkin gate is a controlled version of SWAP that only swaps the target qubits when the control qubit is |1⟩.
+
+Operation
+- If control = |0⟩: target qubits unchanged
+- If control = |1⟩: target qubits are swapped
+
+Truth Table:
+|c a b⟩ → |c a' b'⟩
+- |000⟩ → |000⟩
+- |001⟩ → |001⟩
+- |010⟩ → |010⟩
+- |011⟩ → |011⟩
+- |100⟩ → |100⟩
+- |101⟩ → |110⟩ (swap occurs)
+- |110⟩ → |101⟩ (swap occurs)
+- |111⟩ → |111⟩
+
+## Practical Applications
+
+Quantum Circuit Layout:
+- Routing qubits through limited connectivity graphs
+- Mapping logical qubits to physical qubits
+- Optimizing gate sequences for hardware constraints
+
+Quantum Algorithms:
+- Quantum Sorting: SWAP networks for ordering quantum states
+- Quantum Fourier Transform: Bit-reversal permutations
+- Error Correction: Moving logical qubits for syndrome extraction
+
+Quantum Simulation:
+- Implementing fermionic anticommutation relations
+- Jordan-Wigner transformations for spin systems
+- Particle exchange symmetries in many-body problems
+
+## Advanced Variations
+
+iSWAP Gate:
+Adds a phase to the swapped states:
+- iSWAP|01⟩ = i|10⟩
+- iSWAP|10⟩ = i|01⟩
+
+√SWAP Gate:
+Square root of SWAP, useful for gradual state exchange and adiabatic quantum computing.
+
+SWAP Test:
+Uses controlled-SWAP to measure overlap between quantum states:
+P(measure control as |0⟩) = (1 + |⟨ψ|φ⟩|²)/2
+
+ Implementation Considerations
+
+Hardware Efficiency:
+- Direct SWAP gates require specific connectivity
+- Three-CNOT decomposition works on any connected pair
+- Optimal routing minimizes total gate count
+
+Error Rates:
+- SWAP operations can accumulate errors
+- Trade-off between routing convenience and fidelity
+- Consider gate error rates when choosing decomposition
+
+Understanding SWAP and Fredkin gates is essential for quantum circuit optimization, hardware-aware compilation, and implementing complex quantum algorithms efficiently.`,
   },
   {
     id: "deutsch-algorithm",
     title: "Deutsch-Jozsa Algorithm",
     difficulty: "Intermediate",
     description: "Constant vs balanced function test",
-    content: `Deutsch-Jozsa Algorithm
+    content: ` Deutsch-Jozsa Algorithm
 
-Problem: Determine if f:{0,1}ⁿ→{0,1} is constant or balanced.
+The Deutsch-Jozsa algorithm demonstrates quantum advantage by solving a specific computational problem with exponentially fewer function evaluations than any classical algorithm.
 
-Classical: Need many evaluations.
-Quantum: Single oracle use.
+ Problem Statement
 
-Steps:
-1. Init
-2. Hadamards
-3. Oracle
-4. Hadamards
-5. Measure
+Given a black-box function f: {0,1}ⁿ → {0,1}, determine whether f is:
+- Constant: f(x) = 0 for all x, or f(x) = 1 for all x
+- Balanced: f(x) = 0 for exactly half the inputs, f(x) = 1 for the other half
 
-All zeros → constant else balanced.`,
+ Classical Approach:
+- Worst case: Need to evaluate f on 2ⁿ⁻¹ + 1 inputs
+- For n = 100: Would require ~2⁹⁹ evaluations
+
+Quantum Approach:
+- Requires exactly ONE oracle evaluation
+- Exponential speedup!
+
+ Algorithm Steps
+
+Step 1: Initialization
+Start with n+1 qubits:
+- n query qubits in |0⟩
+- 1 ancilla qubit in |1⟩
+
+Step 2: Create Superposition
+Apply Hadamard gates to all qubits:
+- Query register: H⊗ⁿ|0⟩ⁿ = 1/√2ⁿ ∑ₓ |x⟩
+- Ancilla: H|1⟩ = (|0⟩ - |1⟩)/√2
+
+Step 3: Oracle Query
+Apply the oracle Uf once:
+Uf|x⟩|y⟩ = |x⟩|y ⊕ f(x)⟩
+
+After oracle, the state becomes:
+1/√2ⁿ ∑ₓ (-1)^f(x) |x⟩ ⊗ (|0⟩ - |1⟩)/√2
+
+Step 4: Final Hadamards  
+Apply Hadamard gates to the query register:
+H⊗ⁿ [1/√2ⁿ ∑ₓ (-1)^f(x) |x⟩]
+
+Step 5: Measurement
+Measure the query register in computational basis.
+
+ Mathematical Analysis
+After the final Hadamards, the amplitude of measuring |0⟩ⁿ is:
+
+For Constant Functions:
+- If f(x) = 0 ∀x: Amplitude = 1 → Always measure |0⟩ⁿ
+- If f(x) = 1 ∀x: Amplitude = -1 → Always measure |0⟩ⁿ
+
+For Balanced Functions:
+- Positive and negative contributions cancel
+- Amplitude = 0 → Never measure |0⟩ⁿ
+
+ Circuit Implementation
+\`\`\`
+|0⟩ ——[H]——[Uf]——[H]——[M]
+|0⟩ ——[H]——[  ]——[H]——[M]
+ ⋮    ⋮     ⋮     ⋮     ⋮
+|0⟩ ——[H]——[  ]——[H]——[M]
+|1⟩ ——[H]——[  ]—————————————
+\`\`\`
+
+ Example: 2-Bit Function
+
+Consider f: {00,01,10,11} → {0,1}
+
+Constant f(x) = 0:
+- After oracle: +|00⟩ + |01⟩ + |10⟩ + |11⟩
+- After final H: Measure |00⟩ with probability 1
+
+Balanced f(x) = x₁ ⊕ x₂:  
+- After oracle: +|00⟩ - |01⟩ - |10⟩ + |11⟩
+- After final H: Measure |00⟩ with probability 0
+
+ Practical Considerations
+
+Oracle Implementation:
+- Must be reversible (unitary)
+- Often uses ancilla qubits for complex functions
+- Phase oracle: Uf|x⟩ = (-1)^f(x)|x⟩
+
+Noise Effects:
+- Algorithm is relatively robust to oracle errors
+- Final measurement error can lead to misclassification
+- Error correction may be needed for large n
+
+Extensions:
+- Deutsch's Algorithm: Special case for n=1
+- Bernstein-Vazirani: Finds hidden bit string
+- Simon's Algorithm: Finds hidden period
+
+ Significance
+
+The Deutsch-Jozsa algorithm:
+- First to show exponential quantum advantage
+- Inspired development of other quantum algorithms
+- Demonstrates quantum parallelism and interference
+- Foundation for understanding oracle-based quantum computing
+
+While the problem is somewhat artificial, it proves that quantum computers can solve certain problems exponentially faster than classical computers, establishing the theoretical foundation for quantum advantage.`,
   },
   {
     id: "grover-amplitude",
     title: "Grover's Algorithm - Amplitude Amplification",
     difficulty: "Intermediate",
     description: "Quadratic speedup for search",
-    content: `Grover's Algorithm
+    content: ` Grover's Algorithm & Amplitude Amplification
 
-Search N items in O(√N).
+Grover's algorithm provides a quadratic speedup for unstructured search problems and demonstrates the power of amplitude amplification in quantum computing.
 
-Steps:
-1. Init superposition
-2. Oracle marks solution
-3. Diffusion operator
-4. Repeat ~√N
-5. Measure
+ The Search Problem
 
-Amplitude amplification generalizes Grover.`,
+Classical Search:
+- Search through N unsorted items for a marked item
+- Best strategy: Random sampling or exhaustive search
+- Time complexity: O(N) evaluations on average
+
+Quantum Search:
+- Grover's algorithm finds the marked item in O(√N) evaluations
+- Quadratic speedup - significant for large databases
+- Optimal quantum search algorithm (proven by Bennett et al.)
+
+ Algorithm Overview
+
+Setup:
+- n qubits representing N = 2ⁿ items
+- Oracle function f(x) = 1 if x is the target, 0 otherwise
+- Goal: Find x such that f(x) = 1
+
+Key Insight:
+Rotate the quantum state vector in the 2D subspace spanned by:
+- |ψ⟩ = uniform superposition of non-target states  
+- |w⟩ = uniform superposition of target states
+
+ Detailed Algorithm Steps
+
+Step 1: Initialization
+Create uniform superposition:
+|s⟩ = H⊗ⁿ|0⟩ⁿ = 1/√N ∑ₓ |x⟩
+
+Step 2: Grover Iteration
+Repeat the following G = ⌊π√N/4⌋ times:
+
+a) Oracle Operation (O):
+   O|x⟩ = (-1)^f(x)|x⟩
+   - Flips amplitude of target states
+   - Reflection about |ψ⟩
+
+b) Diffusion Operator (D):
+   D = 2|s⟩⟨s| - I
+   - Reflection about uniform superposition
+   - Also called "inversion about average"
+
+Step 3: Measurement
+Measure in computational basis to obtain the target with high probability.
+
+ Geometric Interpretation
+
+The algorithm performs rotations in a 2D subspace:
+
+Initial State: |s⟩ = √(N-M)/N |ψ⟩ + √M/N |w⟩
+- |ψ⟩: superposition of N-M non-targets  
+- |w⟩: superposition of M targets
+- θ = arcsin(√M/N) is initial angle
+
+Each Grover Iteration:
+- Oracle: Reflection across |ψ⟩ (changes angle by π-2θ)
+- Diffusion: Reflection across |s⟩ (changes angle by π-2θ)  
+- Net effect: Rotation by 2θ toward |w⟩
+
+Optimal Iterations:
+G = ⌊π/(4θ)⌋ ≈ ⌊π√N/(4√M)⌋
+
+ Circuit Implementation
+
+\`\`\`
+|0⟩ ——[H]——[O]——[H]——[Z]——[H]——[M]
+|0⟩ ——[H]——[ ]——[H]——[Z]——[H]——[M]
+ ⋮     ⋮   ⋮   ⋮   ⋮   ⋮    ⋮
+|0⟩ ——[H]——[ ]——[H]——[Z]——[H]——[M]
+       ↑              ↑
+    Superposition  Diffusion
+\`\`\`
+
+The diffusion operator can be implemented as:
+D = H⊗ⁿ(2|0⟩⟨0| - I)H⊗ⁿ
+
+ Amplitude Amplification Generalization
+
+General Framework:
+- Start with arbitrary initial state |ψ⟩
+- Define "good" subspace marked by oracle
+- Use selective rotations to amplify good amplitudes
+
+Operators:
+- Q = -A·S₀·A⁻¹·Sχ
+- A: State preparation operator  
+- S₀: Reflection about |0⟩
+- Sχ: Reflection about good states
+
+Applications Beyond Search:
+- Quantum Monte Carlo methods
+- Solving linear systems (HHL algorithm)
+- Amplitude estimation
+- Quantum machine learning
+
+ Practical Examples
+
+Database Search:
+- N = 10⁶ entries, M = 1 target
+- Classical: ~500,000 queries on average
+- Grover: ~785 queries (√N/2)
+
+Multiple Targets:
+- M targets among N items
+- Success probability after G iterations: sin²((2G+1)θ)
+- Optimal G = π√N/(4√M) - 1/2
+
+Approximate Search:
+- Unknown number of targets
+- Use quantum counting or iterative amplitude estimation
+- Trade-off between success probability and query complexity
+
+ Error Analysis and Robustness
+
+Phase Errors:
+- Oracle phase errors reduce success probability
+- Algorithm relatively robust to small phase deviations
+
+Amplitude Errors:  
+- Unitary errors in diffusion operator affect convergence
+- Can be mitigated with error correction
+
+Decoherence:
+- T₂ time must exceed algorithm duration
+- Requires ~√N coherent operations
+
+ Advanced Variations
+Fixed-Point Quantum Search:
+- Avoids over-rotation problem
+- Success probability doesn't oscillate
+- Uses variable-angle rotations
+
+Partial Grover Search:
+- Interrupt algorithm before optimum
+- Useful when approximation suffices
+- Reduces decoherence effects
+
+Nested Grover Search:
+- Search within search problems
+- Quantum walks on graphs
+- Hierarchical optimization
+
+ Significance and Impact
+
+Grover's algorithm demonstrates:
+- Fundamental Limits: Optimal unstructured search bound
+- Quantum Advantage: Clear quadratic speedup over classical
+- Practical Relevance: Applications in cryptography, optimization, machine learning
+- Theoretical Foundation: Template for other amplitude amplification algorithms
+
+The algorithm bridges theoretical quantum computing with practical applications, showing how quantum interference can be harnessed for computational advantage while remaining implementable on near-term quantum devices.`,
     quiz: [
       {
         id: "q1",
@@ -397,15 +1035,36 @@ Amplitude amplification generalizes Grover.`,
     description: "Estimate eigenvalue phases",
     content: ` Quantum Phase Estimation (QPE)
 
-Given U|ψ⟩ = e^(2πiθ)|ψ⟩ find θ.
+Quantum Phase Estimation (QPE)
 
-Applications:
-- Shor
-- Simulation
-- Chemistry
-- Amplitude estimation
+Purpose:
+QPE estimates the phase 𝜙 of an eigenvalue 𝑒^2𝜋𝑖𝜙of a unitary operator 𝑈
+ given its eigenvector∣u⟩.
 
-High precision with inverse QFT.`,
+Input & Output
+
+Input: Unitary 
+𝑈, eigenstate∣u⟩, 𝑡 qubits for precision.
+
+Output: 
+𝑡-bit approximation of 𝜙.
+
+Algorithm Steps
+
+  1.Initialize: Control register in ∣0⟩ ^ ⊗ t, target in ∣u⟩.
+
+  2.Hadamard: Apply H ^ ⊗t to control qubits.
+  3.Controlled-U: Apply controlled-U^2^j for each control qubit.
+  4.Inverse QFT: Apply QFT⁻¹ on the control register.
+  5.Measure: Get a binary approximation of 𝜙.
+
+Complexity
+O(t²) for QFT⁻¹ + O(t·cost(U)) for controlled-U operations.
+
+Applications
+  -Shor’s algorithm
+  -Quantum simulations
+  -Eigenvalue estimation in quantum chemistry.`,
   },
 
   // Advanced
@@ -1464,167 +2123,148 @@ Applications:
     title: "Quantum Generative Adversarial Networks (QGAN)",
     difficulty: "Advanced",
     description: "Adversarial quantum generation",
-    content: `Quantum GANs
+    content: `Purpose:
+QGANs are the quantum version of classical GANs, used to generate data that mimics a target distribution, leveraging quantum circuits to represent probability distributions more efficiently.
 
-Structure:
-- Quantum generator
-- Classical discriminator
+Structure
 
-Challenges:
-- Mode collapse
-- Stability
-- Plateaus
+  -Generator (Quantum Circuit): Produces quantum states representing candidate data.
+  -Discriminator (Classical or Quantum): Evaluates how close the generated data is to the real data.
+  -Training Loop: The generator tries to fool the discriminator, while the discriminator learns to distinguish real from generated data.
 
-Potential for complex distributions.`,
+Advantages
+  -Can represent complex probability distributions that are hard for classical GANs.
+  -Potential for faster convergence in certain tasks due to quantum superposition and entanglement.
+
+Applications
+  -Quantum data generation
+  -Quantum-enhanced machine learning
+  -Synthetic data for simulations in physics and chemistry`,
   },
   {
     id: "quantum-kernel-methods",
     title: "Quantum Kernel Methods",
     difficulty: "Advanced",
     description: "Kernel evaluation via circuits",
-    content: `Quantum Kernel Methods
+    content: `Quantum kernel methods are part of quantum machine learning. They extend classical kernel techniques by using quantum computers to map data into a high-dimensional Hilbert space, where linear separation of complex patterns becomes easier. By leveraging quantum properties like superposition and entanglement, quantum kernels can potentially provide advantages over classical kernels for certain datasets.
 
-Kernel:
-K(x,y)=|⟨ψ(x)|ψ(y)⟩|²
+Core Concepts
+  Feature Mapping:
+    -Classical input data x is transformed into a quantum state |φ(x)⟩ via a parameterized quantum circuit.
+    -This mapping allows data to exist in an exponentially large feature space efficiently, without explicitly computing each dimension.
+  Quantum Kernel Function:
 
-Advantage: High-dimensional embeddings.
+    -Defined as the inner product of quantum states:K(x, x') = |⟨φ(x)|φ(x')⟩|²
+    -Measures the similarity between two data points in the quantum feature space.
+    -The kernel can be computed on a quantum computer using techniques like swap tests or Hadamard tests.
 
-Challenges:
-- Sampling cost
-- Noise
-- Encoding depth`,
-  },
-  {
-    id: "adiabatic-quantum",
-    title: "Adiabatic Quantum Computing",
-    difficulty: "Advanced",
-    description: "Slow Hamiltonian evolution",
-    content: `Adiabatic Quantum Computing
+Training:
+  -Once the kernel matrix is computed for all training data, classical algorithms like SVMs or kernel ridge regression are used.
+  -The quantum computer handles kernel evaluation, while classical optimization handles model training.
 
-Start in ground state of H₀.
-Evolve to H₁ slowly.
-Stay in ground state if gap sufficient.
+Advantages
+  -Efficient Representation: Quantum states can encode complex correlations and higher-dimensional structures more efficiently than classical vectors.
+  -Potential Quantum Advantage: Certain datasets may require exponentially large classical kernels to achieve the same performance that a quantum kernel can provide efficiently.
+  -Hybrid Approach: Combines quantum kernel evaluation with classical optimization, making it implementable on near-term quantum devices (NISQ-era).
 
-Equivalent to gate model.
+Applications
+  -Classification: Quantum-enhanced SVMs for image recognition, anomaly detection, and pattern classification.
+  -Regression: Predicting continuous outputs with complex, high-dimensional relationships.
+  -Data Analysis: Feature extraction and dimensionality reduction in datasets that are difficult for classical methods.
+  -Quantum Chemistry & Finance: Modeling distributions or correlations that are computationally expensive classically.
 
-Used in optimization (Ising mappings).`,
-  },
-  {
-    id: "topological-quantum",
-    title: "Topological Quantum Computing",
-    difficulty: "Advanced",
-    description: "Anyons and braiding for robustness",
-    content: `Topological Quantum Computing
-
-Anyons:
-- Non-abelian statistics
-- Braid operations encode gates
-
-Robust to local errors.
-
-Experimental progress still early.`,
+Challenges
+  -Noise in current quantum hardware can affect kernel precision.
+  -Designing the right quantum feature map is non-trivial and often problem-dependent.
+  -Scaling to very large datasets is challenging due to the number of kernel evaluations required.`,
   },
   {
     id: "quantum-simulation",
     title: "Quantum Simulation and Hamiltonian Dynamics",
     difficulty: "Advanced",
     description: "Simulate quantum systems directly",
-    content: `Quantum Simulation
+    content: `Quantum Simulation and Hamiltonian Dynamics
 
-Targets:
-- Molecules
-- Materials
-- Lattice models
+Quantum simulation leverages quantum computers to study quantum systems that are intractable for classical computers, providing exponential advantages for understanding complex many-body physics.
 
-Methods:
-- Trotterization
-- Variational simulation
-- Sparse Hamiltonian techniques`,
-  },
-  {
-    id: "variational-ansatz",
-    title: "Variational Ansatz Design",
-    difficulty: "Advanced",
-    description: "Parameterized circuit strategy",
-    content: `Variational Ansatz Design
+ Core Concept
 
-Goals:
-- Expressibility
-- Trainability
-- Efficiency
+Digital Quantum Simulation:
+Use gate-based quantum computers to simulate time evolution of quantum systems:
+U(t) = e^(-iHt)
 
-Types:
-- Hardware-efficient
-- Problem-inspired
-- Adaptive
+Analog Quantum Simulation:  
+Use controllable quantum systems to directly emulate target Hamiltonians
 
-Trade-offs crucial.`,
-  },
-  {
-    id: "quantum-chemistry",
-    title: "Quantum Chemistry Simulation",
-    difficulty: "Advanced",
-    description: "Electronic structure on quantum devices",
-    content: `Quantum Chemistry Simulation
+ Hamiltonian Simulation Methods
 
-Problems:
-- Ground state energy
-- Reaction pathways
+Trotterization:
+Approximate e^(-iHt) by breaking H into sum of terms:
+H = H₁ + H₂ + ... + Hₙ
 
-Methods:
-- VQE
-- Phase estimation
-- Active space reduction
+First-order Trotter: e^(-iHt) ≈ [e^(-iH₁t/r)e^(-iH₂t/r)...e^(-iHₙt/r)]^r
 
-Applications: Materials, drugs.`,
-  },
-  {
-    id: "barren-plateaus",
-    title: "Barren Plateaus in Quantum Circuits",
-    difficulty: "Advanced",
-    description: "Vanishing gradient regions",
-    content: `Barren Plateaus
+Higher-Order Methods:
+- Suzuki-Trotter formulas reduce error scaling
+- Optimal ordering of Hamiltonian terms
+- Error scales as O((t/r)^(k+1)) for k-th order
 
-Cause:
-- Random deep circuits
+Linear Combination of Unitaries (LCU):
+Express H as weighted sum of unitary operators
+Requires ancilla qubits and amplitude amplification
 
-Mitigation:
-- Structured ansatz
-- Layerwise training
-- Problem initialization
+ Target Systems
 
-Active research area.`,
-  },
-  {
-    id: "dynamical-decoupling",
-    title: "Dynamical Decoupling and Pulse Shaping",
-    difficulty: "Advanced",
-    description: "Mitigate decoherence with pulses",
-    content: `Dynamical Decoupling
+Molecular Systems:
+- Electronic structure problems
+- Chemical reaction dynamics  
+- Vibrational modes and spectra
 
-Pulse sequences cancel noise.
+Condensed Matter:
+- Hubbard models for strongly correlated electrons
+- Spin lattice models (Ising, Heisenberg)
+- Topological phases and phase transitions
 
-Techniques:
-- CPMG
-- UDD
-- GRAPE (optimal control)
+High Energy Physics:
+- Lattice gauge theories
+- Quantum field theory models
+- Particle interaction dynamics
 
-Improves coherence times.`,
-  },
-  {
-    id: "quantum-noise-mitigation",
-    title: "Quantum Noise Mitigation Techniques",
-    difficulty: "Advanced",
-    description: "Reduce noise without full QEC",
-    content: `Noise Mitigation
+ Applications
 
-Methods:
-- Zero noise extrapolation
-- Probabilistic error cancellation
-- Symmetry verification
-- Readout mitigation
+Materials Science:
+- High-temperature superconductivity mechanisms
+- Magnetic material properties
+- Catalyst design optimization
 
-Useful in NISQ era.`,
+Drug Discovery:
+- Protein folding dynamics
+- Enzyme catalysis mechanisms  
+- Molecular binding affinity
+
+Fundamental Physics:
+- Many-body localization studies
+- Quantum thermalization processes
+- Entanglement spreading dynamics
+
+ Implementation Strategies
+
+Hardware Requirements:
+- Long coherence times for evolution
+- High-fidelity two-qubit gates
+- Sufficient qubit connectivity
+
+ Error Mitigation:
+- Symmetry preservation techniques
+- Post-processing error correction
+- Noise-resilient algorithms
+
+ Near-term Approaches:
+- Variational quantum eigensolver (VQE)
+- Quantum approximate optimization (QAOA)
+- Hybrid classical-quantum methods
+
+Understanding quantum simulation opens pathways to solving some of the most challenging problems in science and technology using quantum advantage.`,
   },
 ];
 
@@ -2553,7 +3193,8 @@ const LibraryPanel: React.FC = () => {
                 borderColor={listBorderColor}
                 position="sticky"
                 top={0}
-                zIndex={10}
+                zIndex={20}
+                boxShadow={useColorModeValue("0 2px 4px rgba(0,0,0,0.1)", "0 2px 4px rgba(0,0,0,0.3)")}
               >
                 <HStack spacing={2} justify="space-between">
                   <HStack spacing={2}>
@@ -2615,7 +3256,33 @@ const LibraryPanel: React.FC = () => {
         </Box>
       </VStack>
 
-      <VStack flex={1} h="100%" p={6} spacing={4} align="stretch" overflowY="auto">
+      <VStack 
+        flex={1} 
+        h="100%" 
+        p={selectedTopic ? 6 : 0} 
+        spacing={selectedTopic ? 4 : 0} 
+        align="stretch" 
+        overflowY={selectedTopic ? "auto" : "hidden"}
+        sx={{
+          "&::-webkit-scrollbar": { 
+            width: "12px",
+            display: "block"
+          },
+          "&::-webkit-scrollbar-track": { 
+            backgroundColor: "#e2e8f0",
+            borderRadius: "6px",
+            border: "1px solid #cbd5e0"
+          },
+          "&::-webkit-scrollbar-thumb": { 
+            background: "#64748b", 
+            borderRadius: "6px",
+            border: "2px solid #e2e8f0",
+            "&:hover": { 
+              background: "#475569"
+            }
+          }
+        }}
+      >
         {selectedTopic ? (
           <>
             <Box>
@@ -2638,34 +3305,43 @@ const LibraryPanel: React.FC = () => {
                 bg={itemBg}
               >
                 {selectedTopic.id === "controlled-gates" ? (
-                  <HStack align="center" spacing={6}>
-                    <Box flex={1}>
+                  <>
+                    <Text
+                      fontSize={contentFontSize}
+                      color={textColor}
+                      whiteSpace="pre-wrap"
+                      lineHeight={2}
+                      fontFamily="system-ui"
+                    >
+                      {selectedTopic.content}
+                    </Text>
+                    {selectedTopic.imageUrl && (
+                      <Box mt={4} textAlign="center">
+                        <img
+                          src={selectedTopic.imageUrl}
+                          alt={selectedTopic.title}
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: 400,
+                            display: "block",
+                            margin: "0 auto",
+                          }}
+                        />
+                      </Box>
+                    )}
+                    {selectedTopic.contentAfterImage && (
                       <Text
                         fontSize={contentFontSize}
                         color={textColor}
                         whiteSpace="pre-wrap"
                         lineHeight={2}
                         fontFamily="system-ui"
+                        mt={4}
                       >
-                        {selectedTopic.content}
+                        {selectedTopic.contentAfterImage}
                       </Text>
-                    </Box>
-                    {selectedTopic.imageUrl && (
-                      <Box
-                        w={["140px", "220px", "320px"]}
-                        flexShrink={0}
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <img
-                          src={selectedTopic.imageUrl}
-                          alt={selectedTopic.title}
-                          style={{ maxWidth: "100%", maxHeight: 280, display: "block" }}
-                        />
-                      </Box>
                     )}
-                  </HStack>
+                  </>
                 ) : (
                   <>
                     <Text
@@ -2732,189 +3408,98 @@ const LibraryPanel: React.FC = () => {
                   </Box>
                 )}
               </Box>
-              
-              {/* Quiz Section */}
-              {selectedTopic.quiz && selectedTopic.quiz.length > 0 && (
-                <Box
-                  p={6}
-                  borderWidth={1}
-                  borderColor={listBorderColor}
-                  borderRadius="md"
-                  w="100%"
-                  bg={itemBg}
-                >
-                  {!showQuiz ? (
-                    <VStack spacing={4}>
-                      <Heading size="md" color={titleColor}>📝 Test Your Knowledge</Heading>
-                      <Text color={textColor} textAlign="center">
-                        Ready to test what you've learned? Take the {selectedTopic.difficulty.toLowerCase()} quiz!
-                      </Text>
-                      <Button 
-                        colorScheme="blue" 
-                        onClick={startQuiz}
-                        size="lg"
-                      >
-                        Start Quiz ({selectedTopic.quiz.length} questions)
-                      </Button>
-                    </VStack>
-                  ) : (
-                    <VStack spacing={4} align="stretch">
-                      {!quizCompleted ? (
-                        // Active Quiz
-                        <>
-                          <HStack justify="space-between">
-                            <Badge colorScheme="blue" fontSize="sm">
-                              Question {currentQuestionIndex + 1} of {selectedTopic.quiz.length}
-                            </Badge>
-                            <Button size="sm" variant="ghost" onClick={() => setShowQuiz(false)}>
-                              Exit Quiz
-                            </Button>
-                          </HStack>
-                          
-                          <Box p={4} bg={useColorModeValue('blue.50', 'blue.900')} borderRadius="md">
-                            <Text fontSize="lg" fontWeight="bold" mb={4}>
-                              {selectedTopic.quiz[currentQuestionIndex].question}
-                            </Text>
-                            
-                            <RadioGroup value={selectedAnswer} onChange={setSelectedAnswer}>
-                              <VStack align="start" spacing={3}>
-                                {selectedTopic.quiz[currentQuestionIndex].options.map((option, index) => (
-                                  <Radio key={index} value={index.toString()}>
-                                    {option}
-                                  </Radio>
-                                ))}
-                              </VStack>
-                            </RadioGroup>
-                          </Box>
-                          
-                          <HStack justify="space-between">
-                            <Box></Box>
-                            <Button 
-                              colorScheme="green" 
-                              onClick={submitAnswer}
-                              isDisabled={selectedAnswer === ""}
-                            >
-                              {currentQuestionIndex < selectedTopic.quiz.length - 1 ? 'Next Question' : 'Finish Quiz'}
-                            </Button>
-                          </HStack>
-                        </>
-                      ) : (
-                        // Quiz Results
-                        <>
-                          <Heading size="md" color={titleColor} textAlign="center">
-                            🎉 Quiz Completed!
-                          </Heading>
-                          
-                          <Alert status={quizResults.filter(r => r.correct).length >= selectedTopic.quiz.length * 0.7 ? "success" : "warning"}>
-                            <AlertIcon />
-                            You scored {getQuizScore()} ({Math.round((quizResults.filter(r => r.correct).length / quizResults.length) * 100)}%)
-                          </Alert>
-                          
-                          <Button onClick={toggleExplanation}>
-                            {showExplanation ? 'Hide' : 'Show'} Answer Explanations
-                          </Button>
-                          
-                          <Collapse in={showExplanation}>
-                            <VStack spacing={4} align="stretch">
-                              {selectedTopic.quiz.map((question, index) => {
-                                const result = quizResults[index];
-                                return (
-                                  <Box key={question.id} p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
-                                    <Text fontWeight="bold" mb={2}>Q{index + 1}: {question.question}</Text>
-                                    <Text color={result.correct ? 'green.500' : 'red.500'} mb={2}>
-                                      {result.correct ? '✓ Correct' : '✗ Incorrect'}
-                                    </Text>
-                                    <Text fontSize="sm" color={textColor}>
-                                      <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
-                                    </Text>
-                                    {question.explanation && (
-                                      <Text fontSize="sm" color={textColor} mt={2} fontStyle="italic">
-                                        {question.explanation}
-                                      </Text>
-                                    )}
-                                  </Box>
-                                );
-                              })}
-                            </VStack>
-                          </Collapse>
-                          
-                          <HStack spacing={4}>
-                            <Button onClick={resetQuiz} colorScheme="blue" variant="outline">
-                              Retake Quiz
-                            </Button>
-                            <Button onClick={() => setShowQuiz(false)}>
-                              Back to Content
-                            </Button>
-                          </HStack>
-                        </>
-                      )}
-                    </VStack>
-                  )}
-                </Box>
-              )}
             </VStack>
           </>
         ) : (
-          <Box position="relative" h="100%" w="100%" overflow="hidden">
-            {/* Animated Background */}
+          <Box 
+            position="relative" 
+            h="100%" 
+            w="100%" 
+            minH="100vh"
+            overflow="hidden"
+            bg={`linear-gradient(135deg, 
+              ${useColorModeValue('rgba(59, 130, 246, 0.05)', 'rgba(59, 130, 246, 0.03)')} 0%,
+              ${useColorModeValue('rgba(147, 51, 234, 0.05)', 'rgba(147, 51, 234, 0.03)')} 25%,
+              ${useColorModeValue('rgba(16, 185, 129, 0.05)', 'rgba(16, 185, 129, 0.03)')} 50%,
+              ${useColorModeValue('rgba(59, 130, 246, 0.08)', 'rgba(59, 130, 246, 0.04)')} 75%,
+              ${useColorModeValue('rgba(147, 51, 234, 0.06)', 'rgba(147, 51, 234, 0.03)')} 100%)`}
+          >
+            {/* Dynamic Gradient Overlay */}
             <Box
               position="absolute"
               top={0}
               left={0}
               w="100%"
               h="100%"
-              background={`radial-gradient(circle at 20% 30%, ${useColorModeValue('rgba(59, 130, 246, 0.1)', 'rgba(59, 130, 246, 0.05)')} 0%, transparent 50%),
-                          radial-gradient(circle at 80% 70%, ${useColorModeValue('rgba(147, 51, 234, 0.1)', 'rgba(147, 51, 234, 0.05)')} 0%, transparent 50%),
-                          radial-gradient(circle at 40% 80%, ${useColorModeValue('rgba(16, 185, 129, 0.1)', 'rgba(16, 185, 129, 0.05)')} 0%, transparent 50%)`}
+              background={`
+                radial-gradient(ellipse at top left, ${useColorModeValue('rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.08)')} 0%, transparent 50%),
+                radial-gradient(ellipse at top right, ${useColorModeValue('rgba(147, 51, 234, 0.12)', 'rgba(147, 51, 234, 0.06)')} 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, ${useColorModeValue('rgba(16, 185, 129, 0.12)', 'rgba(16, 185, 129, 0.06)')} 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, ${useColorModeValue('rgba(59, 130, 246, 0.1)', 'rgba(59, 130, 246, 0.05)')} 0%, transparent 50%)
+              `}
+              animation="gradient-shift 8s ease-in-out infinite"
+              css={{
+                '@keyframes gradient-shift': {
+                  '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+                  '50%': { opacity: 0.8, transform: 'scale(1.05)' },
+                },
+              }}
             />
             
-            {/* Floating Particles */}
-            {[...Array(20)].map((_, i) => (
+            {/* Enhanced Floating Particles */}
+            {[...Array(30)].map((_, i) => (
               <Box
                 key={i}
                 position="absolute"
-                w="4px"
-                h="4px"
-                bg={`hsl(${220 + i * 15}, 70%, 60%)`}
+                w={`${2 + (i % 3)}px`}
+                h={`${2 + (i % 3)}px`}
+                bg={`hsl(${200 + i * 12}, ${60 + (i % 3) * 15}%, ${50 + (i % 4) * 10}%)`}
                 borderRadius="50%"
-                opacity={0.6}
-                animation={`float-${i % 4} ${4 + (i % 3)}s ease-in-out infinite`}
-                left={`${10 + (i * 4.5) % 80}%`}
-                top={`${10 + (i * 3) % 80}%`}
+                opacity={0.4 + (i % 3) * 0.2}
+                animation={`enhanced-float-${i % 5} ${3 + (i % 4)}s ease-in-out infinite`}
+                left={`${5 + (i * 3.2) % 90}%`}
+                top={`${5 + (i * 2.8) % 90}%`}
                 css={{
-                  '@keyframes float-0': {
-                    '0%, 100%': { transform: 'translateY(0px) rotate(0deg)', opacity: 0.6 },
-                    '50%': { transform: 'translateY(-20px) rotate(180deg)', opacity: 1 },
+                  '@keyframes enhanced-float-0': {
+                    '0%, 100%': { transform: 'translateY(0px) rotate(0deg)', opacity: 0.4 },
+                    '50%': { transform: 'translateY(-30px) rotate(180deg)', opacity: 0.8 },
                   },
-                  '@keyframes float-1': {
-                    '0%, 100%': { transform: 'translateX(0px) rotate(0deg)', opacity: 0.4 },
-                    '50%': { transform: 'translateX(20px) rotate(180deg)', opacity: 0.8 },
+                  '@keyframes enhanced-float-1': {
+                    '0%, 100%': { transform: 'translateX(0px) rotate(0deg)', opacity: 0.3 },
+                    '50%': { transform: 'translateX(25px) rotate(180deg)', opacity: 0.7 },
                   },
-                  '@keyframes float-2': {
-                    '0%, 100%': { transform: 'translateY(0px) translateX(0px)', opacity: 0.5 },
-                    '33%': { transform: 'translateY(-15px) translateX(10px)', opacity: 0.9 },
-                    '66%': { transform: 'translateY(10px) translateX(-10px)', opacity: 0.7 },
+                  '@keyframes enhanced-float-2': {
+                    '0%, 100%': { transform: 'translateY(0px) translateX(0px) scale(1)', opacity: 0.5 },
+                    '33%': { transform: 'translateY(-20px) translateX(15px) scale(1.2)', opacity: 0.9 },
+                    '66%': { transform: 'translateY(15px) translateX(-15px) scale(0.8)', opacity: 0.6 },
                   },
-                  '@keyframes float-3': {
-                    '0%, 100%': { transform: 'scale(1) rotate(0deg)', opacity: 0.3 },
-                    '50%': { transform: 'scale(1.5) rotate(360deg)', opacity: 0.8 },
+                  '@keyframes enhanced-float-3': {
+                    '0%, 100%': { transform: 'scale(1) rotate(0deg)', opacity: 0.4 },
+                    '50%': { transform: 'scale(1.8) rotate(360deg)', opacity: 0.8 },
+                  },
+                  '@keyframes enhanced-float-4': {
+                    '0%, 100%': { transform: 'translateY(0px) rotate(0deg) scale(1)', opacity: 0.5 },
+                    '25%': { transform: 'translateY(-10px) rotate(90deg) scale(1.1)', opacity: 0.7 },
+                    '50%': { transform: 'translateY(-20px) rotate(180deg) scale(1.3)', opacity: 0.9 },
+                    '75%': { transform: 'translateY(-10px) rotate(270deg) scale(1.1)', opacity: 0.7 },
                   },
                 }}
               />
             ))}
             
-            {/* Quantum Symbols */}
+            {/* Quantum State Vectors and Symbols */}
             <Box
               position="absolute"
-              top="20%"
-              left="15%"
-              fontSize="60px"
-              opacity={0.2}
-              animation="quantum-pulse 3s ease-in-out infinite"
+              top="12%"
+              left="8%"
+              fontSize="72px"
+              opacity={0.15}
+              color={useColorModeValue('blue.500', 'blue.300')}
+              animation="quantum-pulse-enhanced 4s ease-in-out infinite"
               css={{
-                '@keyframes quantum-pulse': {
-                  '0%, 100%': { transform: 'scale(1) rotate(0deg)', opacity: 0.2 },
-                  '50%': { transform: 'scale(1.1) rotate(10deg)', opacity: 0.4 },
+                '@keyframes quantum-pulse-enhanced': {
+                  '0%, 100%': { transform: 'scale(1) rotate(0deg)', opacity: 0.15 },
+                  '50%': { transform: 'scale(1.15) rotate(5deg)', opacity: 0.3 },
                 },
               }}
             >
@@ -2923,16 +3508,19 @@ const LibraryPanel: React.FC = () => {
             
             <Box
               position="absolute"
-              top="60%"
-              right="20%"
-              fontSize="50px"
-              opacity={0.15}
-              animation="quantum-spin 4s linear infinite"
+              top="65%"
+              right="12%"
+              fontSize="65px"
+              opacity={0.12}
+              color={useColorModeValue('purple.500', 'purple.300')}
+              animation="quantum-spin-enhanced 6s linear infinite"
               css={{
-                '@keyframes quantum-spin': {
-                  '0%': { transform: 'rotate(0deg)', opacity: 0.15 },
+                '@keyframes quantum-spin-enhanced': {
+                  '0%': { transform: 'rotate(0deg)', opacity: 0.12 },
+                  '25%': { transform: 'rotate(90deg)', opacity: 0.25 },
                   '50%': { transform: 'rotate(180deg)', opacity: 0.3 },
-                  '100%': { transform: 'rotate(360deg)', opacity: 0.15 },
+                  '75%': { transform: 'rotate(270deg)', opacity: 0.25 },
+                  '100%': { transform: 'rotate(360deg)', opacity: 0.12 },
                 },
               }}
             >
@@ -2941,88 +3529,158 @@ const LibraryPanel: React.FC = () => {
             
             <Box
               position="absolute"
-              top="30%"
-              right="15%"
-              fontSize="40px"
-              opacity={0.25}
-              animation="quantum-float 5s ease-in-out infinite"
+              top="25%"
+              right="8%"
+              fontSize="55px"
+              opacity={0.18}
+              color={useColorModeValue('green.500', 'green.300')}
+              animation="quantum-float-enhanced 7s ease-in-out infinite"
               css={{
-                '@keyframes quantum-float': {
-                  '0%, 100%': { transform: 'translateY(0px)', opacity: 0.25 },
-                  '50%': { transform: 'translateY(-30px)', opacity: 0.4 },
+                '@keyframes quantum-float-enhanced': {
+                  '0%, 100%': { transform: 'translateY(0px) rotate(0deg)', opacity: 0.18 },
+                  '33%': { transform: 'translateY(-25px) rotate(10deg)', opacity: 0.35 },
+                  '66%': { transform: 'translateY(-40px) rotate(-5deg)', opacity: 0.25 },
                 },
               }}
             >
               ∫
             </Box>
             
-            {/* Main Content */}
-            <VStack justify="center" align="center" h="100%" spacing={6} position="relative" zIndex={10}>
-              <Box textAlign="center">
+            <Box
+              position="absolute"
+              top="45%"
+              left="5%"
+              fontSize="48px"
+              opacity={0.2}
+              color={useColorModeValue('indigo.500', 'indigo.300')}
+              animation="quantum-matrix 5s ease-in-out infinite"
+              css={{
+                '@keyframes quantum-matrix': {
+                  '0%, 100%': { transform: 'scale(1) rotateY(0deg)', opacity: 0.2 },
+                  '50%': { transform: 'scale(1.2) rotateY(180deg)', opacity: 0.4 },
+                },
+              }}
+            >
+              ℋ
+            </Box>
+            
+            <Box
+              position="absolute"
+              bottom="15%"
+              left="15%"
+              fontSize="42px"
+              opacity={0.16}
+              color={useColorModeValue('teal.500', 'teal.300')}
+              animation="quantum-superposition 6s ease-in-out infinite"
+              css={{
+                '@keyframes quantum-superposition': {
+                  '0%, 100%': { transform: 'translateX(0px) scale(1)', opacity: 0.16 },
+                  '50%': { transform: 'translateX(20px) scale(1.3)', opacity: 0.32 },
+                },
+              }}
+            >
+              ⟨φ|
+            </Box>
+            
+            {/* Central Content Area */}
+            <VStack 
+              justify="center" 
+              align="center" 
+              h="100%" 
+              spacing={8} 
+              position="relative" 
+              zIndex={10}
+              px={8}
+              pt="10vh"
+            >
+              <VStack spacing={4} textAlign="center">
                 <Heading 
-                  size="3xl" 
+                  size="4xl" 
                   color={titleColor} 
-                  mb={4}
-                  animation="title-glow 2s ease-in-out infinite alternate"
+                  fontWeight="800"
+                  letterSpacing="-0.02em"
+                  animation="enhanced-title-glow 3s ease-in-out infinite alternate"
                   css={{
-                    '@keyframes title-glow': {
-                      '0%': { textShadow: `0 0 5px ${useColorModeValue('rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.6)')}` },
-                      '100%': { textShadow: `0 0 20px ${useColorModeValue('rgba(59, 130, 246, 0.5)', 'rgba(59, 130, 246, 0.8)')}, 0 0 30px ${useColorModeValue('rgba(147, 51, 234, 0.3)', 'rgba(147, 51, 234, 0.5)')}` },
+                    '@keyframes enhanced-title-glow': {
+                      '0%': { 
+                        textShadow: `0 0 10px ${useColorModeValue('rgba(59, 130, 246, 0.4)', 'rgba(59, 130, 246, 0.7)')}, 0 0 20px ${useColorModeValue('rgba(59, 130, 246, 0.2)', 'rgba(59, 130, 246, 0.4)')}` 
+                      },
+                      '100%': { 
+                        textShadow: `0 0 20px ${useColorModeValue('rgba(147, 51, 234, 0.6)', 'rgba(147, 51, 234, 0.9)')}, 0 0 40px ${useColorModeValue('rgba(16, 185, 129, 0.4)', 'rgba(16, 185, 129, 0.6)')}, 0 0 60px ${useColorModeValue('rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.5)')}` 
+                      },
                     },
                   }}
                 >
-                  Select a Topic!
+                  Welcome to QuantumFlow Library!
                 </Heading>
                 
-                <Box
-                  display="inline-block"
-                  animation="wave 2.5s ease-in-out infinite"
+                <Text 
+                  color={textColor} 
+                  fontSize="2xl" 
+                  fontWeight="400"
+                  pt="2vh"
+                  maxW="600px"
+                  lineHeight="1.6"
+                  animation="content-fade 2s ease-in-out infinite alternate"
+                  
                   css={{
-                    '@keyframes wave': {
-                      '0%, 100%': { transform: 'translateY(0px)' },
-                      '25%': { transform: 'translateY(-10px)' },
-                      '50%': { transform: 'translateY(0px)' },
-                      '75%': { transform: 'translateY(-5px)' },
+                    '@keyframes content-fade': {
+                      '0%': { opacity: 0.7 },
+                      '100%': { opacity: 1 },
                     },
                   }}
                 >
-                  <Text color={textColor} fontSize="2xl" fontWeight="500">
-                    Click a topic to view details
-                  </Text>
-                </Box>
-              </Box>
-              
-              <Text 
-                color={titleColor} 
-                fontSize="xl" 
-                fontStyle="italic" 
-                textAlign="center"
-                fontWeight="500"
-                animation="text-glow 3s ease-in-out infinite alternate"
-                css={{
-                  '@keyframes text-glow': {
-                    '0%': { textShadow: `0 0 10px ${useColorModeValue('rgba(59, 130, 246, 0.4)', 'rgba(59, 130, 246, 0.7)')}` },
-                    '100%': { textShadow: `0 0 20px ${useColorModeValue('rgba(147, 51, 234, 0.6)', 'rgba(147, 51, 234, 0.8)')}, 0 0 30px ${useColorModeValue('rgba(16, 185, 129, 0.4)', 'rgba(16, 185, 129, 0.6)')}` },
-                  },
-                }}
-              >
-                Where curiosity meets quantum...let the exploration begin! ✨
-              </Text>
-              
-              {/* Animated Arrow Hint */}
-              <Box
-                animation="arrow-bounce 2s ease-in-out infinite"
-                css={{
-                  '@keyframes arrow-bounce': {
-                    '0%, 100%': { transform: 'translateX(0px)', opacity: 0.6 },
-                    '50%': { transform: 'translateX(-10px)', opacity: 1 },
-                  },
-                }}
-              >
-                <Text fontSize="lg" color={textColor} opacity={0.7}>
-                  ← Explore topics on the left
+                  Explore the fascinating world of quantum computing!
                 </Text>
-              </Box>
+              </VStack>
+              
+              <VStack spacing={6} w="100%" maxW="500px">
+                <Text 
+                  color={titleColor} 
+                  fontSize="2xl" 
+                  fontStyle="italic" 
+                  textAlign="center"
+                  fontWeight="500"
+                  animation="enhanced-text-glow 4s ease-in-out infinite alternate"
+                  css={{
+                    '@keyframes enhanced-text-glow': {
+                      '0%': { textShadow: `0 0 15px ${useColorModeValue('rgba(59, 130, 246, 0.5)', 'rgba(59, 130, 246, 0.8)')}` },
+                      '100%': { textShadow: `0 0 25px ${useColorModeValue('rgba(147, 51, 234, 0.7)', 'rgba(147, 51, 234, 0.9)')}, 0 0 35px ${useColorModeValue('rgba(16, 185, 129, 0.5)', 'rgba(16, 185, 129, 0.7)')}` },
+                    },
+                  }}
+                >
+                  Select a topic to begin your quantum journey
+                </Text>
+                
+                {/* Enhanced Arrow with Animation */}
+                <HStack
+                  spacing={3}
+                  animation="enhanced-arrow-bounce 2.5s ease-in-out infinite"
+                  css={{
+                    '@keyframes enhanced-arrow-bounce': {
+                      '0%, 100%': { transform: 'translateX(0px)', opacity: 0.8 },
+                      '50%': { transform: 'translateX(-15px)', opacity: 1 },
+                    },
+                  }}
+                >
+                  <Text fontSize="lg" color={textColor} opacity={0.8} fontWeight="500">
+                    ← Dive into topics on the left
+                  </Text>
+                  <Box 
+                    w="3px" 
+                    h="3px" 
+                    bg={titleColor} 
+                    borderRadius="50%"
+                    animation="pulse 2s ease-in-out infinite"
+                    css={{
+                      '@keyframes pulse': {
+                        '0%, 100%': { transform: 'scale(1)', opacity: 0.6 },
+                        '50%': { transform: 'scale(1.5)', opacity: 1 },
+                      },
+                    }}
+                  />
+                </HStack>
+              </VStack>
             </VStack>
           </Box>
         )}
