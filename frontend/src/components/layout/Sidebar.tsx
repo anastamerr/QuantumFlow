@@ -1,6 +1,6 @@
 import { Box, VStack, Heading, Divider, Text, useColorModeValue, InputGroup, Input, InputLeftElement, Icon } from '@chakra-ui/react'
 import { useDispatch, useSelector } from 'react-redux'
-import { addQubit, removeQubit, selectQubits } from '../../store/slices/circuitSlice'
+import { addQubit, removeQubit, renameQubit, selectQubits } from '../../store/slices/circuitSlice'
 import GateItem from '../gates/GateItem'
 import { gateLibrary } from '../../utils/gateLibrary'
 import { SearchIcon } from '@chakra-ui/icons'
@@ -28,6 +28,10 @@ const Sidebar = () => {
       const lastQubitId = Math.max(...qubits.map(q => q.id))
       dispatch(removeQubit(lastQubitId))
     }
+  }
+
+  const handleQubitNameChange = (id: number, name: string) => {
+    dispatch(renameQubit({ id, name }))
   }
 
   // Filter gates based on search query
@@ -119,6 +123,26 @@ const Sidebar = () => {
             </Box>
           </VStack>
         </Box>
+
+        {qubits.length > 0 && (
+          <Box>
+            <Heading size="sm" mb={2}>Qubit Names</Heading>
+            <VStack spacing={2} align="stretch">
+              {qubits.map(qubit => (
+                <Input
+                  key={qubit.id}
+                  size="sm"
+                  value={qubit.name}
+                  onChange={(e) => handleQubitNameChange(qubit.id, e.target.value)}
+                  placeholder={`q${qubit.id}`}
+                  bg={searchBg}
+                  borderColor={searchBorder}
+                  _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
+                />
+              ))}
+            </VStack>
+          </Box>
+        )}
 
         <Divider />
 

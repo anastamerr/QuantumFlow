@@ -118,18 +118,12 @@ const ProjectPanel: React.FC = () => {
     setFloatingProject(idea)
     setFloatingStep(0)
     setFloatingOpen(true)
-    // For the half-adder project, show default qubits all zero inside the floating card
-    if (idea.id === 'quantum-half-adder') {
-      try { setFirstShot('0000') } catch {}
-    }
   }
 
   const closeFloating = () => {
     setFloatingOpen(false)
     setFloatingProject(null)
     setFloatingStep(0)
-    // Clear the temporary first-shot display when the floating panel closes
-    try { setFirstShot(null) } catch {}
   }
 
   // Music playback state
@@ -137,8 +131,6 @@ const ProjectPanel: React.FC = () => {
   const audioCtxRef = useRef<AudioContext | null>(null)
   // Simulation-provided bits (enabled after backend simulation)
   const [simulationBits, setSimulationBits] = useState<number[] | null>(null)
-  // Store the raw first-shot bitstring (e.g. '0101') so we can display per-qubit measurements
-  const [firstShot, setFirstShot] = useState<string | null>(null)
 
   const playNotes = async (notes: number[], tempo = 400) => {
     if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -215,8 +207,6 @@ const ProjectPanel: React.FC = () => {
         if (Array.isArray(mem) && mem.length > 0) {
           // Concatenate shot bitstrings into a flat bit array
           let bitsFromMem: number[] = []
-          // Save the first shot string for display (raw as returned by backend)
-          try { setFirstShot(typeof mem[0] === 'string' ? mem[0] : String(mem[0])) } catch {}
           for (const s of mem) {
             if (typeof s !== 'string') continue
             for (let i = 0; i < s.length; i++) {
@@ -246,8 +236,6 @@ const ProjectPanel: React.FC = () => {
         }
         // chosen is a bitstring like '0101' (MSB..LSB) — convert to array of bits
         const bits = chosen.split('').map(ch => ch === '1' ? 1 : 0)
-        // Save the sampled single-shot string for display
-        try { setFirstShot(chosen) } catch {}
         // Expand to needed bits by repeating
         const targetBits = 16 * 3
         const out: number[] = []
@@ -437,24 +425,6 @@ const ProjectPanel: React.FC = () => {
           </HStack>
 
                 <Box p={4}>
-                    {/* Half-adder measurement display (shows only in floating panel) */}
-                    {floatingProject.id === 'quantum-half-adder' && firstShot && (
-                      <Box mb={3}>
-                        <Text fontSize="sm" color={useColorModeValue('gray.600','gray.400')} mb={2}>First shot (measurements):</Text>
-                        <HStack spacing={2} mb={2}>
-                          {['Carry','Sum','A','B'].map((name, i) => {
-                            const s = firstShot as string
-                            const idx = s.length - 1 - i
-                            const val = (idx >= 0 && idx < s.length) ? s[idx] : 'NA'
-                            return (
-                              <Box key={name} p={1} px={2} borderRadius="md" bg={useColorModeValue('gray.50','gray.700')}>
-                                <Text fontSize="xs" fontWeight="bold">{name}: {val}</Text>
-                              </Box>
-                            )
-                          })}
-                        </HStack>
-                      </Box>
-                    )}
             {(() => {
               const steps = getProjectSteps(floatingProject.id)
               const step = steps[floatingStep] || { title: '', text: '' }

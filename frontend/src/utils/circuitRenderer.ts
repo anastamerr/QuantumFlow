@@ -139,7 +139,9 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
         // Draw Toffoli gate
         const control1 = gate.controls && gate.controls.length > 0 ? gate.controls[0] : 0
         const control2 = gate.controls && gate.controls.length > 1 ? gate.controls[1] : 1
-        const target = gate.targets && gate.targets.length > 0 ? gate.targets[0] : 2
+        const target = gate.targets && gate.targets.length > 0
+          ? gate.targets[0]
+          : (gate.qubit !== undefined ? gate.qubit : 2)
         const y1 = padding + (control1 * wireSpacing)
         const y2 = padding + (control2 * wireSpacing)
         const y3 = padding + (target * wireSpacing)

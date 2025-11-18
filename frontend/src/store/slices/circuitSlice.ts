@@ -130,6 +130,14 @@ export const circuitSlice = createSlice({
     extendCircuit: (state, action: PayloadAction<number>) => {
       state.maxPosition = action.payload
     },
+    renameQubit: (state, action: PayloadAction<{ id: number; name: string }>) => {
+      const { id, name } = action.payload
+      const target = state.qubits.find(q => q.id === id)
+      if (target) {
+        const trimmed = name !== undefined ? name.trim() : ''
+        target.name = trimmed.length > 0 ? trimmed : `q${id}`
+      }
+    },
     addGates: (state, action: PayloadAction<Omit<Gate, 'id'>[]>) => {
       const newGates = action.payload.map((gate, index) => ({
         ...gate,
@@ -182,6 +190,7 @@ export const {
   importCircuit,
   extendCircuit,
   addGates,
+    renameQubit,
 } = circuitSlice.actions
 
 // Export selectors

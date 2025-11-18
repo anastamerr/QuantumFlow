@@ -45,8 +45,11 @@ const GateParamsPanel = () => {
       }
       
       // Set targets
-      if (selectedGate.targets) {
+      if (selectedGate.targets && selectedGate.targets.length > 0) {
         setTargets([...selectedGate.targets])
+      } else if (selectedGate.type === 'toffoli') {
+        // Default the Toffoli target to the qubit where the gate was dropped
+        setTargets([selectedGate.qubit])
       } else {
         setTargets([])
       }
@@ -70,38 +73,41 @@ const GateParamsPanel = () => {
   // Validate gate configuration (check for invalid qubit selections)
   const validateGateConfiguration = useCallback(() => {
     if (!selectedGate) return true;
-    
-    // Get the main qubit (which functions as the control for CNOT/CZ gates)
+
     const mainQubit = selectedGate.qubit;
-    
-    // Check for target and control conflicts
-    let errorMessage = null;
-    
-    // Check if a target is the same as the control qubit
-    if (targets.includes(mainQubit)) {
+    const gateType = selectedGate.type;
+    const isCNOTorCZ = gateType === 'cnot' || gateType === 'cz';
+
+    const activeTargets = targets.filter((target) => target !== undefined && target !== null);
+    const activeControls = controls.filter((control) => control !== undefined && control !== null);
+
+    let errorMessage: string | null = null;
+
+    if (isCNOTorCZ && activeTargets.includes(mainQubit)) {
       errorMessage = "Target qubit cannot be the same as the control qubit";
     }
-    
-    // Check if targets include controls
-    for (const control of controls) {
-      if (targets.includes(control)) {
-        errorMessage = "Target and control qubits must be different";
-        break;
+
+    if (!errorMessage) {
+      for (const control of activeControls) {
+        if (activeTargets.includes(control)) {
+          errorMessage = "Target and control qubits must be different";
+          break;
+        }
       }
     }
-    
-    // Check for duplicate targets
-    const uniqueTargets = new Set(targets);
-    if (uniqueTargets.size !== targets.length) {
+
+    if (!errorMessage && new Set(activeTargets).size !== activeTargets.length) {
       errorMessage = "All target qubits must be unique";
     }
-    
-    // Check for duplicate controls
-    const uniqueControls = new Set(controls);
-    if (uniqueControls.size !== controls.length) {
+
+    if (!errorMessage && new Set(activeControls).size !== activeControls.length) {
       errorMessage = "All control qubits must be unique";
     }
-    
+
+    if (!errorMessage && gateType === 'toffoli' && activeTargets.length === 0) {
+      errorMessage = "Select a target qubit for the Toffoli gate";
+    }
+
     setValidationError(errorMessage);
     return errorMessage === null;
   }, [selectedGate, targets, controls]);
@@ -168,44 +174,54 @@ const GateParamsPanel = () => {
   };
   
   // Get available qubits (excluding already used qubits)
-  const getAvailableQubitsForTarget = () => {
+  const getAvailableQubitsForTarget = (targetIndex: number) => {
     if (!selectedGate) return qubits;
-    
-    // For targets, exclude the main qubit (control) and any existing controls
+
     const usedQubits = new Set<number>();
-    
-    // Add main qubit (which is the control for CNOT/CZ)
-    if (selectedGate.qubit !== undefined) {
+
+    // Exclude other selected targets to keep them unique
+    targets.forEach((target, idx) => {
+      if (idx !== targetIndex && target !== undefined && target !== null) {
+        usedQubits.add(target);
+      }
+    });
+
+    // Exclude currently selected controls
+    controls.forEach(control => {
+      if (control !== undefined && control !== null) {
+        usedQubits.add(control);
+      }
+    });
+
+    // For CNOT/CZ, exclude the main control qubit from target choices
+    const isCNOTorCZ = selectedGate.type === 'cnot' || selectedGate.type === 'cz';
+    if (isCNOTorCZ && selectedGate.qubit !== undefined) {
       usedQubits.add(selectedGate.qubit);
     }
-    
-    // Add all control qubits
-    if (selectedGate.controls) {
-      selectedGate.controls.forEach(control => usedQubits.add(control));
-    }
-    
-    // Return qubits that are not already used
+
     return qubits.filter(qubit => !usedQubits.has(qubit.id));
   };
   
   // Get available qubits for control
-  const getAvailableQubitsForControl = () => {
+  const getAvailableQubitsForControl = (controlIndex: number) => {
     if (!selectedGate) return qubits;
     
-    // For controls, exclude the main qubit and any targets
     const usedQubits = new Set<number>();
     
-    // Add main qubit
-    if (selectedGate.qubit !== undefined) {
-      usedQubits.add(selectedGate.qubit);
-    }
+    // Exclude all selected targets from control choices
+    targets.forEach(target => {
+      if (target !== undefined && target !== null) {
+        usedQubits.add(target);
+      }
+    });
     
-    // Add all target qubits
-    if (selectedGate.targets) {
-      selectedGate.targets.forEach(target => usedQubits.add(target));
-    }
+    // Exclude other controls to keep them unique
+    controls.forEach((control, idx) => {
+      if (idx !== controlIndex && control !== undefined && control !== null) {
+        usedQubits.add(control);
+      }
+    });
     
-    // Return qubits that are not already used
     return qubits.filter(qubit => !usedQubits.has(qubit.id));
   };
   
@@ -215,9 +231,16 @@ const GateParamsPanel = () => {
     const newTargets = [...targets];
     newTargets[index] = value;
     setTargets(newTargets);
+
+    const updates: Record<string, any> = { targets: newTargets };
+    if (gateDefinition?.id === 'toffoli') {
+      // Keep the gate's primary qubit aligned with the selected target so
+      // simulation/rendering treat the same qubit as the target line.
+      updates.qubit = value;
+    }
     
     // Only update the Redux store if configuration is valid
-    updateGateWithDebounce({ targets: newTargets });
+    updateGateWithDebounce(updates);
   };
   
   // Handle control change
@@ -358,7 +381,7 @@ const GateParamsPanel = () => {
                 <Text fontSize="sm" fontWeight="medium">Target Qubits:</Text>
                 {Array.from({ length: gateDefinition.targets }).map((_, index) => {
                   // Get available targets for this selector
-                  const availableQubits = getAvailableQubitsForTarget();
+                  const availableQubits = getAvailableQubitsForTarget(index);
                   
                   // Skip if no available qubits
                   if (availableQubits.length === 0) {
@@ -419,7 +442,7 @@ const GateParamsPanel = () => {
                 <Text fontSize="sm" fontWeight="medium">Control Qubits:</Text>
                 {Array.from({ length: gateDefinition.controls }).map((_, index) => {
                   // Get available controls for this selector
-                  const availableQubits = getAvailableQubitsForControl();
+                  const availableQubits = getAvailableQubitsForControl(index);
                   
                   // Skip if no available qubits
                   if (availableQubits.length === 0) {

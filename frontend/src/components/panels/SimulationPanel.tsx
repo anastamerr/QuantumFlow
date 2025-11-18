@@ -445,7 +445,7 @@ const SimulationPanel = () => {
                 }}
                 fontWeight="medium"
               >
-                Analysis
+                Output
               </Tab>
               <Tab 
                 isDisabled={!simulationComplete || !memory}
@@ -456,7 +456,7 @@ const SimulationPanel = () => {
                 }}
                 fontWeight="medium"
               >
-                Output
+                Analysis
               </Tab>
               <Tab 
                 isDisabled={!simulationComplete || !results}
@@ -687,19 +687,23 @@ const SimulationPanel = () => {
                           <Thead>
                             <Tr>
                               <Th>Shot #</Th>
-                              {Array.from({ length: qubits.length }).map((_, qi) => (
-                                <Th key={qi} isNumeric={false}>Q{qi}</Th>
-                              ))}
+                              {qubits.map((qubit, qi) => {
+                                const trimmedName = (qubit?.name ?? '').trim()
+                                const label = trimmedName.length > 0 ? trimmedName : `q${qubit?.id ?? qi}`
+                                return (
+                                  <Th key={qubit.id ?? qi} isNumeric={false}>{label}</Th>
+                                )
+                              })}
                             </Tr>
                           </Thead>
                           <Tbody>
                             {memory.slice(0, Math.min(16, memory.length)).map((s, si) => (
                               <Tr key={si}>
                                 <Td>{si + 1}</Td>
-                                {Array.from({ length: qubits.length }).map((_, qi) => {
+                                {qubits.map((qubit, qi) => {
                                   const idx = (s as string).length - 1 - qi
                                   const val = (idx >= 0 && idx < (s as string).length) ? (s as string)[idx] : 'NA'
-                                  return <Td key={qi} fontFamily="monospace">{val}</Td>
+                                  return <Td key={qubit.id ?? qi} fontFamily="monospace">{val}</Td>
                                 })}
                               </Tr>
                             ))}
