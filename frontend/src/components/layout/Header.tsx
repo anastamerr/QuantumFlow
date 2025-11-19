@@ -1,15 +1,22 @@
 ﻿import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack } from "@chakra-ui/react"
 import { useDispatch, useSelector } from "react-redux"
-import { setActivePanel, selectActivePanel, toggleTutorial } from "../../store/slices/uiSlice"
+import { setActivePanel, selectActivePanel, toggleTutorial, openChat, closeChat, selectIsChatOpen } from "../../store/slices/uiSlice"
 import { clearCircuit, selectCircuitName } from "../../store/slices/circuitSlice"
 
 const Header = () => {
   const dispatch = useDispatch()
   const activePanel = useSelector(selectActivePanel)
+  const isChatOpen = useSelector(selectIsChatOpen)
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
 
   const handlePanelChange = (panel: "circuit" | "code" | "simulation" | "export" | "algorithms" | "puzzles" | "stats" | "chat") => {
+    if (panel === "chat") {
+      // Open/close chat independently — do not change activePanel
+      if (isChatOpen) dispatch(closeChat())
+      else dispatch(openChat())
+      return
+    }
     dispatch(setActivePanel(panel))
   }
 
@@ -91,7 +98,7 @@ const Header = () => {
           </Button>
           <Button
             size="sm"
-            variant={activePanel === "chat" ? "solid" : "ghost"}
+            variant={isChatOpen ? "solid" : "ghost"}
             onClick={() => handlePanelChange("chat")}
             colorScheme="orange"
           >

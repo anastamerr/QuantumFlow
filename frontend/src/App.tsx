@@ -7,7 +7,7 @@ import Sidebar from "./components/layout/Sidebar"
 import CircuitCanvas from "./components/canvas/CircuitCanvas"
 import CodePanel from "./components/panels/CodePanel"
 import { useSelector } from "react-redux"
-import { selectActivePanel, selectIsFullView } from "./store/slices/uiSlice"
+import { selectActivePanel, selectIsFullView, selectIsChatOpen } from "./store/slices/uiSlice"
 import SimulationPanel from "./components/panels/SimulationPanel"
 import ExportPanel from "./components/panels/ExportPanel"
 import GateParamsPanel from "./components/panels/GateParamsPanel"
@@ -22,6 +22,7 @@ import type { RootState } from "@/store"
 function App() {
   const activePanel = useSelector(selectActivePanel)
   const isFullView = useSelector(selectIsFullView)
+  const isChatOpen = useSelector(selectIsChatOpen)
   const toast = useToast()
   const panelBg = useColorModeValue("white", "gray.800")
   const borderColor = useColorModeValue("gray.200", "gray.600")
@@ -152,11 +153,28 @@ function App() {
                 {activePanel === "algorithms" && <AlgorithmLibraryPanel />}
                 {activePanel === "puzzles" && <PuzzlesPanel />}
                 {activePanel === "stats" && <StatsPanel />}
-                {activePanel === "chat" && <ChatPanel />}
               </ResizablePanel>
             </Flex>
           </Box>
-            {/* Gate parameters panel - will only render when a gate is selected */}
+
+          {/* Right-side AI Chat panel (fixed width, not resizable) */}
+          {isChatOpen && (
+            <Box
+              display={{ base: "none", md: "block" }}
+              width={{ base: "0", md: "360px" }}
+              minWidth={{ base: "0", md: "320px" }}
+              borderLeft="1px solid"
+              borderColor={borderColor}
+              bg={panelBg}
+              p={3}
+              flexShrink={0}
+              overflow="hidden"
+            >
+              <ChatPanel />
+            </Box>
+          )}
+
+          {/* Gate parameters panel - will only render when a gate is selected */}
           <GateParamsPanel />
         </Flex>
         

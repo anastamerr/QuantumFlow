@@ -24,102 +24,102 @@ import type { RootState } from "@/store"
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 type PuzzleState = {
+  id: number
   description: string
   qubits: number
   targetMatrix: string
   isSolved: boolean
   attemptCount: number
   difficulty: "Beginner" | "Intermediate" | "Advanced"
+  constraints?: Record<string, any>
 }
-
-const quantumPuzzles: PuzzleState[] = [
-  {
-    description: "Replicate the effect of the Pauli-X (NOT) gate on a single qubit, but without using an X gate. Use two gates only.",
-    qubits: 1,
-    targetMatrix: "Pauli X",
-    isSolved: false,
-    attemptCount: 0,
-    difficulty: "Beginner",
-  },
-  {
-    description: "Apply a gate that flips the phase of the angle state. The state angle should remain unchanged. Use one gate.",
-    qubits: 1,
-    targetMatrix: "Pauli Z",
-    isSolved: false,
-    attemptCount: 0,
-    difficulty: "Beginner",
-  },
-  {
-    description: "Create the identity operation (do nothing) using exactly two different gates. The resulting matrix must be the Identity Matrix (I).",
-    qubits: 1,
-    targetMatrix: "Identity",
-    isSolved: false,
-    attemptCount: 0,
-    difficulty: "Beginner",
-  },
-  {
-    description: "Build a circuit that swaps the states of two qubits (Qubit 0 and Qubit 1) using **three CNOT gates** and no other gates.",
-    qubits: 2,
-    targetMatrix: "Swap",
-    isSolved: false,
-    attemptCount: 0,
-    difficulty: "Intermediate",
-  },
-  {
-    description: "Construct a circuit that rotates a qubit by an angle of pi/4 around the Z-axis, but only if the control qubit (Qubit 0) is in the angle state. This is a Controlled-pi/4 gate.",
-    qubits: 2,
-    targetMatrix: "Controlled Rz",
-    isSolved: false,
-    attemptCount: 0,
-    difficulty: "Advanced",
-  },
-  {
-    description: "Simulate a Toffoli (CCNOT) gate using only single-qubit gates and CNOT gates. This will require several steps and three qubits.",
-    qubits: 3,
-    targetMatrix: "Toffoli",
-    isSolved: false,
-    attemptCount: 0,
-    difficulty: "Advanced",
-  },
-]
 
 export default function PuzzlesPanel(): JSX.Element {
   const toast = useToast()
   const [currentPuzzleID, setCurrentPuzzleID] = React.useState(0)
+  const [puzzles, setPuzzles] = React.useState<PuzzleState[]>([])
   const [showTarget, setShowTarget] = React.useState(false)
   const [showDetails, setShowDetails] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(false)
+  const [isLoadingPuzzles, setIsLoadingPuzzles] = React.useState(true)
 
-  const puzzle = quantumPuzzles[currentPuzzleID]
   const userCircuitGates = useSelector((state: RootState) => state.circuit.gates)
   const numQubits = useSelector((state: RootState) => state.circuit.qubits.length)
 
+  // Fetch puzzles from backend on component mount
+  React.useEffect(() => {
+    const fetchPuzzles = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/puzzles`)
+        if (!response.ok) {
+          throw new Error("Failed to fetch puzzles")
+        }
+        const data = await response.json()
+        const puzzlesWithState = data.puzzles.map((p: typeof data.puzzles[0]) => ({
+          ...p,
+          // ensure constraints field is preserved (may be undefined)
+          constraints: p.constraints ?? undefined,
+          isSolved: false,
+          attemptCount: 0,
+        }))
+        setPuzzles(puzzlesWithState)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load puzzles. Using default puzzles.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        })
+        console.error("Error fetching puzzles:", error)
+      } finally {
+        setIsLoadingPuzzles(false)
+      }
+    }
+
+    fetchPuzzles()
+  }, [toast])
+
+  // Keyboard navigation for puzzle switching
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") {
-        setCurrentPuzzleID((id) => (id + 1) % quantumPuzzles.length)
+        setCurrentPuzzleID((id) => (id + 1) % puzzles.length)
       } else if (e.key === "ArrowLeft") {
-        setCurrentPuzzleID((id) => (id - 1 + quantumPuzzles.length) % quantumPuzzles.length)
+        setCurrentPuzzleID((id) => (id - 1 + puzzles.length) % puzzles.length)
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  }, [puzzles.length])
+
+  if (isLoadingPuzzles || puzzles.length === 0) {
+    return (
+      <Box p={4} height="100%" display="flex" alignItems="center" justifyContent="center">
+        <VStack spacing={4}>
+          <Spinner size="lg" />
+          <Text>Loading puzzles...</Text>
+        </VStack>
+      </Box>
+    )
+  }
+
+  const puzzle = puzzles[currentPuzzleID]
 
   const switchPuzzleRight = () => {
-    setCurrentPuzzleID((id) => (id + 1) % quantumPuzzles.length)
+    setCurrentPuzzleID((id) => (id + 1) % puzzles.length)
     setShowTarget(false)
     setShowDetails(false)
   }
 
   const switchPuzzleLeft = () => {
-    setCurrentPuzzleID((id) => (id - 1 + quantumPuzzles.length) % quantumPuzzles.length)
+    setCurrentPuzzleID((id) => (id - 1 + puzzles.length) % puzzles.length)
     setShowTarget(false)
     setShowDetails(false)
   }
 
-  const solvedCount = quantumPuzzles.filter((p) => p.isSolved).length
-  const progressPct = Math.round((solvedCount / quantumPuzzles.length) * 100)
+  const solvedCount = puzzles.filter((p) => p.isSolved).length
+  const progressPct = Math.round((solvedCount / puzzles.length) * 100)
 
   const handleCheckSolution = async () => {
     if (userCircuitGates.length === 0) {
@@ -160,7 +160,9 @@ export default function PuzzlesPanel(): JSX.Element {
           duration: 5000,
           isClosable: true,
         })
-        puzzle.isSolved = true
+        const updatedPuzzles = [...puzzles]
+        updatedPuzzles[currentPuzzleID].isSolved = true
+        setPuzzles(updatedPuzzles)
       } else {
         toast({
           title: "Incorrect Solution",
@@ -170,7 +172,9 @@ export default function PuzzlesPanel(): JSX.Element {
           isClosable: true,
         })
       }
-      puzzle.attemptCount += 1
+      const updatedPuzzles = [...puzzles]
+      updatedPuzzles[currentPuzzleID].attemptCount += 1
+      setPuzzles(updatedPuzzles)
     } catch (error) {
       toast({
         title: "Validation Error",
@@ -181,7 +185,6 @@ export default function PuzzlesPanel(): JSX.Element {
       })
     } finally {
       setIsLoading(false)
-      setCurrentPuzzleID((id) => id)
     }
   }
 
@@ -205,26 +208,75 @@ export default function PuzzlesPanel(): JSX.Element {
   }
 
   const handleMarkSolved = () => {
-    puzzle.isSolved = true
+    const updatedPuzzles = [...puzzles]
+    updatedPuzzles[currentPuzzleID].isSolved = true
+    setPuzzles(updatedPuzzles)
     toast({
       title: "Marked solved",
       description: "Puzzle flagged as solved.",
       status: "success",
       duration: 2000,
     })
-    setCurrentPuzzleID((id) => id)
   }
 
   const handleResetPuzzle = () => {
-    puzzle.isSolved = false
-    puzzle.attemptCount = 0
+    const updatedPuzzles = [...puzzles]
+    updatedPuzzles[currentPuzzleID].isSolved = false
+    updatedPuzzles[currentPuzzleID].attemptCount = 0
+    setPuzzles(updatedPuzzles)
     toast({
       title: "Reset",
       description: "Puzzle attempts cleared and marked active.",
       status: "info",
       duration: 2000,
     })
-    setCurrentPuzzleID((id) => id)
+  }
+
+  const renderConstraints = (c: Record<string, any> | undefined) => {
+    if (!c) return <Text fontSize="sm" color="gray.500">No special constraints for this puzzle.</Text>
+    return (
+      <VStack align="start" spacing={1} mt={2}>
+        {c.avoid_gates && c.avoid_gates.length > 0 && (
+          <Text fontSize="sm">Avoid gates: {c.avoid_gates.join(", ")}</Text>
+        )}
+        {c.blacklist && c.blacklist.length > 0 && (
+          <Text fontSize="sm">Blacklisted: {c.blacklist.join(", ")}</Text>
+        )}
+        {c.allowed_gates && c.allowed_gates.length > 0 && (
+          <Text fontSize="sm">Allowed gates: {c.allowed_gates.join(", ")}</Text>
+        )}
+        {typeof c.max_total_gates !== "undefined" && c.max_total_gates !== null && (
+          <Text fontSize="sm">Max total gates: {c.max_total_gates}</Text>
+        )}
+        {typeof c.min_total_gates !== "undefined" && c.min_total_gates !== null && (
+          <Text fontSize="sm">Min total gates: {c.min_total_gates}</Text>
+        )}
+        {c.exact_counts && (
+          <Text fontSize="sm">
+            Exact counts:{" "}
+            {Object.entries(c.exact_counts)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(", ")}
+          </Text>
+        )}
+        {c.require_different_gates && <Text fontSize="sm">Require distinct gates (no duplicates)</Text>}
+        {/* show any other constraint keys not rendered above */}
+        {Object.keys(c)
+          .filter((k) => ![
+            "avoid_gates",
+            "blacklist",
+            "allowed_gates",
+            "max_total_gates",
+            "min_total_gates",
+            "exact_counts",
+            "require_different_gates",
+            "limits",
+          ].includes(k))
+          .map((k) => (
+            <Text key={k} fontSize="xs" color="gray.500">{k}: {JSON.stringify((c as any)[k])}</Text>
+          ))}
+      </VStack>
+    )
   }
 
   return (
@@ -240,7 +292,7 @@ export default function PuzzlesPanel(): JSX.Element {
         </HStack>
         <Spacer />
         <HStack spacing={3} width={{ base: "40%", md: "30%" }}>
-          <Text fontSize="sm" whiteSpace="nowrap">{solvedCount}/{quantumPuzzles.length} solved</Text>
+          <Text fontSize="sm" whiteSpace="nowrap">{solvedCount}/{puzzles.length} solved</Text>
           <Progress value={progressPct} size="sm" flex="1" borderRadius="md" />
         </HStack>
       </HStack>
@@ -270,8 +322,10 @@ export default function PuzzlesPanel(): JSX.Element {
           <Collapse in={showDetails} animateOpacity>
             <Box mt={3}>
               <Divider mb={3} />
-              <Text fontSize="sm" color="gray.600" _dark={{ color: "gray.400" }}>
-                Tip: Build and test your circuit on the canvas. When you think it matches the target, click "Check Solution".
+              <Heading size="sm" mb={2}>Details & Constraints</Heading>
+              {renderConstraints(puzzle.constraints)}
+              <Text fontSize="sm" color="gray.600" _dark={{ color: "gray.400" }} mt={3}>
+                Tip: Build and test your circuit on the canvas. When you think it matches the target, click "Check Solution". Ps: don't use the ChatBot ;)
               </Text>
             </Box>
           </Collapse>
