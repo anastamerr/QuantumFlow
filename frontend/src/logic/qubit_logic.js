@@ -123,7 +123,9 @@ export const playCardLogic = (currentState, playerId, cardId) => {
     let newHand = [...player.hand];
     const playedCard = newHand.splice(cardIndex, 1)[0];
     
-    let newPos = state.ballPosition;
+    let newPos = state.ballPosition;          // logical end position
+    let visiblePos = state.ballPosition;      // what we show while dice is rolling
+
     let desc = '';
     let roll = state.lastDieRoll;
     let shouldFreeze = false;
@@ -140,67 +142,84 @@ export const playCardLogic = (currentState, playerId, cardId) => {
     if (playedCard.type === QubitCardType.MEASURE) {
         if ([QubitPosition.PLUS, QubitPosition.MINUS, QubitPosition.PLUS_I, QubitPosition.MINUS_I].includes(newPos)) {
             const outcome = rollDie();
-            newPos = outcome.pos;
+            newPos = outcome.pos;        // logical result 0/1
+            visiblePos = newPos;         // show 0/1 while rolling
             roll = outcome.val;
             desc = `Measured! Collapsed to ${newPos}`;
             shouldFreeze = true;
         } else {
             desc = 'Measurement on basis state (No change).';
+            visiblePos = newPos;
         }
     } else {
         const oldPos = newPos;
         newPos = applyGate(playedCard.type, oldPos);
         desc = `Played ${playedCard.type}: ${oldPos} → ${newPos}`;
+        visiblePos = newPos;             // default: show where we moved
     }
 
     let newLastAction = desc;
-    const preRollPos = state.ballPosition; // Save for visual freeze
 
     // 2. Check Scoring
     const opponentId = playerId === 1 ? 2 : 1;
     const opponent = { ...players[opponentId] };
 
     if (newPos === player.endzone) {
-        // TOUCHDOWN (Player reached opponent's goal)
+        // TOUCHDOWN (as you currently define it)
+        const scoringPos = newPos;       // this is '+' or '-'
+        visiblePos = scoringPos;         // IMPORTANT: freeze on scoring +/- during dice
+
         player.touchdowns += 1;
-        newLastAction += " TOUCHDOWN!";
-        
+        players[playerId] = player;
+
         const kick = rollDie();
-        newPos = kick.pos;
+        const resetPos = kick.pos;       // where ball goes AFTER roll
+        newPos = resetPos;
         roll = kick.val;
-        newLastAction += ` Reset to ${newPos}.`;
+        newLastAction += ` TOUCHDOWN! Reset to ${resetPos}.`;
         shouldFreeze = true;
+
     } else if (newPos === opponent.endzone) {
-        // SAFETY (Player reached OWN goal -> Opponent scores)
+        // SAFETY (as you currently define it)
+        const scoringPos = newPos;       // '+' or '-'
+        visiblePos = scoringPos;         // freeze on scoring +/- during dice
+
         opponent.touchdowns += 1;
-        players[opponentId] = opponent; // Commit opponent update
-        newLastAction += ` SAFETY! ${opponent.name} scores!`;
-        
+        players[opponentId] = opponent;
+
         const kick = rollDie();
-        newPos = kick.pos;
+        const resetPos = kick.pos;
+        newPos = resetPos;
         roll = kick.val;
-        newLastAction += ` Reset to ${newPos}.`;
+        newLastAction += ` SAFETY! ${opponent.name} scores! Reset to ${resetPos}.`;
         shouldFreeze = true;
     }
 
     // Game Over Check
-    const isOver = newDeck.length === 0 && players[1].hand.length === 0 && players[2].hand.length === 0;
+    const isOver =
+        newDeck.length === 0 &&
+        players[1].hand.length === 0 &&
+        players[2].hand.length === 0;
+
     if (isOver) newLastAction += " [GAME OVER]";
 
     // Construct Result State
     let result = { 
-        ...state, deck: newDeck, players, 
-        lastDieRoll: roll, is_over: isOver 
+        ...state,
+        deck: newDeck,
+        players,
+        lastDieRoll: roll,
+        is_over: isOver
     };
 
     if (shouldFreeze) {
         // Defer update
-        result.ballPosition = preRollPos; // Freeze visual position
+        result.ballPosition = visiblePos;              // <-- KEY CHANGE: show scoring +/- (or 0/1 for Meas)
         result.isDiceRolling = true;
         result.rollTrigger = (state.rollTrigger || 0) + 1;
         result.lastAction = 'Rolling...';
         result.pendingMove = {
-            newPos: newPos,
+            newPos: newPos,                            // final 0/1 position after roll
             nextPid: nextPid,
             newLastAction: newLastAction,
             updatedPlayers: players,
@@ -216,6 +235,7 @@ export const playCardLogic = (currentState, playerId, cardId) => {
     
     return result;
 };
+
 
 export const getCpuMoveCardId = (state) => {
     const computer = state.players[2];
