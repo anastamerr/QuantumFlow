@@ -29,6 +29,8 @@ import {
   clearError,
 } from '@/store/slices/qubitTouchdownSlice'
 import { QubitBoard } from './QubitBoard'
+import QubitTutorialModal from "@/components/canvas/QubitTutorialModal";
+import RulesTutorialModal from "@/components/canvas/RulesTutorialModal";
 import { QubitGameControls } from './QubitGameControls'
 import { getCpuMoveCardId, CPU_DELAY } from '../../logic/qubit_logic'
 
@@ -39,7 +41,9 @@ export default function QubitTouchdownPage({ onBack }: { onBack: () => void }) {
   const cpuTimerRef = useRef<any>(null)
 
   const [mode, setMode] = useState<'PVP' | 'PVC'>('PVC')
-  const [isRulesOpen, setIsRulesOpen] = useState(false)
+  const [isRulesTutorialOpen, setIsRulesTutorialOpen] = useState(false);
+  const [isPhysicsOpen, setIsPhysicsOpen] = useState(false);
+  const [highlightTag, setHighlightTag] = useState<'none' | 'card-backs' | 'card-fronts' | 'board' | 'measurement'>('none');
   const [isEndModalOpen, setIsEndModalOpen] = useState(false)
 
   const bgPage = useColorModeValue('gray.900', 'gray.900')
@@ -186,8 +190,11 @@ export default function QubitTouchdownPage({ onBack }: { onBack: () => void }) {
           <Button size="xs" colorScheme="green" onClick={() => handleStartGame(mode)}>
             New Game
           </Button>
-          <Button size="xs" variant="outline" onClick={() => setIsRulesOpen(true)}>
-            Rules
+          <Button size="xs" colorScheme="blue" variant="outline" onClick={() => setIsRulesTutorialOpen(true)}>
+            How to play
+          </Button>
+          <Button size="xs" colorScheme="blue" variant="outline" onClick={() => setIsPhysicsOpen(true)}>
+            The Physics of the Qubit Touchdown
           </Button>
           <Button size="xs" variant="ghost" onClick={onBack}>
             Exit
@@ -217,30 +224,6 @@ export default function QubitTouchdownPage({ onBack }: { onBack: () => void }) {
           />
         </Box>
       </Flex>
-
-      {/* RULES MODAL */}
-      <Modal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} size="lg">
-        <ModalOverlay />
-        <ModalContent bg="gray.700" color="white">
-          <ModalHeader>Rules</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            <VStack align="stretch" spacing={3}>
-              <Text fontSize="sm">
-                <strong>Start:</strong> Roll die (0/1). Player 1&apos;s goal is the opposite pole.
-              </Text>
-              <Text fontSize="sm">
-                <strong>Score:</strong> Move the ball into the OPPONENT&apos;S endzone to score.
-                Moving it into your own endzone is a Safety (opponent scores).
-              </Text>
-              <Text fontSize="sm">
-                <strong>Measurement card:</strong> If the ball is on +, −, +i, or −i, it collapses
-                it to 0 or 1 (with a die roll). On 0 or 1, it does nothing.
-              </Text>
-            </VStack>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
 
       {/* WINNING / END-OF-GAME MODAL */}
       <Modal
@@ -310,6 +293,18 @@ export default function QubitTouchdownPage({ onBack }: { onBack: () => void }) {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      <QubitTutorialModal 
+        isOpen={isPhysicsOpen} 
+        onClose={() => setIsPhysicsOpen(false)} 
+      />
+
+      <RulesTutorialModal
+        isOpen={isRulesTutorialOpen}
+        onClose={() => setIsRulesTutorialOpen(false)}
+      />
+
+
     </Box>
   )
 }
