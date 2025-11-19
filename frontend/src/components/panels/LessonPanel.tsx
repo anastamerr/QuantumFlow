@@ -41,6 +41,7 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../store';
 import { selectGates, selectQubits } from '../../store/slices/circuitSlice';
+import { setCurrentLesson, setCurrentLessonStep, clearCurrentLesson } from '../../store/slices/uiSlice';
 import { QML_LESSONS, getLessonById, getNextLesson, LessonCircuit, LessonStep as LessonStepType } from '../../utils/qmlLessons';
 import { quantumApi } from '../../lib/quantumApi';
 import CircuitCanvas from '../canvas/CircuitCanvas';
@@ -74,6 +75,7 @@ const convertParamsToRadians = (params: Record<string, any>) => {
 };
 
 export const LessonPanel: React.FC = () => {
+  const dispatch = useDispatch();
   const [lessonState, setLessonState] = useState<LessonState>({
     active: false,
     lessonId: null,
@@ -115,6 +117,11 @@ export const LessonPanel: React.FC = () => {
         completedSteps: [],
         lessonData: lesson,
       });
+
+      // Update UI slice and localStorage for AI chatbot awareness
+      dispatch(setCurrentLesson({ lessonId, step: 1 }));
+      localStorage.setItem('currentLessonId', lessonId);
+      localStorage.setItem('currentLessonStep', '1');
 
       // Get initial step guidance
       const guidance = await quantumApi.getLessonStepGuidance(lessonId, 1, lesson);
@@ -167,11 +174,17 @@ export const LessonPanel: React.FC = () => {
       if (response.correct) {
         // Step completed!
         const newCompletedSteps = [...lessonState.completedSteps, lessonState.currentStep];
+        const nextStep = response.next_step || lessonState.currentStep;
+        
         setLessonState((prev) => ({
           ...prev,
           completedSteps: newCompletedSteps,
-          currentStep: response.next_step || prev.currentStep,
+          currentStep: nextStep,
         }));
+
+        // Update UI slice and localStorage
+        dispatch(setCurrentLessonStep(nextStep));
+        localStorage.setItem('currentLessonStep', nextStep.toString());
 
         toast({
           title: response.praise || '🎉 Perfect!',
@@ -183,6 +196,11 @@ export const LessonPanel: React.FC = () => {
 
         // Check if lesson is complete
         if (response.lesson_complete) {
+          // Clear lesson state
+          dispatch(clearCurrentLesson());
+          localStorage.removeItem('currentLessonId');
+          localStorage.removeItem('currentLessonStep');
+          
           toast({
             title: response.celebration || '🏆 Lesson Complete!',
             description: 'Amazing work! Ready for the next challenge?',

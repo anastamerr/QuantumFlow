@@ -45,8 +45,10 @@ import {
   setNumQubits,
   toggleChatVisibility,
 } from '../../store/slices/aiChatSlice';
-import { addGates, selectQubits, selectGates } from '../../store/slices/circuitSlice';
+import { addGates, selectQubits, selectGates, addGate } from '../../store/slices/circuitSlice';
+import { selectActivePanel, selectCurrentLessonId, selectCurrentLessonStep } from '../../store/slices/uiSlice';
 import { generateCircuitFromChat } from '../../lib/quantumApi';
+import { QML_LESSONS, getLessonById } from '../../utils/qmlLessons';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ModernCodeBlock from '../common/ModernCodeBlock';
@@ -67,6 +69,9 @@ const AIChatbot = () => {
   const numQubits = useSelector(selectChatNumQubits);
   const currentQubits = useSelector(selectQubits);
   const currentGates = useSelector(selectGates);
+  const activePanel = useSelector(selectActivePanel);
+  const currentLessonId = useSelector(selectCurrentLessonId);
+  const currentLessonStep = useSelector(selectCurrentLessonStep);
   
   const [inputValue, setInputValue] = useState('');
   const [isDragging, setIsDragging] = useState(false);
@@ -83,6 +88,48 @@ const AIChatbot = () => {
   const aiMsgBg = useColorModeValue('gray.50', 'gray.700');
   const inputBg = useColorModeValue('gray.50', 'gray.700');
   const shadowColor = useColorModeValue('lg', 'dark-lg');
+  
+  // Helper function to detect current lesson context
+  const detectLessonContext = () => {
+    // Check if we're in lesson mode by looking at Redux state first, then localStorage as fallback
+    const isLessonActive = activePanel === 'lessons' || currentLessonId || localStorage.getItem('currentLessonId');
+    if (!isLessonActive) return null;
+    
+    const lessonId = currentLessonId || localStorage.getItem('currentLessonId');
+    const step = currentLessonStep || parseInt(localStorage.getItem('currentLessonStep') || '1');
+    
+    if (lessonId) {
+      const lesson = getLessonById(lessonId);
+      return {
+        lesson,
+        currentStep: step,
+        isActive: true
+      };
+    }
+    return null;
+  };
+  
+  // Helper function to append gates instead of replacing
+  const appendGatesToCircuit = (newGates: any[]) => {
+    newGates.forEach(gate => {
+      // Generate proper gate structure for circuit
+      const gateToAdd = {
+        name: gate.name || gate.type || gate.gateType,
+        symbol: (gate.type || gate.gateType).toUpperCase(),
+        description: `${gate.type || gate.gateType} gate`,
+        category: 'AI Generated',
+        color: '#3182ce',
+        type: gate.type || gate.gateType,
+        qubit: gate.qubit !== undefined ? gate.qubit : (gate.targets?.[0] ?? 0),
+        position: gate.position !== undefined ? gate.position : currentGates.length,
+        params: gate.params || {},
+        targets: gate.targets,
+        controls: gate.controls,
+      };
+      
+      dispatch(addGate(gateToAdd));
+    });
+  };
   
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -136,17 +183,33 @@ const AIChatbot = () => {
     dispatch(setError(null));
     
     try {
-      // Prepare circuit context
+      // Detect lesson context
+      const lessonContext = detectLessonContext();
+      
+      // Prepare enhanced circuit context with lesson information
       const circuitContext = {
         qubits: currentQubits.length,
         gates: currentGates.map(g => ({
           type: g.type,
+          gateType: g.type, // Add both for backend compatibility
           qubit: g.qubit,
           position: g.position,
           params: g.params,
           targets: g.targets,
           controls: g.controls,
         })),
+        lessonContext: lessonContext ? {
+          isInLesson: true,
+          lessonId: lessonContext.lesson?.id,
+          lessonTitle: lessonContext.lesson?.title,
+          currentStep: lessonContext.currentStep,
+          totalSteps: lessonContext.lesson?.steps.length || 0,
+          difficulty: lessonContext.lesson?.difficulty,
+          currentStepData: lessonContext.lesson?.steps[lessonContext.currentStep - 1],
+          expectedNextGate: lessonContext.lesson?.steps[lessonContext.currentStep - 1]?.expectedGate,
+        } : {
+          isInLesson: false
+        }
       };
       
       // Prepare conversation history (last 5 messages for context)
@@ -155,7 +218,7 @@ const AIChatbot = () => {
         content: msg.content,
       }));
       
-      // Call backend API with full context
+      // Call backend API with full context including lesson information
       const response = await generateCircuitFromChat(
         userMessage, 
         numQubits,
@@ -163,8 +226,25 @@ const AIChatbot = () => {
         conversationHistory
       );
       
-      // Build rich AI response with educational content
+      // Build rich AI response with educational content and lesson awareness
       let aiResponse = response.response || response.explanation;
+      
+      // Add lesson-specific context if in a lesson
+      if (lessonContext) {
+        const stepInfo = lessonContext.lesson?.steps[lessonContext.currentStep - 1];
+        if (stepInfo) {
+          aiResponse = `📚 **Lesson Context:** ${lessonContext.lesson?.title} - Step ${lessonContext.currentStep}\n\n${aiResponse}`;
+          
+          // Add step-specific guidance
+          if (userMessage.toLowerCase().includes('help') || userMessage.toLowerCase().includes('stuck')) {
+            aiResponse += `\n\n💡 **Step Guidance:** ${stepInfo.instruction}\n\n🔍 **Hint:** ${stepInfo.hint}`;
+          }
+          
+          if (stepInfo.educationalNote) {
+            aiResponse += `\n\n${stepInfo.educationalNote}`;
+          }
+        }
+      }
       
       // Add action indicator
       if (response.action_taken) {
@@ -207,27 +287,73 @@ const AIChatbot = () => {
         });
       }
       
-      // Add gates to circuit if generated
+      // Add gates to circuit if generated - APPEND, don't replace!
       if (response.gates && response.gates.length > 0) {
-        // Map gates to ensure all required properties are present
-        const mappedGates = response.gates.map((gate: any, index: number) => ({
-          name: gate.type,
-          symbol: gate.type.toUpperCase(),
-          description: `${gate.type} gate`,
-          category: 'AI Generated',
-          color: '#3182ce',
-          type: gate.type,
-          qubit: gate.qubit !== undefined ? gate.qubit : 0,
-          position: gate.position !== undefined ? gate.position : currentGates.length + index,
-          params: gate.params,
-          targets: gate.targets,
-          controls: gate.controls,
-        }));
-        dispatch(addGates(mappedGates));
+        console.log('🔍 Backend returned gates:', response.gates);
+        
+        // Filter out invalid gates and fix CNOT gates
+        const validGates = response.gates.filter((gate: any) => {
+          if (!gate.type && !gate.gateType) {
+            console.warn('Skipping gate without type:', gate);
+            return false;
+          }
+          return true;
+        }).map((gate: any, index: number) => {
+          const gateType = gate.type || gate.gateType;
+          console.log(`🔧 Processing gate: ${gateType}`, gate);
+          
+          // Fix CNOT gate structure - map both cx and cnot
+          if (gateType.toUpperCase() === 'CNOT' || gateType.toUpperCase() === 'CX') {
+            // Extract control and target from gate data
+            const controlQubit = gate.controls?.[0] ?? 0;
+            const targetQubit = gate.targets?.[0] ?? 1;
+            
+            const cnotGate = {
+              name: 'CNOT',
+              symbol: 'CX',
+              description: 'CNOT gate',
+              category: 'AI Generated',
+              color: '#3182ce',
+              type: 'cnot', // Use 'cnot' to match gate library
+              qubit: controlQubit, // Control qubit goes in main qubit field
+              position: gate.position !== undefined ? gate.position : (currentGates.length + index),
+              params: gate.params || {},
+              targets: [targetQubit], // Target qubit(s)
+              controls: [controlQubit], // Control qubit(s)
+            };
+            console.log('✅ Created CNOT gate:', cnotGate);
+            return cnotGate;
+          }
+          
+          // Handle other gates normally
+          const normalGate = {
+            name: gate.name || gateType,
+            symbol: gateType.toUpperCase(),
+            description: `${gateType} gate`,
+            category: 'AI Generated',
+            color: '#3182ce',
+            type: gateType.toLowerCase(), // Ensure lowercase for consistency
+            qubit: gate.qubit !== undefined ? gate.qubit : (gate.targets?.[0] ?? 0),
+            position: gate.position !== undefined ? gate.position : (currentGates.length + index),
+            params: gate.params || {},
+            targets: gate.targets,
+            controls: gate.controls,
+          };
+          console.log(`✅ Created ${gateType} gate:`, normalGate);
+          return normalGate;
+        });
+        
+        console.log('🎯 Final processed gates:', validGates);
+        
+        // Append gates one by one to preserve existing circuit
+        validGates.forEach(gate => {
+          console.log('🚀 Adding gate to circuit:', gate);
+          dispatch(addGate(gate));
+        });
         
         toast({
           title: '🎉 Gates Added!',
-          description: `Added ${response.gates.length} gate${response.gates.length > 1 ? 's' : ''} to your circuit`,
+          description: `Added ${validGates.length} gate${validGates.length > 1 ? 's' : ''} to your circuit`,
           status: 'success',
           duration: 3000,
           isClosable: true,
@@ -387,17 +513,18 @@ const AIChatbot = () => {
                         AI Circuit Assistant 🤖
                       </Text>
                       <Text fontSize="sm" mt={2} mb={4}>
-                        I can help you build quantum circuits! I'm not just here to suggest - I'll actually add gates, build circuits, and help you learn.
+                        I can help you build quantum circuits! I'll add gates to your existing circuit and provide lesson-specific guidance when you're in a lesson.
                       </Text>
                       <Divider my={4} />
                       <VStack align="start" spacing={2} fontSize="xs" color="gray.400">
                         <Text fontWeight="bold" fontSize="sm" color="gray.500">✨ Try asking me to:</Text>
                         <Text>• "Add a Hadamard gate"</Text>
                         <Text>• "Create a Bell state"</Text>
-                        <Text>• "Build a GHZ state"</Text>
+                        <Text>• "Help with current lesson step"</Text>
+                        <Text>• "What's the next gate I need?"</Text>
                         <Text>• "Analyze my circuit"</Text>
-                        <Text>• "What can I do next?"</Text>
                         <Text>• "Explain the X gate"</Text>
+                        <Text>• "Add a CNOT gate from qubit 0 to 1"</Text>
                       </VStack>
                     </Box>
                   </ScaleFade>
@@ -477,22 +604,7 @@ const AIChatbot = () => {
             {/* Input area */}
             <Box p={3} borderTop="1px solid" borderColor={borderColor}>
               <VStack spacing={2}>
-                <HStack spacing={2} width="100%">
-                  <Text fontSize="xs" color="gray.500">Qubits:</Text>
-                  <HStack spacing={1}>
-                    {[2, 3, 4, 5].map((n) => (
-                      <Button
-                        key={n}
-                        size="xs"
-                        variant={numQubits === n ? 'solid' : 'outline'}
-                        colorScheme="blue"
-                        onClick={() => dispatch(setNumQubits(n))}
-                      >
-                        {n}
-                      </Button>
-                    ))}
-                  </HStack>
-                </HStack>
+                
                 
                 <HStack spacing={2} width="100%">
                   <Input

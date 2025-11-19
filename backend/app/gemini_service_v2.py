@@ -59,7 +59,7 @@ class EducationalGeminiService:
         
         Args:
             user_message: User's message or request
-            current_circuit: Current state of the circuit
+            current_circuit: Current state of the circuit (includes lesson context)
             conversation_history: Previous messages for context
             
         Returns:
@@ -68,12 +68,18 @@ class EducationalGeminiService:
         if not self.available:
             return self._fallback_response(user_message, current_circuit)
         
+        # Extract lesson context if provided
+        lesson_context = current_circuit.get("lessonContext") if current_circuit else None
+        
         # Analyze current circuit
         circuit_analysis = ""
         suggestions = []
+        lesson_info = ""
         
         if current_circuit:
-            self.assistant.get_circuit_state(current_circuit)
+            # Remove lesson context for circuit analysis to avoid confusion
+            circuit_data = {k: v for k, v in current_circuit.items() if k != "lessonContext"}
+            self.assistant.get_circuit_state(circuit_data)
             analysis = self.assistant.analyze_circuit()
             
             if analysis.get("status") == "empty":
@@ -89,6 +95,19 @@ class EducationalGeminiService:
 """
                 suggestions = analysis.get('suggestions', [])
         
+        # Add lesson context information
+        if lesson_context and lesson_context.get("isInLesson"):
+            lesson_info = f"""
+🎓 LESSON MODE ACTIVE: {lesson_context.get('lessonTitle', 'Unknown Lesson')}
+Current Step: {lesson_context.get('currentStep', 1)} of {lesson_context.get('totalSteps', '?')}
+Difficulty: {lesson_context.get('difficulty', 'unknown')}
+
+Current Step Details:
+{self._format_lesson_step(lesson_context.get('currentStepData', {}))}
+
+Expected Next Gate: {self._format_expected_gate(lesson_context.get('expectedNextGate', {}))}
+"""
+        
         # Build conversation context
         context_messages = ""
         if conversation_history:
@@ -98,7 +117,7 @@ class EducationalGeminiService:
                 for msg in recent
             ])
         
-        # Create educational prompt
+        # Create educational prompt with lesson awareness
         system_prompt = f"""You are an enthusiastic and HELPFUL quantum computing teacher! 🎓⚛️
 
 Your teaching philosophy:
@@ -108,14 +127,20 @@ Your teaching philosophy:
 4. **Teach by Doing**: Build circuits together, explain as you go
 5. **Step-by-Step Support**: Break down complex tasks into manageable steps
 6. **Error Prevention**: Validate before adding, warn about issues, suggest fixes
+7. **Lesson Awareness**: When in lesson mode, guide them toward the current step goal
 
 {circuit_analysis}
+
+{lesson_info if lesson_info else ''}
 
 {'Recent conversation:' + context_messages if context_messages else ''}
 
 {'Current suggestions for the user:' + chr(10) + chr(10).join(f'• {s}' for s in suggestions) if suggestions else ''}
 
 User's message: "{user_message}"
+
+LESSON MODE GUIDELINES:
+{self._get_lesson_guidelines(lesson_context) if lesson_context and lesson_context.get("isInLesson") else ''}
 
 Your response should be in JSON format:
 {{
@@ -133,7 +158,8 @@ Available gates: h, x, y, z, s, t, cx (CNOT), rx, ry, rz, swap
 
 Gate formats:
 - Single-qubit: {{"type": "h", "qubit": 0, "position": 0}}
-- Two-qubit: {{"type": "cx", "controls": [0], "targets": [1], "position": 1}}
+- Two-qubit CNOT: {{"type": "cx", "controls": [0], "targets": [1], "position": 1}}
+  IMPORTANT: For CNOT gates, ALWAYS use "controls" and "targets" arrays
 - Rotation gates (MUST include params): {{"type": "rx", "qubit": 0, "params": {{"theta": 0.5}}, "position": 0}}
   - RX uses "theta" parameter
   - RY uses "theta" parameter  
@@ -149,10 +175,12 @@ IMPORTANT Guidelines:
 - Use position to place gates in correct order (0 = first column, 1 = second, etc.)
 - Be specific about qubit numbers and positions
 - If they say "add X" → Add it! Don't just suggest it!
+- CNOT gates: ALWAYS use {{"type": "cx", "controls": [control_qubit], "targets": [target_qubit], "position": N}}
 - Think: "How can I help them RIGHT NOW?" not "What should they do?"
 
 Examples of being helpful:
 - User: "add a hadamard gate" → Response: "Done! I've added an H gate to qubit 0..." + gates=[{{"type":"h","qubit":0,"position":0}}]
+- User: "add CNOT from qubit 0 to 1" → Response: "Adding CNOT!" + gates=[{{"type":"cx","controls":[0],"targets":[1],"position":1}}]
 - User: "add RZ gate with angle 0.3" → Response: "Added RZ rotation!" + gates=[{{"type":"rz","qubit":0,"params":{{"phi":0.3}},"position":0}}]
 - User: "make a bell state" → Response: "Let's build it together!" + gates=[{{"type":"h","qubit":0,"position":0}},{{"type":"cx","controls":[0],"targets":[1],"position":1}}]
 - User: "rotate qubit 1 by 45 degrees around Y" → Response: "Rotating!" + gates=[{{"type":"ry","qubit":1,"params":{{"theta":0.7854}},"position":0}}]
@@ -434,6 +462,67 @@ Be the helpful assistant they need!
                 "Ask me to explain any quantum gate"
             ]
         }
+    
+    def _format_lesson_step(self, step_data: Dict[str, Any]) -> str:
+        """Format lesson step information for display."""
+        if not step_data:
+            return "No step data available"
+        
+        return f"""
+• Title: {step_data.get('title', 'Unknown')}
+• Instruction: {step_data.get('instruction', 'No instruction')}
+• Hint: {step_data.get('hint', 'No hint')}
+• Educational Note: {step_data.get('educationalNote', 'No note')}
+• Why It Matters: {step_data.get('whyItMatters', 'No explanation')}
+"""
+    
+    def _format_expected_gate(self, expected_gate: Dict[str, Any]) -> str:
+        """Format expected gate information for display."""
+        if not expected_gate:
+            return "No specific gate expected"
+        
+        gate_type = expected_gate.get('gateType', 'unknown')
+        targets = expected_gate.get('targets', [])
+        controls = expected_gate.get('controls', [])
+        params = expected_gate.get('params', {})
+        
+        result = f"Type: {gate_type}"
+        if targets:
+            result += f", Targets: {targets}"
+        if controls:
+            result += f", Controls: {controls}"
+        if params:
+            result += f", Params: {params}"
+        
+        return result
+    
+    def _get_lesson_guidelines(self, lesson_context: Dict[str, Any]) -> str:
+        """Get lesson-specific guidelines for the AI."""
+        if not lesson_context or not lesson_context.get("isInLesson"):
+            return ""
+        
+        difficulty = lesson_context.get('difficulty', 'unknown')
+        current_step = lesson_context.get('currentStep', 1)
+        total_steps = lesson_context.get('totalSteps', 1)
+        
+        guidelines = f"""
+- You are helping with a {difficulty} lesson (Step {current_step}/{total_steps})
+- Focus on the current step goal and guide them toward the expected gate
+- If they ask for help, reference the lesson instruction and hint
+- Provide step-appropriate explanations (simpler for beginner, more detailed for advanced)
+- If they seem stuck, offer to add the expected gate for them
+- Celebrate when they complete steps correctly
+- Connect what they're doing to the lesson's learning objectives
+"""
+        
+        if difficulty == "beginner":
+            guidelines += "- Use simple language and focus on basic concepts\n- Explain why each gate matters\n- Be very encouraging\n"
+        elif difficulty == "intermediate":
+            guidelines += "- Include some technical details\n- Reference quantum concepts like superposition and entanglement\n- Challenge them to think about next steps\n"
+        elif difficulty == "advanced":
+            guidelines += "- Use precise technical language\n- Reference quantum algorithms and applications\n- Discuss optimization and real-world considerations\n"
+        
+        return guidelines
 
 
 # Export the main service
