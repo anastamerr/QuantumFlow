@@ -42,13 +42,13 @@ const PROJECT_IDEAS: ProjectIdea[] = [
   
   // Intermediate
   { id: "quantum-half-adder", title: "Quantum Half Adder", difficulty: "Intermediate", description: "Simulate half adders using quantum gates!", image: "/images/project images/adder.png" },
-  { id: "quantum-teleportation-demo", title: "Quantum Teleportation Tutorial", difficulty: "Intermediate", description: "Interactive teleportation demo.", image: "/images/project images/teleport.png" },
+  { id: "quantum-teleportation-demo", title: "Quantum Teleportation", difficulty: "Intermediate", description: "Send an unknown state from one qubit to another using entanglement!", image: "/images/project images/teleport.png" },
   { id: "quantum-comparator", title: "Quantum Comparator", difficulty: "Intermediate", description: "Implement a classical comparator using quantum gates!", image: "/images/project images/scale.png" },
 
   // Advanced
-  { id: "grover-oracle", title: "Grover Oracle Builder", difficulty: "Advanced", description: "Design a marked item oracle with MCX and run Grover.", image: "/images/project images/oracle.png" },
-  { id: "phase-kickback-lab", title: "Phase Kickback Lab", difficulty: "Advanced", description: "Explore phase kickback using CZ and superposition states.", image: "/images/project images/quantum.png" },
-  { id: "subtractor-2bit", title: "2-bit Subtractor", difficulty: "Advanced", description: "Compute difference and borrow using CX/CCX with clean ancillas.", image: "/images/project images/subtract.png" },
+  { id: "grover-oracle", title: "Grover Oracle Builder", difficulty: "Advanced", description: "Design a marked item oracle with MCX and run Grover!", image: "/images/project images/oracle.png" },
+  { id: "phase-kickback-lab", title: "Phase Kickback Lab", difficulty: "Advanced", description: "Explore phase kickback using CZ and superposition states!", image: "/images/project images/quantum.png" },
+  { id: "subtractor-2bit", title: "2-bit Subtractor", difficulty: "Advanced", description: "Compute difference and borrow using CX/CCX with clean ancillas!", image: "/images/project images/subtract.png" },
 ];
 
 const ProjectPanel: React.FC = () => {
@@ -124,7 +124,7 @@ const ProjectPanel: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    if (activePanel === 'projects' && floatingOpen) {
+    if (floatingOpen && ['projects', 'library', 'blochSphere'].includes(activePanel)) {
       closeFloating()
     }
   }, [activePanel, floatingOpen, closeFloating])
@@ -346,17 +346,40 @@ const ProjectPanel: React.FC = () => {
       ]
     }
 
+    if(id === 'quantum-teleportation-demo'){
+      return [
+        { text: 'Goal: Teleport an unknown state from Alice’s qubit to Bob’s qubit!' },
+        { text: 'Add 3 qubits: q0 (Alice input), q1 (Alice entangled qubit), q2 (Bob qubit)!' },
+        { text: 'Prepare the state to teleport on q0! Apply Hadamard to q0!' },
+        { text: 'Create an entangled Bell pair between q1 and q2: apply Hadamard to q1, then CNOT with q1 as control and q2 as target!' },
+        { text: 'Alice now has q0 and q1, Bob has q2!' },
+        { text: 'Next, Alice performs the Bell measurement part: apply CNOT with q0 as control and q1 as target.' },
+        { text: 'Apply Hadamard to q0! At this point, q0 and q1 are ready to be measured; their outcomes are classically correlated with Bob’s qubit q2.' },
+        { text: 'Measure q0 and q1' },
+        { text: 'Click on Simulation from the top bar!' },
+        { text: 'Click Run Simulation!' },
+        { text: 'Now inspect q2’s state. If this were a real experiment, Alice would send these two classical bits to Bob, and Bob would apply the corresponding Pauli-X/Z gates  to recover the exact original'},
+        { text: 'In a full teleportation protocol, Bob would apply Z to q2 if m1 = 1, and X to q2 if m0 = 1.' },
+        { text: 'Congratulations! You have built a quantum teleportation demo!' }];
+    }
+
     if (id === 'quantum-comparator') {
       return [
         { text: 'Goal: Compare two 2-bit numbers A1,A0  B1,B0, output 1 if A>B else 0.'},
         { text: 'Start by adding 5 qubits to the circuit, A1, A0, B1, B0, and OUT! Rename the qubits for an easier implementation!' },
-        { text: 'Add Hadamard (H) gates to all input qubits to create superposition!' },
-        { text: 'First, add CNOT gates from A0 to OUT and B0 to OUT!' },
+        { text: 'Disclaimer: Hadamard gates do not produce a deterministic output, so initializing the qubits using them does not guarantee a 100% accurate comparison.' },
+        { text: 'It is better to determine the input manually, by placing X gates where you want the input to be 1 and leaving input 0 as is.' },
+        { text: 'Choose whichever initialization method you prefer in the first block next to the input!' },
+        { text: 'Then, add an X gate on B1!' },
         { text: 'Next, add a Toffoli gate with A1 and B1 as controls and OUT as target!' },
-        { text: 'Add Measure (M) gates to all qubits!' },
+        { text: 'Then, add X gates on A1 and B0!' },
+        { text: 'Next, add MCX gate, with OUT as target and all others as input! Increase the control qubits number by clicking on the gate after placing it!' },
+        { text: 'Then, add X gates on A1 and B1!' },
+        { text: 'Next, add MCX gate, with OUT as target and all others as input!' },
+        { text: 'Then, add X gates on B0!' },
         { text: 'Click on Simulation from the top bar!' },
         { text: 'Click Run Simulation!' },
-        { text: 'Check the states of the measured qubits and verify the comparator output!' },
+        { text: 'Check the Output panel and verify the comparator output!' },
         { text: 'Congratulations! You have built a quantum comparator!' }
 
       ]
@@ -364,58 +387,73 @@ const ProjectPanel: React.FC = () => {
 
     if (id === 'grover-oracle') {
       return [
-        { text: 'Goal: mark one 3-qubit (number) basis state and amplify it using Grover Algorithim.' },
-        { text: 'Add 3 qubits q2,q1,q0 as the search register and 1 ancilla (A Temporary helper qbit for phase qubit) qA we want to set it to 1 (view next step) for phase kickback.' },
-        { text: 'Prepare uniform superposition: apply Hadamard to q2,q1,q0. Set ancilla 1/root(2)(|0>+|1>) by applying Pauli-X then Hadamard on qA.' },
-        { text: 'Choose the marked state (e.g., 101). Add Pauli-X to any of the three qubits that should be 0 in the marked pattern (for 101, add Pauli-X to (middle bit)q1 only).' },
-        { text: 'Implement the phase oracle: apply Multi-controlled Z using H on qA, to do that we do a trick, since we dont have a Multi Controlled-Z.' },
-        { text: 'Implement the phase oracle as a controlled-controlled-Z (CCZ): apply Hadamard to q0, then Toffoli with q2 and q1 as controls and q0 as target, then Hadamard to q0 again.'},
-        { text: 'Unflip the pattern:apply Pauli-X (undo the Pauli-X on q1 for 101).' },
-        { text: 'Diffusion operator: apply Hadamard to q2,q1,q0; then Pauli-X to q2,q1,q0; then Hadamard on q0, Toffoli(q2,q1 are the control bits while q0 is the target bit) then H on q0; finally Pauli-X to q2,q1,q0 and Hadamard to q2,q1,q0.' },
-        { text: 'Measure q2,q1,q0. The marked bitstring (101 in this example) should appear with the highest probability. Increase the number of shots to see this clearly in the output.' },
+        { text: 'Goal: Mark one 3-qubit (number) basis state and amplify it using Grover Algorithm!' },
+        { text: 'Add 3 qubits q2,q1,q0 as the search register and 1 ancilla (A Temporary helper qbit for phase qubit) qA!' },
+        { text: 'We want to set qA to 1 by adding an X gate then Hadamard gate!' },
+        { text: 'Prepare uniform superposition: apply Hadamard to q2,q1,q0! ' },
+        { text: 'Choose the marked state (e.g., 101). Add Pauli-X to any of the three qubits that should be 1 in the marked pattern!' },
+        { text: 'Apply Hadamard to q0, then Toffoli with q2 and q1 as controls and q0 as target, then Hadamard to q0 again!'},
+        { text: 'Apply Pauli-X (undo the Pauli-X on q1 for 010)!' },
+        { text: 'Apply Hadamard to q2,q1,q0!'},
+        { text: 'Apply Pauli-X to q2,q1,q0!'},
+        { text: 'Apply Hadamard on q0!' },
+        { text: 'Apply Toffoli with q2,q1 as the control bits while q0 is the target bit!' },
+        { text: 'Apply Hadamard on q0!' },
+        { text: 'Apply Pauli-X to q2,q1,q0!' },
+        { text: 'Finally, apply Hadamard to q2,q1,q0!' },
+        { text: 'Measure q2,q1,q0!' },
+        { text: 'Click on Simulation from the top bar!' },
+        { text: 'Click Run Simulation!' },
+        { text: 'Check the Output panel and verify the output!' },
+        { text: 'The marked bitstring should appear with the highest probability. Increase the number of shots to see this clearly in the output.' },
+        { text: 'Congratulations! You have built a Grover Oracle and run Grover\'s Algorithm!' }
       ]
     }
 
     if (id === 'phase-kickback-lab') {
       return [
-        { text: 'Goal: observe phase kickback using ControlledZ and superposition states.' },
-        { text: 'Add two qubits qC (control) and qT (target).' },
-        { text: 'Apply Hadamard to qC to prepare superposition.' },
-        { text: 'Apply Pauli-X  to qT to prepare |1⟩.' },
-        { text: 'Apply H(Hadamard) to qT to prepare |−⟩.' },
-        { text: 'Apply ControlledZ between qC and qT.' },
-        { text: 'Apply Hadamard to qT to return to Z-basis.' },
-        { text: 'Apply Hadamard to qC to interfere the kicked phase.' },
-        { text: 'Measure qC and qT and inspect outcomes.' },
-        { text: 'Replace Controlled-Z with Hadamard on qT, then Controlled-Not where qc is the control bit and qt is the target bit, then Hadamard on qT.' },
-        { text: 'Insert pauli-Z or Phase gate on qT before Controlled-Z and observe qC distribution changes.' },
+        { text: 'Goal: Observe phase kickback using Controlled-Z and superposition states.' },
+        { text: 'Add two qubits qC (control) and qT (target)!' },
+        { text: 'Apply Hadamard to qC to prepare superposition!' },
+        { text: 'Apply Pauli-X  to qT to prepare |1⟩!' },
+        { text: 'Apply H(Hadamard) to qT to prepare superposition!' },
+        { text: 'Apply Controlled-Z between qC and qT!' },
+        { text: 'Apply Hadamard to qT to return to Z-basis!' },
+        { text: 'Apply Hadamard to qC to interfere the kicked phase!' },
+        { text: 'Measure qC and qT and inspect outcomes!' },
+        { text: 'Replace Controlled-Z with Hadamard on qT, then Controlled-Not where qc is the control bit and qt is the target bit, then Hadamard on qT!' },
+        { text: 'Click on Simulation from the top bar!' },
+        { text: 'Click Run Simulation!' },
+        { text: 'Check the states of the measured qubits and verify the output!' },
+        { text: 'Insert pauli-Z or Phase gate on qT before Controlled-Z and observe qC distribution changes!' },
+        { text: 'Congratulations! You have built a phase kickback lab!' }
       ]
     }
 
     if (id === 'subtractor-2bit') {
       return [
-        { text: 'Add seven qubits: b2 ,d1, d0, a1, a0, b1, b0 (top→bottom).' },
-        { text: 'a0, a1 and b0, b1 are our numbers each having 2 bits while b2, d1,d0 are our least,most significant bits and b2 is the negative carry(underflow).' },
-        { text: 'Set input bits by applying Pauli-X to a1,a0,b1,b0 as needed. ' },
-        { text: 'A Pauli-X gate is the quantum Equivlent of a not gate and we can use it to simulate (10,01,00,11) ' },
-        { text: 'Ensure Ancillas b2,d1,d0 are initialized to |0⟩.' },
-        { text: 'Ancilla bits are Temporary qbit where we can store our carry from the subtraction.' },
-        { text: 'Apply Controlled-X a0→d0.' },
-        { text: 'Apply Controlled-X b0→d0.' },
-        { text: 'Apply Pauli-x to a0.' },
-        { text: 'Apply Toffoli a0,b0→d1.' },
-        { text: 'Apply Pauli-X to a0.' },
-        { text: 'Apply Controlled-X a1→d1.' },
-        { text: 'Apply Controlled-X b1→d1.' },
-        { text: 'Apply Pauli-X to a1.' },
-        { text: 'Apply Toffoli a1,b1→b2.' },
-        { text: 'Apply Pauli-X to a1.' },
-        { text: 'Apply Toffoli d1,a1→b2.' },
+        { text: 'Add seven qubits: B2 ,D1, D0, A1, A0, B1, B0.' },
+        { text: 'A0, A1 and B0, B1 are our numbers while B2, D1,D0 are our least, most significant bits and B2 is the negative carry (underflow).' },
+        { text: 'Set input bits by applying Pauli-X to A1, A0, B1, B0 wherever you need \'1\'!' },
+        { text: 'A Pauli-X gate is the quantum equivlent of a not gate and we can use it to simulate (10,01,00,11)! ' },
+        { text: 'Ancilla qubits are B2,D1,D0!' },
+        { text: 'Ancilla bits are temporary qbits where we can store our carry from the subtraction!' },
+        { text: 'Apply Controlled-X A0→D0!' },
+        { text: 'Apply Controlled-X B0→D0!' },
+        { text: 'Apply Pauli-X to A0!' },
+        { text: 'Apply Toffoli A0, B0→D1!' },
+        { text: 'Apply Pauli-X to A0!' },
+        { text: 'Apply Controlled-X A1→D1!' },
+        { text: 'Apply Controlled-X B1→D1!' },
+        { text: 'Apply Pauli-X to A1!' },
+        { text: 'Apply Toffoli A1, B1→B2!' },
+        { text: 'Apply Pauli-X to A1!' },
+        { text: 'Apply Toffoli D1, A1→B2!' },
         { text: 'Add Measure (M) gates to all qubits!' },
         { text: 'Click on Simulation from the top bar!' },
         { text: 'Click Run Simulation!' },
         { text: 'Check the states of the measured qubits and verify the output!' },
-        { text: 'Congratulations! You have built a quantum subtractor!Now Try Again using larger numbers!' }
+        { text: 'Congratulations! You have built a quantum subtractor!' }
 
       ]
     }
