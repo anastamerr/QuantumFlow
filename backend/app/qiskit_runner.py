@@ -69,9 +69,24 @@ def _apply_gate(qc, gate: Dict[str, Any]):
         qc.swap(q1, q2)
     # Three-qubit gate
     elif gtype == "toffoli" or gtype == "ccx":
-        if len(controls) < 2 or len(targets) < 1:
-            raise ValueError("Toffoli requires controls[0], controls[1], targets[0]")
-        qc.ccx(controls[0], controls[1], targets[0])
+        # Prefer the gate's placed `qubit` as the target (fallback to targets[0]).
+        if len(controls) < 2:
+            raise ValueError("Toffoli requires two control qubits (controls[0], controls[1])")
+        target = qubit if qubit is not None else (targets[0] if targets else None)
+        if target is None:
+            raise ValueError("Toffoli requires a target (qubit or targets[0])")
+        # Validate indices are within the circuit range
+        max_index = qc.num_qubits - 1
+        if controls[0] < 0 or controls[0] > max_index or controls[1] < 0 or controls[1] > max_index or target < 0 or target > max_index:
+            raise ValueError(f"Toffoli control/target indices out of range for circuit with {qc.num_qubits} qubits")
+        qc.ccx(controls[0], controls[1], target)
+    elif gtype == "mcx":
+        if len(controls) < 2:
+            raise ValueError("MCX gate requires at least two control qubits")
+        target = qubit if qubit is not None else (targets[0] if targets else None)
+        if target is None:
+            raise ValueError("MCX requires a target qubit (qubit or targets[0])")
+        qc.mcx(controls, target)
     else:
         # Unsupported gate types are ignored to keep execution robust
         # Alternatively, raise to notify client: raise ValueError(f"Unsupported gate type: {gtype}")
@@ -122,6 +137,12 @@ def run_circuit(
     except Exception as e:  # pragma: no cover
         raise RuntimeError(f"Failed to import Qiskit: {e}")
 
+    # Validate: if any Toffoli/CCX gates are present, ensure the circuit
+    # has at least 3 qubits (Toffoli is a 3-qubit gate and does not require 4).
+    if any((g.get("type") in ("toffoli", "ccx", "mcx")) for g in (gates or [])):
+        if int(num_qubits) < 3:
+            raise ValueError("Toffoli/CCX/MCX gates require the circuit to have at least 3 qubits")
+
     # Build circuit
     qc = QuantumCircuit(num_qubits, num_qubits)
 
@@ -160,7 +181,9 @@ def run_circuit(
     try:
         if memory:
             mem = result.get_memory()
-            memory_out = mem[0] if isinstance(mem, list) else mem
+            # Ensure we return the full memory list (one bitstring per shot) so the
+            # API response matches the ExecuteResponse model which expects a list.
+            memory_out = mem if isinstance(mem, list) else [mem]
     except Exception:
         memory_out = None
 

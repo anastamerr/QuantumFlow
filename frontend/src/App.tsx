@@ -14,6 +14,11 @@ import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
+import AIPanel from './components/panels/AIPanel'
+import LibraryPanel from './components/panels/LibraryPanel'
+import ProjectPanel from './components/panels/ProjectPanel'
+import QKDModal from './components/panels/QKDModal'
+import BlochSpherePage from './components/visualization/BlochSpherePage'
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
@@ -89,22 +94,24 @@ function App() {
       <VStack spacing={0} align="stretch" h="100vh">
         <Header />
         <Flex flex={1} overflow="hidden">
-          {/* Fixed sidebar that doesn't scroll */}
-          <Box
-            position="sticky"
-            top={0}
-            h="calc(100vh - 60px)" // Adjust based on header height
-            zIndex={10}
-            flexShrink={0}
-          >
-            <Sidebar />
-          </Box>
+          {/* Fixed sidebar that doesn't scroll (hidden when viewing Library or Bloch Sphere full-page) */}
+          {activePanel !== 'library' && activePanel !== 'blochSphere' && (
+            <Box
+              position="sticky"
+              top={0}
+              h="calc(100vh - 60px)" // Adjust based on header height
+              zIndex={10}
+              flexShrink={0}
+            >
+              <Sidebar />
+            </Box>
+          )}
           
           {/* Main content area with vertical scrolling */}
-          <Box 
+            <Box 
             flex={1} 
-            p={4} 
-            overflowY="auto" 
+            p={activePanel === 'library' || activePanel === 'projects' || activePanel === 'blochSphere' ? 0 : 4} 
+            overflowY={'auto'} 
             h="calc(100vh - 60px)" // Adjust based on header height
             css={{
               '&::-webkit-scrollbar': {
@@ -124,37 +131,56 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {!isFullView && (
-                <Box flex={1} mb={4}>
-                  <CircuitCanvas />
+              {activePanel === 'library' ? (
+                // Library occupies the full content area (replacing sidebar + canvas)
+                <Box flex={1} w="100%" p={0} h="calc(100vh - 60px)">
+                  <LibraryPanel />
                 </Box>
+              ) : activePanel === 'blochSphere' ? (
+                // Bloch Sphere page rendered as a React component
+                <Box flex={1} w="100%" p={0} h="calc(100vh - 60px)">
+                  <BlochSpherePage />
+                </Box>
+              ) : (
+                <>
+                  {!isFullView && (
+                    <Box flex={1} mb={4}>
+                      <CircuitCanvas />
+                    </Box>
+                  )}
+                  <ResizablePanel 
+                    direction="vertical" 
+                    defaultSize={isFullView ? 600 : 300} 
+                    minSize={150} 
+                    maxSize={isFullView ? 800 : 500}
+                    borderWidth={1} 
+                    borderRadius="md" 
+                    bg={panelBg}
+                    borderColor={borderColor}
+                    p={4}
+                    flex={isFullView ? 1 : undefined}
+                    height={isFullView ? "calc(100vh - 120px)" : undefined}
+                  >
+                    {activePanel === 'code' && <CodePanel />}
+                    {activePanel === 'simulation' && <SimulationPanel />}
+                    {activePanel === 'export' && <ExportPanel />}
+                    {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                    {activePanel === 'ai' && <AIPanel />}
+                  </ResizablePanel>
+                </>
               )}
-              <ResizablePanel 
-                direction="vertical" 
-                defaultSize={isFullView ? 600 : 300} 
-                minSize={150} 
-                maxSize={isFullView ? 800 : 500}
-                borderWidth={1} 
-                borderRadius="md" 
-                bg={panelBg}
-                borderColor={borderColor}
-                p={4}
-                flex={isFullView ? 1 : undefined}
-                height={isFullView ? "calc(100vh - 120px)" : undefined}
-              >
-                {activePanel === 'code' && <CodePanel />}
-                {activePanel === 'simulation' && <SimulationPanel />}
-                {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
-              </ResizablePanel>
             </Flex>
           </Box>
             {/* Gate parameters panel - will only render when a gate is selected */}
           <GateParamsPanel />
         </Flex>
         
-        {/* Tutorial panel - modal overlay */}
+          {/* Tutorial panel - modal overlay */}
         <TutorialPanel />
+        {/* Projects panel - modal overlay (renders like TutorialPanel) */}
+        <ProjectPanel />
+        {/* QKD modal overlay */}
+        <QKDModal />
       </VStack>
     </DndProvider>
   )

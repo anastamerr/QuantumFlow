@@ -4,7 +4,17 @@ import { RootState } from '../index'
 // Define types for UI state
 export interface UiState {
   selectedGateId: string | null
-  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms'
+  activePanel:
+      | 'circuit'
+      | 'code'
+      | 'simulation'
+      | 'export'
+      | 'algorithms'
+      | 'ai'
+      | 'library'
+      | 'projects'
+      | 'blochSphere'
+      | 'qkd'
   showGateParams: boolean
   codeFormat: 'qiskit' | 'cirq' | 'json'
   isDragging: boolean
@@ -12,7 +22,9 @@ export interface UiState {
   zoomLevel: number
   showTutorial: boolean
   isFullView: boolean
+  tutorialStep: number          // ⬅️ add this line
 }
+
 
 // Define the initial state
 const initialState: UiState = {
@@ -25,7 +37,9 @@ const initialState: UiState = {
   zoomLevel: 1,
   showTutorial: false,
   isFullView: false,
+  tutorialStep: 0,              // ⬅️ add this line
 }
+
 
 export const uiSlice = createSlice({
   name: 'ui',
@@ -37,6 +51,22 @@ export const uiSlice = createSlice({
     },
     setActivePanel: (state, action: PayloadAction<UiState['activePanel']>) => {
       state.activePanel = action.payload
+      // Exit full view when returning to the circuit panel
+      if (action.payload === 'circuit' && state.isFullView) {
+        state.isFullView = false
+      }
+      if (
+        action.payload === 'projects' ||
+        action.payload === 'library' ||
+        action.payload === 'blochSphere' ||
+        action.payload === 'qkd'
+      ) {
+        state.showGateParams = false
+        state.selectedGateId = null
+      }
+    },
+    setTutorialStep: (state, action: PayloadAction<number>) => {
+      state.tutorialStep = action.payload
     },
     toggleGateParams: (state) => {
       state.showGateParams = !state.showGateParams
@@ -75,6 +105,7 @@ export const {
   toggleTutorial,
   toggleFullView,
   resetUi,
+  setTutorialStep,
 } = uiSlice.actions
 
 // Export selectors
@@ -87,6 +118,7 @@ export const selectShowGrid = (state: RootState) => state.ui.showGrid
 export const selectZoomLevel = (state: RootState) => state.ui.zoomLevel
 export const selectShowTutorial = (state: RootState) => state.ui.showTutorial
 export const selectIsFullView = (state: RootState) => state.ui.isFullView
+export const selectTutorialStep = (state: RootState) => state.ui.tutorialStep
 
 // Export the reducer
 export default uiSlice.reducer

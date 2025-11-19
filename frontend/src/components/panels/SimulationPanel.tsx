@@ -20,6 +20,12 @@ import {
   Divider,
   Badge,
   Icon,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
   Grid,
   GridItem,
   Tooltip,
@@ -60,6 +66,7 @@ const SimulationPanel = () => {
   // const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   // const [autoPlay, setAutoPlay] = useState<boolean>(false);
   const [simulationComplete, setSimulationComplete] = useState<boolean>(false);
+  const [memory, setMemory] = useState<string[] | null>(null);
   
   // Store visualization instance reference
   // const visualizerRef = useRef<any>(null);
@@ -103,9 +110,9 @@ const SimulationPanel = () => {
   
   // Check if circuit has a Hadamard gate (creates superposition)
   const hasHadamard = gates.some(gate => gate.type === 'h');
-  const hasEntanglement = gates.some(gate => 
-    gate.type === 'cnot' || gate.type === 'cz' || gate.type === 'swap' || gate.type === 'toffoli'
-  );
+  const hasEntanglement = gates.some(gate =>
+    gate.type === 'cnot' || gate.type === 'cz' || gate.type === 'swap' || gate.type === 'toffoli' || gate.type === 'mcx'
+  )
   
   // Get gate counts for analysis
   const getGateStats = useCallback(() => {
@@ -113,7 +120,7 @@ const SimulationPanel = () => {
     
     gates.forEach(gate => {
       const type = gate.type;
-      stats[type] = (stats[type] || 0) + 1;
+      stats[type] = (stats[type] || 1) + 1;
     });
     
     return stats;
@@ -139,12 +146,26 @@ const SimulationPanel = () => {
           num_qubits: qubits.length,
           gates: storeGates,
           shots,
-          memory: false,
+          memory: true, // request per-shot memory so other UIs can consume sequences
         });
         setServerConnected(true);
         setResults(response.probabilities);
+        setMemory(response.memory ?? null);
         setSimulationComplete(true);
         setActiveTab(1);
+        try {
+          // Broadcast a global event so other UI components (e.g. ProjectPanel) can react
+          window.dispatchEvent(new CustomEvent('qflow:simulation:complete', {
+            detail: {
+              probabilities: response.probabilities,
+              shots,
+              memory: response.memory ?? null,
+            }
+          }));
+        } catch (e) {
+          // ignore if event dispatching fails in some environments
+          console.warn('Failed to dispatch simulation complete event', e);
+        }
       } catch (err) {
         console.error('Backend execution error:', err);
         setServerConnected(false);
@@ -424,10 +445,10 @@ const SimulationPanel = () => {
                 }}
                 fontWeight="medium"
               >
-                Analysis
+                Output
               </Tab>
               <Tab 
-                isDisabled={!simulationComplete || !results}
+                isDisabled={!simulationComplete || !memory}
                 _selected={{ 
                   color: "white", 
                   bg: "blue.500",
@@ -435,8 +456,9 @@ const SimulationPanel = () => {
                 }}
                 fontWeight="medium"
               >
-                Bloch Sphere
+                Analysis
               </Tab>
+              
             </TabList>
             
             <TabPanels>
@@ -625,6 +647,58 @@ const SimulationPanel = () => {
                             </Text>
                           </Flex>
                         </Box>
+                      </Box>
+                    )}
+                  </CardBody>
+                </Card>
+              </TabPanel>
+              
+              {/* Output Tab: show first 16 shots memory table */}
+              <TabPanel p={0} pt={3}>
+                <Card
+                  borderRadius="lg"
+                  boxShadow="md"
+                  bg={cardBg}
+                  minH="200px"
+                  maxH="800px"
+                  borderWidth="1px"
+                  borderColor={borderColor}
+                  overflow="auto"
+                >
+                  <CardBody>
+                    {!simulationComplete || !memory ? (
+                      <VStack spacing={4} justify="center" h="200px">
+                        <Text color="gray.500" textAlign="center">Run the simulation (with memory enabled) to see shot output.</Text>
+                      </VStack>
+                    ) : (
+                      <Box>
+                        <Heading size="md" mb={3}>Raw Shot Output (first {Math.min(16, memory.length)} shots)</Heading>
+                        <Table variant="simple" size="sm">
+                          <Thead>
+                            <Tr>
+                              <Th>Shot #</Th>
+                              {qubits.map((qubit, qi) => {
+                                const trimmedName = (qubit?.name ?? '').trim()
+                                const label = trimmedName.length > 0 ? trimmedName : `q${qubit?.id ?? qi}`
+                                return (
+                                  <Th key={qubit.id ?? qi} isNumeric={false}>{label}</Th>
+                                )
+                              })}
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {memory.slice(0, Math.min(16, memory.length)).map((s, si) => (
+                              <Tr key={si}>
+                                <Td>{si + 1}</Td>
+                                {qubits.map((qubit, qi) => {
+                                  const idx = (s as string).length - 1 - qi
+                                  const val = (idx >= 0 && idx < (s as string).length) ? (s as string)[idx] : 'NA'
+                                  return <Td key={qubit.id ?? qi} fontFamily="monospace">{val}</Td>
+                                })}
+                              </Tr>
+                            ))}
+                          </Tbody>
+                        </Table>
                       </Box>
                     )}
                   </CardBody>

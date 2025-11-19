@@ -164,6 +164,19 @@ export const gateLibrary: GateDefinition[] = [
     targets: 1,
     controls: 2,
   },
+  {
+    id: 'mcx',
+    name: 'Multi-Controlled X',
+    symbol: 'MCX',
+    description: 'Applies an X gate to the target when all selected control qubits are |1⟩',
+    category: 'Multi-Qubit Gates',
+    color: 'orange',
+    targets: 1,
+    controls: 2,
+    supportsDynamicControls: true,
+    minControls: 2,
+    defaultControls: 2,
+  },
   
   // Measurement
   {

@@ -145,10 +145,24 @@ export const applyThreeQubitGate = (
 ): QuantumState => {
   const newState: QuantumState = {};
   
-  if (gate.type === 'toffoli' && gate.controls && gate.controls.length >= 2 && gate.targets && gate.targets.length > 0) {
+  // Require at least 3 qubits in the circuit for Toffoli and prefer the gate's `qubit` as the target
+  if (
+    gate.type === 'toffoli' &&
+    numQubits >= 3 &&
+    gate.controls &&
+    gate.controls.length >= 2
+  ) {
     const control1 = gate.controls[0];
     const control2 = gate.controls[1];
-    const target = gate.targets[0];
+    // Use gate.qubit as the target if provided; otherwise fall back to targets[0]
+    const target = (gate.qubit !== undefined) ? gate.qubit : (gate.targets && gate.targets.length > 0 ? gate.targets[0] : undefined);
+    if (target === undefined) {
+      // If no explicit target, copy state through (invalid gate configuration)
+      Object.entries(state).forEach(([basisState, amplitude]) => {
+        newState[basisState] = [...amplitude];
+      });
+      return newState;
+    }
     
     // Apply Toffoli gate
     Object.entries(state).forEach(([basisState, amplitude]) => {
@@ -161,6 +175,37 @@ export const applyThreeQubitGate = (
     });
   }
   
+  return newState;
+};
+
+export const applyMultiControlledXGate = (
+  state: QuantumState,
+  gate: Gate,
+  numQubits: number
+): QuantumState => {
+  const newState: QuantumState = {};
+  if (gate.type !== 'mcx' || !gate.controls || gate.controls.length < 2) {
+    Object.entries(state).forEach(([basisState, amplitude]) => {
+      newState[basisState] = [...amplitude];
+    });
+    return newState;
+  }
+
+  const target = gate.targets && gate.targets.length > 0
+    ? gate.targets[0]
+    : (gate.qubit !== undefined ? gate.qubit : undefined);
+
+  if (target === undefined) {
+    Object.entries(state).forEach(([basisState, amplitude]) => {
+      newState[basisState] = [...amplitude];
+    });
+    return newState;
+  }
+
+  Object.entries(state).forEach(([basisState, amplitude]) => {
+    applyMultiControlledX(basisState, amplitude, gate.controls as number[], target, newState);
+  });
+
   return newState;
 };
 
@@ -179,6 +224,8 @@ export const simulateGateApplication = (
     return applyTwoQubitGate(state, gate, numQubits);
   } else if (gate.type === 'toffoli') {
     return applyThreeQubitGate(state, gate, numQubits);
+  } else if (gate.type === 'mcx') {
+    return applyMultiControlledXGate(state, gate, numQubits);
   } else {
     // Unsupported gate type - just return the original state
     return { ...state };
@@ -257,6 +304,23 @@ const applyPauliY = (
   amplitude: Complex, 
   targetQubit: number, 
   newState: QuantumState
+
+const applyMultiControlledX = (
+  basisState: string,
+  amplitude: Complex,
+  controls: number[],
+  target: number,
+  newState: QuantumState
+) => {
+  const n = basisState.length;
+  const controlsActive = controls.every(control => basisState[n - 1 - control] === '1');
+  if (controlsActive) {
+    const flippedState = flipBit(basisState, target);
+    addToState(newState, flippedState, amplitude);
+  } else {
+    addToState(newState, basisState, amplitude);
+  }
+};
 ) => {
   // Y gate flips the target bit and applies a phase based on the bit value
   const n = basisState.length;

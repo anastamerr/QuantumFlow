@@ -15,6 +15,7 @@ const GateParamsPanel = () => {
   const [params, setParams] = useState<Record<string, number | string>>({})
   const [targets, setTargets] = useState<number[]>([])
   const [controls, setControls] = useState<number[]>([])
+  const [controlCount, setControlCount] = useState<number>(0)
   const [isUpdating, setIsUpdating] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
   
@@ -30,6 +31,11 @@ const GateParamsPanel = () => {
   const gateDefinition = selectedGate 
     ? gateLibrary.find(g => g.id === selectedGate.type)
     : null
+  const isMCXGate = gateDefinition?.id === 'mcx'
+  const minControlCount = isMCXGate ? (gateDefinition?.minControls ?? 2) : (gateDefinition?.controls ?? 0)
+  const maxControlCount = isMCXGate
+    ? Math.max(gateDefinition?.maxControls ?? (qubits.length - 1), minControlCount)
+    : gateDefinition?.controls ?? 0
   
   // Update local state when selected gate changes
   useEffect(() => {
@@ -45,17 +51,26 @@ const GateParamsPanel = () => {
       }
       
       // Set targets
-      if (selectedGate.targets) {
+      if (selectedGate.targets && selectedGate.targets.length > 0) {
         setTargets([...selectedGate.targets])
+      } else if (selectedGate.type === 'toffoli') {
+        // Default the Toffoli target to the qubit where the gate was dropped
+        setTargets([selectedGate.qubit])
       } else {
         setTargets([])
       }
       
       // Set controls
       if (selectedGate.controls) {
-        setControls([...selectedGate.controls])
-      } else {
-        setControls([])
+          setControls([...selectedGate.controls])
+          setControlCount(
+            isMCXGate
+              ? Math.max(selectedGate.controls.length, minControlCount)
+              : selectedGate.controls.length
+          )
+        } else {
+          setControls([])
+          setControlCount(isMCXGate ? minControlCount : 0)
       }
       
       setIsUpdating(false)
@@ -63,45 +78,61 @@ const GateParamsPanel = () => {
       setParams({})
       setTargets([])
       setControls([])
+      setControlCount(0)
       setValidationError(null)
     }
-  }, [selectedGate])
+  }, [selectedGate, gateDefinition, isMCXGate, minControlCount])
   
   // Validate gate configuration (check for invalid qubit selections)
   const validateGateConfiguration = useCallback(() => {
     if (!selectedGate) return true;
-    
-    // Get the main qubit (which functions as the control for CNOT/CZ gates)
+
     const mainQubit = selectedGate.qubit;
-    
-    // Check for target and control conflicts
-    let errorMessage = null;
-    
-    // Check if a target is the same as the control qubit
-    if (targets.includes(mainQubit)) {
+    const gateType = selectedGate.type;
+    const isCNOTorCZ = gateType === 'cnot' || gateType === 'cz';
+
+    const activeTargets = targets.filter((target) => target !== undefined && target !== null);
+    const activeControls = controls.filter((control) => control !== undefined && control !== null);
+
+    let errorMessage: string | null = null;
+
+    if (isCNOTorCZ && activeTargets.includes(mainQubit)) {
       errorMessage = "Target qubit cannot be the same as the control qubit";
     }
-    
-    // Check if targets include controls
-    for (const control of controls) {
-      if (targets.includes(control)) {
-        errorMessage = "Target and control qubits must be different";
-        break;
+
+    if (!errorMessage) {
+      for (const control of activeControls) {
+        if (activeTargets.includes(control)) {
+          errorMessage = "Target and control qubits must be different";
+          break;
+        }
       }
     }
-    
-    // Check for duplicate targets
-    const uniqueTargets = new Set(targets);
-    if (uniqueTargets.size !== targets.length) {
+
+    if (!errorMessage && new Set(activeTargets).size !== activeTargets.length) {
       errorMessage = "All target qubits must be unique";
     }
-    
-    // Check for duplicate controls
-    const uniqueControls = new Set(controls);
-    if (uniqueControls.size !== controls.length) {
+
+    if (!errorMessage && new Set(activeControls).size !== activeControls.length) {
       errorMessage = "All control qubits must be unique";
     }
-    
+
+    if (!errorMessage && gateType === 'toffoli' && activeTargets.length === 0) {
+      errorMessage = "Select a target qubit for the Toffoli gate";
+    }
+
+    if (!errorMessage && gateType === 'mcx') {
+      const minControls = gateDefinition?.minControls ?? 2;
+      const target = activeTargets[0] ?? mainQubit;
+      if (activeControls.length < minControls) {
+        errorMessage = `MCX requires at least ${minControls} control qubits`;
+      } else if (target === undefined) {
+        errorMessage = "Select a target qubit for the MCX gate";
+      } else if (activeControls.includes(target)) {
+        errorMessage = "Target qubit cannot also be a control for MCX";
+      }
+    }
+
     setValidationError(errorMessage);
     return errorMessage === null;
   }, [selectedGate, targets, controls]);
@@ -168,44 +199,54 @@ const GateParamsPanel = () => {
   };
   
   // Get available qubits (excluding already used qubits)
-  const getAvailableQubitsForTarget = () => {
+  const getAvailableQubitsForTarget = (targetIndex: number) => {
     if (!selectedGate) return qubits;
-    
-    // For targets, exclude the main qubit (control) and any existing controls
+
     const usedQubits = new Set<number>();
-    
-    // Add main qubit (which is the control for CNOT/CZ)
-    if (selectedGate.qubit !== undefined) {
+
+    // Exclude other selected targets to keep them unique
+    targets.forEach((target, idx) => {
+      if (idx !== targetIndex && target !== undefined && target !== null) {
+        usedQubits.add(target);
+      }
+    });
+
+    // Exclude currently selected controls
+    controls.forEach(control => {
+      if (control !== undefined && control !== null) {
+        usedQubits.add(control);
+      }
+    });
+
+    // For CNOT/CZ, exclude the main control qubit from target choices
+    const isCNOTorCZ = selectedGate.type === 'cnot' || selectedGate.type === 'cz';
+    if (isCNOTorCZ && selectedGate.qubit !== undefined) {
       usedQubits.add(selectedGate.qubit);
     }
-    
-    // Add all control qubits
-    if (selectedGate.controls) {
-      selectedGate.controls.forEach(control => usedQubits.add(control));
-    }
-    
-    // Return qubits that are not already used
+
     return qubits.filter(qubit => !usedQubits.has(qubit.id));
   };
   
   // Get available qubits for control
-  const getAvailableQubitsForControl = () => {
+  const getAvailableQubitsForControl = (controlIndex: number) => {
     if (!selectedGate) return qubits;
     
-    // For controls, exclude the main qubit and any targets
     const usedQubits = new Set<number>();
     
-    // Add main qubit
-    if (selectedGate.qubit !== undefined) {
-      usedQubits.add(selectedGate.qubit);
-    }
+    // Exclude all selected targets from control choices
+    targets.forEach(target => {
+      if (target !== undefined && target !== null) {
+        usedQubits.add(target);
+      }
+    });
     
-    // Add all target qubits
-    if (selectedGate.targets) {
-      selectedGate.targets.forEach(target => usedQubits.add(target));
-    }
+    // Exclude other controls to keep them unique
+    controls.forEach((control, idx) => {
+      if (idx !== controlIndex && control !== undefined && control !== null) {
+        usedQubits.add(control);
+      }
+    });
     
-    // Return qubits that are not already used
     return qubits.filter(qubit => !usedQubits.has(qubit.id));
   };
   
@@ -215,9 +256,43 @@ const GateParamsPanel = () => {
     const newTargets = [...targets];
     newTargets[index] = value;
     setTargets(newTargets);
+
+    const updates: Record<string, any> = { targets: newTargets };
+    if (gateDefinition?.id === 'toffoli' || gateDefinition?.id === 'mcx') {
+      // Keep the gate's primary qubit aligned with the selected target so
+      // simulation/rendering treat the same qubit as the target line.
+      updates.qubit = value;
+    }
+    if (gateDefinition?.id === 'mcx') {
+      let filteredControls = controls.filter(control => control !== value);
+      if (filteredControls.length !== controls.length) {
+        if (filteredControls.length < minControlCount) {
+          const forbidden = new Set<number>();
+          forbidden.add(value);
+          newTargets.forEach(target => forbidden.add(target));
+          filteredControls.forEach(control => forbidden.add(control));
+          const needed = minControlCount - filteredControls.length;
+          const candidates = qubits
+            .map(q => q.id)
+            .filter(id => !forbidden.has(id));
+          filteredControls = [...filteredControls, ...candidates.slice(0, needed)];
+          if (filteredControls.length < minControlCount) {
+            toast({
+              title: "Not enough qubits",
+              description: "Add more qubits to maintain the required MCX controls.",
+              status: "warning",
+              duration: 3000,
+            });
+          }
+        }
+        setControls(filteredControls);
+        setControlCount(Math.max(filteredControls.length, minControlCount));
+        updates.controls = filteredControls;
+      }
+    }
     
     // Only update the Redux store if configuration is valid
-    updateGateWithDebounce({ targets: newTargets });
+    updateGateWithDebounce(updates);
   };
   
   // Handle control change
@@ -228,6 +303,46 @@ const GateParamsPanel = () => {
     setControls(newControls);
     
     // Only update the Redux store if configuration is valid
+    updateGateWithDebounce({ controls: newControls });
+  };
+
+  const handleControlCountChange = (_: string, valueAsNumber: number) => {
+    if (!isMCXGate) return;
+    const maxAllowed = Math.min(maxControlCount, qubits.length - 1);
+    const numericValue = Number.isFinite(valueAsNumber) ? valueAsNumber : (controlCount || minControlCount);
+    const sanitized = Math.max(minControlCount, Math.min(numericValue, maxAllowed));
+    if (sanitized === controlCount) return;
+
+    let newControls = [...controls];
+    if (sanitized < newControls.length) {
+      newControls = newControls.slice(0, sanitized);
+    } else {
+      const forbidden = new Set<number>();
+      if (selectedGate?.qubit !== undefined) {
+        forbidden.add(selectedGate.qubit);
+      }
+      targets.forEach(target => forbidden.add(target));
+      newControls.forEach(control => forbidden.add(control));
+
+      const needed = sanitized - newControls.length;
+      const candidates = qubits
+        .map(q => q.id)
+        .filter(id => !forbidden.has(id));
+
+      if (candidates.length < needed) {
+        toast({
+          title: "Not enough qubits",
+          description: "Add more qubits to assign additional control lines.",
+          status: "warning",
+          duration: 3000,
+        });
+        return;
+      }
+      newControls = [...newControls, ...candidates.slice(0, needed)];
+    }
+
+    setControlCount(sanitized);
+    setControls(newControls);
     updateGateWithDebounce({ controls: newControls });
   };
   
@@ -358,7 +473,7 @@ const GateParamsPanel = () => {
                 <Text fontSize="sm" fontWeight="medium">Target Qubits:</Text>
                 {Array.from({ length: gateDefinition.targets }).map((_, index) => {
                   // Get available targets for this selector
-                  const availableQubits = getAvailableQubitsForTarget();
+                  const availableQubits = getAvailableQubitsForTarget(index);
                   
                   // Skip if no available qubits
                   if (availableQubits.length === 0) {
@@ -417,9 +532,31 @@ const GateParamsPanel = () => {
             {!isCNOTorCZ && gateDefinition.controls && gateDefinition.controls > 0 && (
               <VStack align="stretch" spacing={2} mt={2}>
                 <Text fontSize="sm" fontWeight="medium">Control Qubits:</Text>
-                {Array.from({ length: gateDefinition.controls }).map((_, index) => {
+                {isMCXGate && (
+                  <FormControl>
+                    <FormLabel fontSize="xs">Number of control qubits</FormLabel>
+                    <NumberInput
+                      size="sm"
+                      min={minControlCount}
+                      max={Math.max(minControlCount, Math.min(maxControlCount, qubits.length - 1))}
+                      value={controlCount || minControlCount}
+                      onChange={handleControlCountChange}
+                      isDisabled={isUpdating}
+                    >
+                      <NumberInputField />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                    <Text fontSize="xs" color={infoTextColor} mt={1}>
+                      MCX requires at least {minControlCount} distinct controls
+                    </Text>
+                  </FormControl>
+                )}
+                {Array.from({ length: isMCXGate ? Math.max(controlCount || minControlCount, minControlCount) : gateDefinition.controls }).map((_, index) => {
                   // Get available controls for this selector
-                  const availableQubits = getAvailableQubitsForControl();
+                  const availableQubits = getAvailableQubitsForControl(index);
                   
                   // Skip if no available qubits
                   if (availableQubits.length === 0) {
