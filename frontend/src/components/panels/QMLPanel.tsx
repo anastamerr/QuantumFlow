@@ -334,28 +334,29 @@ const QMLPanel = () => {
     setNumLayers(template.num_layers);
     setEncoding(template.encoding);
     
-    // Generate and visualize the circuit locally
+    // Generate and visualize the circuit locally (matching backend structure exactly)
     try {
       const gates: any[] = [];
       let position = 0;
       
-      // Generate encoding layer (simplified visualization with sample data)
+      // Data encoding layer
       if (template.encoding === 'angle') {
+        // Angle encoding: RY rotation on each qubit
         for (let i = 0; i < template.num_qubits; i++) {
           gates.push({
-            id: `template-ry-${i}-${position}`,
+            id: `template-enc-ry-q${i}`,
             type: 'ry',
             qubit: i,
             position: position,
-            params: { theta: 45 }, // Sample angle in degrees
+            params: { theta: 45 }, // Sample encoding angle
           });
         }
         position++;
       } else if (template.encoding === 'amplitude') {
-        // Amplitude encoding uses Hadamard + controlled rotations
+        // Amplitude encoding: Hadamard gates for superposition
         for (let i = 0; i < template.num_qubits; i++) {
           gates.push({
-            id: `template-h-${i}-${position}`,
+            id: `template-enc-h-q${i}`,
             type: 'h',
             qubit: i,
             position: position,
@@ -365,43 +366,80 @@ const QMLPanel = () => {
         position++;
       }
       
-      // Generate variational layers
+      // Variational layers (matching PennyLane strongly-entangling layers)
       for (let layer = 0; layer < template.num_layers; layer++) {
-        // Local rotations on each qubit
+        const basePos = position;
+        
+        // Time step 1: RY rotations on all qubits
         for (let q = 0; q < template.num_qubits; q++) {
-          ['ry', 'rz', 'ry'].forEach((gateType, idx) => {
-            gates.push({
-              id: `template-${gateType}-L${layer}-q${q}-${position}`,
-              type: gateType,
-              qubit: q,
-              position: position,
-              params: { theta: Math.random() * 90 }, // Random sample angles
-            });
-            position++;
+          gates.push({
+            id: `template-L${layer}-ry1-q${q}`,
+            type: 'ry',
+            qubit: q,
+            position: basePos,
+            params: { theta: Math.random() * 90 },
           });
         }
         
-        // Entangling CNOTs in a chain pattern
-        for (let q = 0; q < template.num_qubits - 1; q++) {
+        // Time step 2: RZ rotations on all qubits
+        for (let q = 0; q < template.num_qubits; q++) {
           gates.push({
-            id: `template-cnot-L${layer}-${q}-${position}`,
-            type: 'cnot',
-            qubit: q + 1,
-            position: position,
-            targets: [q + 1],
-            controls: [q],
-            params: {},
+            id: `template-L${layer}-rz-q${q}`,
+            type: 'rz',
+            qubit: q,
+            position: basePos + 1,
+            params: { phi: Math.random() * 90 },
           });
         }
-        position++;
+        
+        // Time step 3: RY rotations on all qubits
+        for (let q = 0; q < template.num_qubits; q++) {
+          gates.push({
+            id: `template-L${layer}-ry2-q${q}`,
+            type: 'ry',
+            qubit: q,
+            position: basePos + 2,
+            params: { theta: Math.random() * 90 },
+          });
+        }
+        
+        // Entanglement layer: Each CNOT gets its own position
+        // Chain pattern: 0→1, then 1→2, then 2→3, etc.
+        let cnotPos = basePos + 3;
+        for (let q = 0; q < template.num_qubits - 1; q++) {
+          gates.push({
+            id: `template-L${layer}-cnot-q${q}-q${q+1}`,
+            type: 'cnot',
+            qubit: q,           // Control
+            targets: [q + 1],   // Target
+            position: cnotPos,
+            params: {},
+          });
+          cnotPos++;  // Each CNOT at separate position
+        }
+        
+        // Cyclic CNOT: (n-1)→0 for circuits with >2 qubits
+        if (template.num_qubits > 2) {
+          gates.push({
+            id: `template-L${layer}-cnot-cyclic-q${template.num_qubits-1}-q0`,
+            type: 'cnot',
+            qubit: template.num_qubits - 1,  // Control
+            targets: [0],                     // Target
+            position: cnotPos,
+            params: {},
+          });
+          cnotPos++;
+        }
+        
+        position = cnotPos; // Next layer starts after all CNOTs
       }
       
-      // Dispatch template gates to circuit canvas
+      // Clear and add gates (addGates will automatically create needed qubits)
       dispatch(addGates(gates));
       
       toast({
         title: 'Template loaded',
-        description: `${template.name} - ${gates.length} gates visualized on canvas`,
+        description: `${template.name} - ${template.num_qubits} qubits, ${template.num_layers} layers (${gates.length} gates)`,
         status: 'success',
         duration: 3000,
       });

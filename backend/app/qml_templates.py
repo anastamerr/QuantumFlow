@@ -181,24 +181,6 @@ def get_qml_templates() -> Dict[str, Any]:
     return {
         "templates": [
             {
-                "id": "variational_classifier",
-                "name": "Variational Quantum Classifier",
-                "description": "Binary classification using variational quantum circuit",
-                "num_qubits": 2,
-                "num_layers": 2,
-                "encoding": "angle",
-                "num_parameters": 12  # 2 qubits * 3 params * 2 layers
-            },
-            {
-                "id": "quantum_kernel",
-                "name": "Quantum Kernel Circuit",
-                "description": "Quantum kernel for SVM classification",
-                "num_qubits": 2,
-                "num_layers": 1,
-                "encoding": "angle",
-                "num_parameters": 6
-            },
-            {
                 "id": "qnn_regression",
                 "name": "Quantum Neural Network (Regression)",
                 "description": "QNN for continuous value prediction",
