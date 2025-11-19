@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 from qiskit import QuantumCircuit
+from pydantic import BaseModel
 
 from .models import ExecuteRequest, ExecuteResponse, PuzzleValidationRequest, PuzzleValidationResponse
 from .qiskit_runner import run_circuit
@@ -13,6 +14,13 @@ load_dotenv()
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
+
+# Request/Response models for AI chatbot
+class Question(BaseModel):
+    question: str
+
+class Answer(BaseModel):
+    answer: str
 
 app = FastAPI(title="QuantumFlow Backend", version="1.0.0")
 
@@ -36,6 +44,64 @@ def health():
         "qiskit": qiskit_ok,
         "backend_env": os.getenv("QISKIT_BACKEND", "aer_simulator"),
     }
+
+@app.post("/ask", response_model=Answer)
+async def ask_question(data: Question):
+    """
+    AI chatbot endpoint - answers quantum computing questions using Gemini
+    """
+    try:
+        if not data.question.strip():
+            raise HTTPException(status_code=400, detail="Question cannot be empty")
+        
+        # Check if Gemini API key is configured
+        if not os.getenv("GEMINI_API_KEY"):
+            raise HTTPException(
+                status_code=500, 
+                detail="Gemini API key not configured. Please set GEMINI_API_KEY environment variable."
+            )
+        
+        # Import and use LangChain with Gemini
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_core.output_parsers import StrOutputParser
+        
+        # Initialize Gemini
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            temperature=0.7,
+            google_api_key=os.getenv("GEMINI_API_KEY")
+        )
+        
+        # System prompt
+        system_prompt = """You are an expert quantum computing assistant with deep knowledge of:
+- Quantum mechanics fundamentals (superposition, entanglement, measurement)
+- Quantum gates (Hadamard, CNOT, Pauli gates, rotation gates)
+- Quantum algorithms (Shor's, Grover's, VQE, QAOA)
+- Qiskit programming and circuit design
+- Quantum error correction and noise
+- Current quantum hardware and limitations
+
+Provide clear, accurate, and educational explanations. Use analogies when helpful.
+Keep responses concise but comprehensive. Use mathematical notation when appropriate.
+If asked about code, provide Qiskit examples."""
+        
+        # Create chain
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", "{question}")
+        ])
+        chain = prompt_template | llm | StrOutputParser()
+        
+        # Get response
+        answer = await chain.ainvoke({"question": data.question})
+        
+        return Answer(answer=answer)
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing question: {str(e)}")
 
 @app.post("/api/v1/execute", response_model=ExecuteResponse)
 def execute(req: ExecuteRequest) -> ExecuteResponse:

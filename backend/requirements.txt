@@ -4,3 +4,6 @@ pydantic==2.9.2
 python-dotenv==1.0.1
 qiskit==1.2.4
 qiskit-aer==0.15.1
+langchain>=0.1.0
+langchain-google-genai>=1.0.0
+google-generativeai>=0.5.2,<0.6.0

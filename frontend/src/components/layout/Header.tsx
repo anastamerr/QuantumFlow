@@ -1,7 +1,7 @@
-import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack } from '@chakra-ui/react'
-import { useDispatch, useSelector } from 'react-redux'
-import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
-import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
+﻿import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack } from "@chakra-ui/react"
+import { useDispatch, useSelector } from "react-redux"
+import { setActivePanel, selectActivePanel, toggleTutorial } from "../../store/slices/uiSlice"
+import { clearCircuit, selectCircuitName } from "../../store/slices/circuitSlice"
 
 const Header = () => {
   const dispatch = useDispatch()
@@ -9,12 +9,12 @@ const Header = () => {
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
 
-  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'puzzles' | 'stats') => {
+  const handlePanelChange = (panel: "circuit" | "code" | "simulation" | "export" | "algorithms" | "puzzles" | "stats" | "chat") => {
     dispatch(setActivePanel(panel))
   }
 
   const handleClearCircuit = () => {
-    if (confirm('Are you sure you want to clear the current circuit?')) {
+    if (confirm("Are you sure you want to clear the current circuit?")) {
       dispatch(clearCircuit())
     }
   }
@@ -35,59 +35,67 @@ const Header = () => {
         <HStack spacing={2}>
           <Button
             size="sm"
-            variant={activePanel === 'circuit' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('circuit')}
+            variant={activePanel === "circuit" ? "solid" : "ghost"}
+            onClick={() => handlePanelChange("circuit")}
             colorScheme="blue"
           >
             Circuit
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'code' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('code')}
+            variant={activePanel === "code" ? "solid" : "ghost"}
+            onClick={() => handlePanelChange("code")}
             colorScheme="blue"
           >
             Code
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'simulation' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('simulation')}
+            variant={activePanel === "simulation" ? "solid" : "ghost"}
+            onClick={() => handlePanelChange("simulation")}
             colorScheme="blue"
           >
             Simulation
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'export' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('export')}
+            variant={activePanel === "export" ? "solid" : "ghost"}
+            onClick={() => handlePanelChange("export")}
             colorScheme="blue"
           >
             Export
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'stats' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('stats')}
+            variant={activePanel === "stats" ? "solid" : "ghost"}
+            onClick={() => handlePanelChange("stats")}
             colorScheme="blue"
           >
             Stats
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'puzzles' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('puzzles')}
+            variant={activePanel === "puzzles" ? "solid" : "ghost"}
+            onClick={() => handlePanelChange("puzzles")}
             colorScheme="cyan"
           >
             Puzzles
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'algorithms' ? 'solid' : 'ghost'}
-            onClick={() => handlePanelChange('algorithms')}
+            variant={activePanel === "algorithms" ? "solid" : "ghost"}
+            onClick={() => handlePanelChange("algorithms")}
             colorScheme="purple"
           >
             Algorithms
+          </Button>
+          <Button
+            size="sm"
+            variant={activePanel === "chat" ? "solid" : "ghost"}
+            onClick={() => handlePanelChange("chat")}
+            colorScheme="orange"
+          >
+            AI Chat
           </Button>
           <Button
             size="sm"
@@ -111,7 +119,7 @@ const Header = () => {
             onClick={toggleColorMode}
             colorScheme="white"
           >
-            {colorMode === 'light' ? '☀️' : '🌙'}
+            {colorMode === "light" ? "" : ""}
           </Button>
         </HStack>
       </Flex>
