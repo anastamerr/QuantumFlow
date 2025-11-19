@@ -1,10 +1,11 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+﻿import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { RootState } from '../index'
 
 // Define types for UI state
 export interface UiState {
   selectedGateId: string | null
-  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms'
+  // 'chat' removed from activePanel — chat is managed independently via isChatOpen
+  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'puzzles' | 'stats'
   showGateParams: boolean
   codeFormat: 'qiskit' | 'cirq' | 'json'
   isDragging: boolean
@@ -12,6 +13,8 @@ export interface UiState {
   zoomLevel: number
   showTutorial: boolean
   isFullView: boolean
+  // new independent chat flag
+  isChatOpen: boolean
 }
 
 // Define the initial state
@@ -25,6 +28,7 @@ const initialState: UiState = {
   zoomLevel: 1,
   showTutorial: false,
   isFullView: false,
+  isChatOpen: false,
 }
 
 export const uiSlice = createSlice({
@@ -37,6 +41,16 @@ export const uiSlice = createSlice({
     },
     setActivePanel: (state, action: PayloadAction<UiState['activePanel']>) => {
       state.activePanel = action.payload
+    },
+    // Chat panel controls (independent)
+    openChat: (state) => {
+      state.isChatOpen = true
+    },
+    closeChat: (state) => {
+      state.isChatOpen = false
+    },
+    toggleChat: (state) => {
+      state.isChatOpen = !state.isChatOpen
     },
     toggleGateParams: (state) => {
       state.showGateParams = !state.showGateParams
@@ -67,6 +81,9 @@ export const uiSlice = createSlice({
 export const {
   selectGate,
   setActivePanel,
+  openChat,
+  closeChat,
+  toggleChat,
   toggleGateParams,
   setCodeFormat,
   setIsDragging,
@@ -87,6 +104,7 @@ export const selectShowGrid = (state: RootState) => state.ui.showGrid
 export const selectZoomLevel = (state: RootState) => state.ui.zoomLevel
 export const selectShowTutorial = (state: RootState) => state.ui.showTutorial
 export const selectIsFullView = (state: RootState) => state.ui.isFullView
+export const selectIsChatOpen = (state: RootState) => state.ui.isChatOpen
 
 // Export the reducer
 export default uiSlice.reducer

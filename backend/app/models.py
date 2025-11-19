@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+﻿from typing import Dict, List, Optional, Union, Literal, Any
 from pydantic import BaseModel, Field
 
 
@@ -27,3 +27,29 @@ class ExecuteResponse(BaseModel):
     probabilities: Dict[str, float]
     memory: Optional[List[str]] = None
     status: str = "success"
+
+
+class PuzzleValidationRequest(BaseModel):
+    num_qubits: int = Field(..., ge=1, description="Number of qubits in the circuit")
+    gates: List[GateModel]
+    target_label: str = Field(..., description="Target gate label (e.g., Pauli X, Swap)")
+
+
+class PuzzleValidationResponse(BaseModel):
+    is_correct: bool
+    message: str
+    status: str = "success"
+
+
+class PuzzleData(BaseModel):
+    id: int
+    description: str
+    qubits: int
+    targetMatrix: str
+    difficulty: Literal["Beginner", "Intermediate", "Advanced"]
+    constraints: Optional[Dict[str, Any]] = None
+
+
+class PuzzlesResponse(BaseModel):
+    puzzles: List[PuzzleData]
+    total: int

@@ -1,87 +1,92 @@
-import { Box, Flex, VStack, useColorModeValue, useToast } from '@chakra-ui/react'
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
-import { useEffect } from 'react'
-import Header from './components/layout/Header'
-import Sidebar from './components/layout/Sidebar'
-import CircuitCanvas from './components/canvas/CircuitCanvas'
-import CodePanel from './components/panels/CodePanel'
-import { useSelector } from 'react-redux'
-import { selectActivePanel, selectIsFullView } from './store/slices/uiSlice'
-import SimulationPanel from './components/panels/SimulationPanel'
-import ExportPanel from './components/panels/ExportPanel'
-import GateParamsPanel from './components/panels/GateParamsPanel'
-import TutorialPanel from './components/panels/TutorialPanel'
-import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
-import ResizablePanel from './components/layout/ResizablePanel'
+﻿import { Box, Flex, VStack, useColorModeValue, useToast } from "@chakra-ui/react"
+import { DndProvider } from "react-dnd"
+import { HTML5Backend } from "react-dnd-html5-backend"
+import { useEffect } from "react"
+import Header from "./components/layout/Header"
+import Sidebar from "./components/layout/Sidebar"
+import CircuitCanvas from "./components/canvas/CircuitCanvas"
+import CodePanel from "./components/panels/CodePanel"
+import { useSelector } from "react-redux"
+import { selectActivePanel, selectIsFullView, selectIsChatOpen } from "./store/slices/uiSlice"
+import SimulationPanel from "./components/panels/SimulationPanel"
+import ExportPanel from "./components/panels/ExportPanel"
+import GateParamsPanel from "./components/panels/GateParamsPanel"
+import TutorialPanel from "./components/panels/TutorialPanel"
+import AlgorithmLibraryPanel from "./components/panels/AlgorithmLibraryPanel"
+import ResizablePanel from "./components/layout/ResizablePanel"
+import PuzzlesPanel from "@/components/panels/PuzzlesPanel"
+import StatsPanel from "@/components/panels/StatsPanel"
+import ChatPanel from "@/components/panels/ChatPanel"
+import type { RootState } from "@/store"
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
   const isFullView = useSelector(selectIsFullView)
+  const isChatOpen = useSelector(selectIsChatOpen)
   const toast = useToast()
-  const panelBg = useColorModeValue('white', 'gray.800')
-  const borderColor = useColorModeValue('gray.200', 'gray.600')
+  const panelBg = useColorModeValue("white", "gray.800")
+  const borderColor = useColorModeValue("gray.200", "gray.600")
 
   // Handle keyboard shortcuts globally
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle shortcuts if not in input/textarea
       if (
-        document.activeElement?.tagName === 'INPUT' || 
-        document.activeElement?.tagName === 'TEXTAREA' ||
-        document.activeElement?.tagName === 'SELECT'
+        document.activeElement?.tagName === "INPUT" || 
+        document.activeElement?.tagName === "TEXTAREA" ||
+        document.activeElement?.tagName === "SELECT"
       ) {
         return
       }
       
       // Escape key to close panels or deselect items
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         // Would need to dispatch relevant actions
         // Implementation omitted for brevity
       }
       
       // Ctrl/Cmd + Z for undo
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault()
         toast({
-          title: 'Undo',
-          description: 'Undo functionality is coming in a future update',
-          status: 'info',
+          title: "Undo",
+          description: "Undo functionality is coming in a future update",
+          status: "info",
           duration: 3000,
         })
       }
       
       // Ctrl/Cmd + Shift + Z for redo
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "z") {
         e.preventDefault()
         toast({
-          title: 'Redo',
-          description: 'Redo functionality is coming in a future update',
-          status: 'info',
+          title: "Redo",
+          description: "Redo functionality is coming in a future update",
+          status: "info",
           duration: 3000,
         })
       }
     }
     
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
   }, [toast])
 
   // Error boundary for the entire application (simplified version)
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      console.error('Unhandled error:', event.error)
+      console.error("Unhandled error:", event.error)
       toast({
-        title: 'Application Error',
-        description: 'An unexpected error occurred. Try refreshing the page.',
-        status: 'error',
+        title: "Application Error",
+        description: "An unexpected error occurred. Try refreshing the page.",
+        status: "error",
         duration: null,
         isClosable: true,
       })
     }
     
-    window.addEventListener('error', handleError)
-    return () => window.removeEventListener('error', handleError)
+    window.addEventListener("error", handleError)
+    return () => window.removeEventListener("error", handleError)
   }, [toast])
 
   return (
@@ -93,7 +98,7 @@ function App() {
           <Box
             position="sticky"
             top={0}
-            h="calc(100vh - 60px)" // Adjust based on header height
+            h="calc(100vh - 60px)"
             zIndex={10}
             flexShrink={0}
           >
@@ -105,21 +110,21 @@ function App() {
             flex={1} 
             p={4} 
             overflowY="auto" 
-            h="calc(100vh - 60px)" // Adjust based on header height
+            h="calc(100vh - 60px)"
             css={{
-              '&::-webkit-scrollbar': {
-                width: '8px',
+              "&::-webkit-scrollbar": {
+                width: "8px",
               },
-              '&::-webkit-scrollbar-track': {
-                width: '10px',
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              "&::-webkit-scrollbar-track": {
+                width: "10px",
+                backgroundColor: "rgba(0, 0, 0, 0.05)",
               },
-              '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(0, 0, 0, 0.2)',
-                borderRadius: '4px',
+              "&::-webkit-scrollbar-thumb": {
+                background: "rgba(0, 0, 0, 0.2)",
+                borderRadius: "4px",
               },
-              '&::-webkit-scrollbar-thumb:hover': {
-                background: 'rgba(0, 0, 0, 0.3)',
+              "&::-webkit-scrollbar-thumb:hover": {
+                background: "rgba(0, 0, 0, 0.3)",
               },
             }}
           >
@@ -142,14 +147,34 @@ function App() {
                 flex={isFullView ? 1 : undefined}
                 height={isFullView ? "calc(100vh - 120px)" : undefined}
               >
-                {activePanel === 'code' && <CodePanel />}
-                {activePanel === 'simulation' && <SimulationPanel />}
-                {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                {activePanel === "code" && <CodePanel />}
+                {activePanel === "simulation" && <SimulationPanel />}
+                {activePanel === "export" && <ExportPanel />}
+                {activePanel === "algorithms" && <AlgorithmLibraryPanel />}
+                {activePanel === "puzzles" && <PuzzlesPanel />}
+                {activePanel === "stats" && <StatsPanel />}
               </ResizablePanel>
             </Flex>
           </Box>
-            {/* Gate parameters panel - will only render when a gate is selected */}
+
+          {/* Right-side AI Chat panel (fixed width, not resizable) */}
+          {isChatOpen && (
+            <Box
+              display={{ base: "none", md: "block" }}
+              width={{ base: "0", md: "360px" }}
+              minWidth={{ base: "0", md: "320px" }}
+              borderLeft="1px solid"
+              borderColor={borderColor}
+              bg={panelBg}
+              p={3}
+              flexShrink={0}
+              overflow="hidden"
+            >
+              <ChatPanel />
+            </Box>
+          )}
+
+          {/* Gate parameters panel - will only render when a gate is selected */}
           <GateParamsPanel />
         </Flex>
         
