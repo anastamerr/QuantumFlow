@@ -17,7 +17,7 @@
     "@chakra-ui/react": "^2.8.0",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@react-three/drei": "^9.80.3",
+    "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@reduxjs/toolkit": "^1.9.5",
     "@types/react-syntax-highlighter": "^15.5.13",
