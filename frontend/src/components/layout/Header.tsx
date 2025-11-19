@@ -119,7 +119,7 @@ const Header = () => {
             onClick={toggleColorMode}
             colorScheme="white"
           >
-            {colorMode === "light" ? "" : ""}
+            {colorMode === "light" ? "☀️" : "🌙"}
           </Button>
         </HStack>
       </Flex>
