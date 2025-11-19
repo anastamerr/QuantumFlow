@@ -23,3 +23,9 @@ jobs:
         env:
           VITE_HF_API_KEY: ${{ secrets.HF_API_KEY }}
           VITE_API_BASE_URL: http://localhost:8000
+
+      - run: npm run build
+        working-directory: frontend
+        env:
+          VITE_HF_API_KEY: ${{ secrets.HF_API_KEY }}
+          VITE_API_BASE_URL: http://localhost:8000
