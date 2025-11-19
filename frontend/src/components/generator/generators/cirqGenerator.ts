@@ -117,33 +117,39 @@ function generateGateSection(gates: Gate[]): string {
           }
           break;
         case 'ry':
-          const phi = Number(gate.params?.phi || gate.params?.theta || gate.params?.angle || 0);
-          if (isNaN(phi)) {
+          // RY gate uses theta parameter (rotation around Y-axis)
+          const ryTheta = Number(gate.params?.theta || gate.params?.angle || 0);
+          if (isNaN(ryTheta)) {
             gateSection += `# Warning: Invalid parameter for RY gate, using 0\n`;
             gateSection += `circuit.append(cirq.ry(0)(qubits[${gate.qubit}]))\n`;
           } else {
-            const ryAngle = Math.abs(phi) <= 2 * Math.PI ? phi : phi * Math.PI / 180;
+            const ryAngle = Math.abs(ryTheta) <= 2 * Math.PI ? ryTheta : ryTheta * Math.PI / 180;
             gateSection += `circuit.append(cirq.ry(${ryAngle})(qubits[${gate.qubit}]))\n`;
           }
           break;
         case 'rz':
-          const lambda = Number(gate.params?.lambda || gate.params?.phi || gate.params?.angle || 0);
-          if (isNaN(lambda)) {
+          // RZ gate uses phi parameter (rotation around Z-axis)
+          const rzPhi = Number(gate.params?.phi || gate.params?.theta || gate.params?.angle || 0);
+          if (isNaN(rzPhi)) {
             gateSection += `# Warning: Invalid parameter for RZ gate, using 0\n`;
             gateSection += `circuit.append(cirq.rz(0)(qubits[${gate.qubit}]))\n`;
           } else {
-            const rzAngle = Math.abs(lambda) <= 2 * Math.PI ? lambda : lambda * Math.PI / 180;
+            const rzAngle = Math.abs(rzPhi) <= 2 * Math.PI ? rzPhi : rzPhi * Math.PI / 180;
             gateSection += `circuit.append(cirq.rz(${rzAngle})(qubits[${gate.qubit}]))\n`;
           }
           break;
         case 'p':
-          const phase = Number(gate.params?.phi || gate.params?.phase || 0);
-          if (isNaN(phase)) {
+          // Phase gate uses phi parameter
+          const phasePhi = Number(gate.params?.phi || gate.params?.phase || 0);
+          if (isNaN(phasePhi)) {
             gateSection += `# Warning: Invalid parameter for P gate, using 0\n`;
             gateSection += `circuit.append(cirq.ZPowGate(exponent=0)(qubits[${gate.qubit}]))\n`;
           } else {
-            // Convert to exponent for ZPowGate (phase in radians / π)
-            const phaseExponent = Math.abs(phase) <= 2 * Math.PI ? phase / Math.PI : phase / 180;
+            // Check if value is already in radians or degrees
+            const phaseAngle = Math.abs(phasePhi) <= 2 * Math.PI ? phasePhi : phasePhi * Math.PI / 180;
+            // Convert to exponent for ZPowGate: ZPowGate(e) applies phase of e×π
+            // So for phase φ, exponent = φ/π
+            const phaseExponent = phaseAngle / Math.PI;
             gateSection += `circuit.append(cirq.ZPowGate(exponent=${phaseExponent})(qubits[${gate.qubit}]))\n`;
           }
           break;

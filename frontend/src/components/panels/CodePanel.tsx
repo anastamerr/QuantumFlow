@@ -10,6 +10,7 @@ import { Gate as CircuitGate } from '../../types/circuit'
 import AdvancedOptimizationPanel from './AdvancedOptimizationPanel'
 import { defaultAdvancedOptions } from '../../utils/circuitOptimizer'
 import FullViewToggle from '../common/FullViewToggle'
+import ModernCodeBlock from '../common/ModernCodeBlock'
 
 const CodePanel = () => {
   const dispatch = useDispatch()
@@ -67,31 +68,6 @@ const CodePanel = () => {
     dispatch(setCodeFormat(e.target.value as 'qiskit' | 'cirq' | 'json'))
   }
   
-  const handleCopyCode = () => {
-    let code = ''
-    
-    if (codeFormat === 'qiskit' || codeFormat === 'cirq') {
-      // Transform the gates to match expected type
-      const circuitGates = transformStoreGatesToCircuitGates(gates);
-      
-      if (codeFormat === 'qiskit') {
-        code = generateQiskitCode(qubits, circuitGates, optimize, optimizationOptions)
-      } else {
-        code = generateCirqCode(qubits, circuitGates, optimize, optimizationOptions)
-      }
-    } else if (codeFormat === 'json') {
-      code = JSON.stringify({ qubits, gates }, null, 2)
-    }
-    
-    navigator.clipboard.writeText(code)
-      .then(() => {
-        // Show success feedback
-        setShowCopied(true)
-        setTimeout(() => setShowCopied(false), 2000)
-      })
-      .catch(err => console.error('Failed to copy code:', err))
-  }
-  
   const handleOptimizationChange = (option: keyof OptimizationOptions, value: boolean | string) => {
     setOptimizationOptions({
       ...optimizationOptions,
@@ -111,7 +87,7 @@ const CodePanel = () => {
     if (codeFormat === 'qiskit' || codeFormat === 'cirq') {
       // Transform the gates to match expected type
       const circuitGates = transformStoreGatesToCircuitGates(gates);
-      
+
       if (codeFormat === 'qiskit') {
         return generateQiskitCode(qubits, circuitGates, optimize, optimizationOptions)
       } else {
@@ -122,9 +98,18 @@ const CodePanel = () => {
     }
     return ''
   }
-  
-  // State for copy feedback
-  const [showCopied, setShowCopied] = useState(false)
+
+  // Get language for syntax highlighting
+  const getLanguage = (): 'python' | 'json' => {
+    return codeFormat === 'json' ? 'json' : 'python'
+  }
+
+  // Get filename for download
+  const getFilename = () => {
+    if (codeFormat === 'qiskit') return 'quantum_circuit_qiskit'
+    if (codeFormat === 'cirq') return 'quantum_circuit_cirq'
+    return 'quantum_circuit'
+  }
   
   return (
     <Box>
@@ -138,14 +123,6 @@ const CodePanel = () => {
               <option value="cirq">Cirq</option>
               <option value="json">JSON</option>
             </Select>
-            <Button 
-              size="sm" 
-              colorScheme="blue" 
-              onClick={handleCopyCode}
-              position="relative"
-            >
-              {showCopied ? 'Copied!' : 'Copy Code'}
-            </Button>
           </HStack>
         </HStack>
         
@@ -306,37 +283,28 @@ const CodePanel = () => {
           </Box>
         )}
         
-        <Box 
-          p={4} 
-          borderRadius="md" 
-          bg={codeBg} 
-          borderWidth={1} 
-          borderColor={codeBorder}
-          overflowX="auto"
-          fontFamily="monospace"
-          fontSize="sm"
-          whiteSpace="pre"
-          minH="300px"
-          maxH="800px"
-          position="relative"
-          resize="vertical"
-          overflow="auto"
-          sx={{
-            resize: 'vertical',
-            '&::-webkit-resizer': {
-              background: codeBorder,
-              borderRadius: '2px'
-            }
-          }}
-        >
-          {gates.length === 0 ? (
-            <Text color="gray.500" fontStyle="italic">
+        {gates.length === 0 ? (
+          <Box
+            p={8}
+            borderRadius="lg"
+            bg={codeBg}
+            borderWidth={1}
+            borderColor={codeBorder}
+            textAlign="center"
+          >
+            <Text color="gray.500" fontStyle="italic" fontSize="md">
               Your circuit is empty. Drag and drop gates to generate code.
             </Text>
-          ) : (
-            getGeneratedCode()
-          )}
-        </Box>
+          </Box>
+        ) : (
+          <ModernCodeBlock
+            code={getGeneratedCode()}
+            language={getLanguage()}
+            filename={getFilename()}
+            showLineNumbers={true}
+            maxHeight="800px"
+          />
+        )}
         
         {/* Additional info about optimizations */}
         {optimize && codeFormat !== 'json' && gates.length > 0 && (

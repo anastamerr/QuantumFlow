@@ -604,7 +604,9 @@ const addToState = (state: QuantumState, basisState: string, amplitude: Complex)
 
 /**
  * Mock function to simulate a quantum circuit execution and return measurement probabilities
+ * Disabled: measurements must come from backend.
  */
+/*
 export const simulateCircuit = (gates: Gate[], numQubits: number): Record<string, number> => {
   // Initialize state to |0...0⟩
   let state: QuantumState = {};
@@ -630,3 +632,4 @@ export const simulateCircuit = (gates: Gate[], numQubits: number): Record<string
   // Calculate final probabilities
   return calculateProbabilities(state);
 };
+*/
