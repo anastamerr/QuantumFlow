@@ -3565,7 +3565,7 @@ const LibraryPanel: React.FC = () => {
                       letterSpacing="wide"
                       textTransform="uppercase"
                     >
-                      📚 Prepare your brain… things are about to get superposed.
+                      Prepare your brain… things are about to get superposed.
                     </Text>
                     <Divider orientation="vertical" height="20px" />
                     
