@@ -948,6 +948,9 @@ pip install -r requirements.txt
 
 # Verify installation
 python -c "import qiskit; print('Qiskit installed:', qiskit.__version__)"
+
+# Make dev script executable
+chmod +x dev.sh
 ```
 
 #### **3. Environment Configuration**
@@ -980,18 +983,30 @@ npm list react typescript @reduxjs/toolkit
 ```bash
 # Terminal 1: Start Backend
 cd backend
-source .venv/bin/activate
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+chmod +x dev.sh
+export GEMINI_API_KEY=your_api_key
+.\dev.sh
 
 # Terminal 2: Start Frontend
 cd frontend
 npm run dev
 ```
 
+
+
+## Important
+A possible error due to the VITE_API_BASE_URL make sure to create the .env file containing 
+#### Vite frontend configuration
+VITE_API_BASE_URL=http://localhost:8000
+
+
+
+
 #### **6. Verification**
 - **Backend**: Visit http://localhost:8000/docs for API documentation
 - **Frontend**: Visit http://localhost:5173 for the application
 - **Health Check**: curl http://localhost:8000/health
+- **Dev Script**: The `dev.sh` script automatically activates the virtual environment and starts the server
 
 ### Production Deployment
 

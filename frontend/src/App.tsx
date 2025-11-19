@@ -136,26 +136,41 @@ function App() {
                   <CircuitCanvas />
                 </Box>
               )}
-              <ResizablePanel 
-                direction="vertical" 
-                defaultSize={isFullView ? 600 : 300} 
-                minSize={150} 
-                maxSize={isFullView ? 800 : 500}
-                borderWidth={1} 
-                borderRadius="md" 
-                bg={panelBg}
-                borderColor={borderColor}
-                p={4}
-                flex={isFullView ? 1 : undefined}
-                height={isFullView ? "calc(100vh - 120px)" : undefined}
-              >
-                {activePanel === 'code' && <CodePanel />}
-                {activePanel === 'simulation' && <SimulationPanel />}
-                {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
-                {activePanel === 'qml' && <QMLPanel />}
-                {activePanel === 'lessons' && <LessonPanel />}
-              </ResizablePanel>
+              {activePanel === 'qml' || activePanel === 'lessons' ? (
+                // QML and Lessons take full screen without ResizablePanel
+                <Box 
+                  flex={1}
+                  borderWidth={1} 
+                  borderRadius="md" 
+                  bg={panelBg}
+                  borderColor={borderColor}
+                  p={4}
+                  height="calc(100vh - 120px)"
+                  overflowY="auto"
+                >
+                  {activePanel === 'qml' && <QMLPanel />}
+                  {activePanel === 'lessons' && <LessonPanel />}
+                </Box>
+              ) : (
+                <ResizablePanel 
+                  direction="vertical" 
+                  defaultSize={isFullView ? 600 : 300} 
+                  minSize={150} 
+                  maxSize={isFullView ? 800 : 500}
+                  borderWidth={1} 
+                  borderRadius="md" 
+                  bg={panelBg}
+                  borderColor={borderColor}
+                  p={4}
+                  flex={isFullView ? 1 : undefined}
+                  height={isFullView ? "calc(100vh - 120px)" : undefined}
+                >
+                  {activePanel === 'code' && <CodePanel />}
+                  {activePanel === 'simulation' && <SimulationPanel />}
+                  {activePanel === 'export' && <ExportPanel />}
+                  {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                </ResizablePanel>
+              )}
             </Flex>
           </Box>
             {/* Gate parameters panel - will only render when a gate is selected */}
