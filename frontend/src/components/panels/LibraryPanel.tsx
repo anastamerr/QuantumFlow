@@ -19,6 +19,262 @@ import {
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+// Helper function to parse text and add proper bold formatting
+const formatText = (text: string) => {
+  if (!text) return null;
+  
+  const lines = text.split('\n');
+  const formattedLines: JSX.Element[] = [];
+  
+  lines.forEach((line, lineIndex) => {
+    const trimmedLine = line.trim();
+    
+    // Skip empty lines but preserve spacing
+    if (trimmedLine === '') {
+      formattedLines.push(<Box key={`empty-${lineIndex}`} height="0.8em" />);
+      return;
+    }
+    
+    // Detect different types of headers with more precise patterns
+    const isBoldHeader = /^\*\*(.*?)\*\*$/.test(trimmedLine);
+    const headerText = isBoldHeader ? trimmedLine.match(/^\*\*(.*?)\*\*$/)?.[1] || trimmedLine : trimmedLine;
+    const isBoldSubHeader = isBoldHeader && /^[A-Z][a-zA-Z\s\-()]+:?$|^Matrix|^Properties|^Key\s+Properties|^Applications|^How\s+(it\s+)?[Ww]orks|^Truth\s+[Tt]able|^Practical\s+Implementation|^Common\s+(gate\s+)?types|^Why\s+|^When\s+|^Intuition|^Operation|^Challenges|^Advantages/.test(headerText);
+    const isMainHeader = /^[A-Z][a-zA-Z\s\-()]+Gate\s*(\([^)]+\))?$|^[A-Z][a-zA-Z\s\-()]+Algorithm$|^[A-Z][a-zA-Z\s\-()]+States?$|^Bell States?$|^Entanglement$|^Superposition$|^Quantum\s+[A-Z]|^[A-Z][a-zA-Z\s]+Basics?$/.test(trimmedLine);
+    const isSubHeader = /^[A-Z][a-zA-Z\s\-()]+:$|^Matrix|^Properties|^Key\s+Properties|^Applications|^How\s+(it\s+)?[Ww]orks|^Truth\s+[Tt]able|^Practical\s+Implementation|^Common\s+(gate\s+)?types|^Why\s+|^When\s+/.test(trimmedLine);
+    const isListItem = /^\s*[\-\u2022]\s+/.test(line);
+    const isNumberedItem = /^\s*\d+\.\s+/.test(line);
+    const isCodeBlock = /^\s*[A-Z]\s*=|^\s*\[\[|^\s*Control\s+Target|^\s*[01]\s+[01]/.test(line);
+    
+    if (isBoldSubHeader) {
+      // Bold subtitle headers - purple color like other subtitles
+      formattedLines.push(
+        <Heading
+          key={`bold-sub-header-${lineIndex}`}
+          as="h4"
+          size="md"
+          color="purple.600"
+          _dark={{ color: "purple.300" }}
+          mt={4}
+          mb={2}
+          fontWeight="semibold"
+        >
+          {headerText}
+        </Heading>
+      );
+    } else if (isBoldHeader) {
+      // Bold markdown headers - extract text and make prominent
+      formattedLines.push(
+        <Heading
+          key={`bold-header-${lineIndex}`}
+          as="h3"
+          size="xl"
+          color="blue.600"
+          _dark={{ color: "blue.300" }}
+          mt={lineIndex > 0 ? 6 : 0}
+          mb={4}
+          fontWeight="bold"
+        >
+          {headerText}
+        </Heading>
+      );
+    } else if (isMainHeader) {
+      // Main headers - larger and prominent
+      formattedLines.push(
+        <Heading
+          key={`main-header-${lineIndex}`}
+          as="h3"
+          size="lg"
+          color="blue.600"
+          _dark={{ color: "blue.300" }}
+          mt={lineIndex > 0 ? 6 : 0}
+          mb={3}
+          fontWeight="bold"
+        >
+          {trimmedLine}
+        </Heading>
+      );
+    } else if (isSubHeader) {
+      // Sub headers - medium emphasis
+      formattedLines.push(
+        <Heading
+          key={`sub-header-${lineIndex}`}
+          as="h4"
+          size="md"
+          color="purple.600"
+          _dark={{ color: "purple.300" }}
+          mt={4}
+          mb={2}
+          fontWeight="semibold"
+        >
+          {trimmedLine}
+        </Heading>
+      );
+    } else if (isCodeBlock) {
+      // Code blocks and matrices
+      formattedLines.push(
+        <Box
+          key={`code-${lineIndex}`}
+          as="pre"
+          bg="gray.50"
+          _dark={{ bg: "gray.800", borderColor: "gray.600" }}
+          p={3}
+          borderRadius="md"
+          fontFamily="mono"
+          fontSize="sm"
+          border="1px solid"
+          borderColor="gray.200"
+          mt={2}
+          mb={2}
+          overflowX="auto"
+        >
+          {line}
+        </Box>
+      );
+    } else {
+      // Regular content with keyword highlighting
+      const parts: (string | JSX.Element)[] = [];
+      let currentText = line;
+      let partIndex = 0;
+      
+      // Important quantum computing terms to highlight
+      const importantTerms = [
+        'qubit', 'qubits', 'superposition', 'entanglement', 'quantum', 'unitary',
+        'eigenstate', 'eigenvalue', 'amplitude', 'phase', 'measurement',
+        'interference', 'coherence', 'decoherence', 'algorithm', 'circuit',
+        'CNOT', 'Hadamard', 'Pauli', 'rotation', 'Bell state', 'controlled',
+        'teleportation', 'cryptography', 'factoring', 'optimization', 'matrix'
+      ];
+      
+      // Create a single regex for all terms
+      const termsRegex = new RegExp(`\\b(${importantTerms.join('|')})s?\\b`, 'gi');
+      
+      // Mathematical expressions
+      const mathRegex = /(\|[01]\u27e9|\u03b1|\u03b2|\u03c0|e\^[^,\s]+|\d+\u00b0|O\([^)]+\))/g;
+      
+      let lastIndex = 0;
+      
+      // Process the text and create highlighted spans
+      const processText = (text: string) => {
+        const segments: (string | JSX.Element)[] = [];
+        let segmentIndex = 0;
+        let lastSegmentIndex = 0;
+        
+        // Find all matches (both terms and math)
+        const allMatches: Array<{start: number, end: number, text: string, type: 'term' | 'math'}> = [];
+        
+        // Find term matches
+        let termMatch;
+        while ((termMatch = termsRegex.exec(text)) !== null) {
+          if (termMatch.index !== undefined) {
+            allMatches.push({
+              start: termMatch.index,
+              end: termMatch.index + termMatch[0].length,
+              text: termMatch[0],
+              type: 'term'
+            });
+          }
+        }
+        
+        // Find math matches
+        let mathMatch;
+        while ((mathMatch = mathRegex.exec(text)) !== null) {
+          if (mathMatch.index !== undefined) {
+            allMatches.push({
+              start: mathMatch.index,
+              end: mathMatch.index + mathMatch[0].length,
+              text: mathMatch[0],
+              type: 'math'
+            });
+          }
+        }
+        
+        // Sort matches by position
+        allMatches.sort((a, b) => a.start - b.start);
+        
+        // Build segments
+        allMatches.forEach(match => {
+          // Add text before match
+          if (match.start > lastSegmentIndex) {
+            const beforeText = text.slice(lastSegmentIndex, match.start);
+            if (beforeText) segments.push(beforeText);
+          }
+          
+          // Add highlighted match
+          if (match.type === 'term') {
+            segments.push(
+              <Text 
+                as="span" 
+                fontWeight="semibold" 
+                color="teal.600" 
+                _dark={{ color: "teal.300" }}
+                key={`term-${lineIndex}-${segmentIndex++}`}
+              >
+                {match.text}
+              </Text>
+            );
+          } else {
+            segments.push(
+              <Text 
+                as="span" 
+                fontWeight="semibold" 
+                color="green.600" 
+                _dark={{ color: "green.300" }}
+                fontFamily="mono"
+                key={`math-${lineIndex}-${segmentIndex++}`}
+              >
+                {match.text}
+              </Text>
+            );
+          }
+          
+          lastSegmentIndex = match.end;
+        });
+        
+        // Add remaining text
+        if (lastSegmentIndex < text.length) {
+          const remainingText = text.slice(lastSegmentIndex);
+          if (remainingText) segments.push(remainingText);
+        }
+        
+        return segments.length > 0 ? segments : [text];
+      };
+      
+      const processedParts = processText(currentText);
+      
+      // Style based on content type
+      const textProps: any = {
+        key: `line-${lineIndex}`,
+        display: "block",
+        fontSize: "md",
+        lineHeight: "tall",
+        color: "gray.700",
+        _dark: { color: "gray.200" }
+      };
+      
+      if (isListItem || isNumberedItem) {
+        textProps.ml = 6;
+        textProps.mt = 1;
+        textProps.pl = 2;
+      } else {
+        textProps.mt = 2;
+      }
+      
+      formattedLines.push(
+        <Text {...textProps}>
+          {processedParts.map((part, index) => 
+            typeof part === 'string' ? part : React.cloneElement(part as React.ReactElement, { key: `part-${lineIndex}-${index}` })
+          )}
+        </Text>
+      );
+    }
+  });
+  
+  return (
+    <Box>
+      {formattedLines}
+    </Box>
+  );
+};
 
 interface QuizQuestion {
   id: string;
@@ -58,9 +314,7 @@ const QUANTUM_TOPICS: TopicItem[] = [
     difficulty: "Beginner",
     description: "Learn the fundamentals of quantum bits",
     imageUrl: "/public/images/superposition.svg",
-    content: ` Qubits and Superposition
-
-In classical computing, information is stored in bits—tiny units that can hold a value of either 0 or 1. Quantum computing introduces a new building block called the qubit (quantum bit), which behaves very differently from classical bits and unlocks entirely new computational possibilities.
+    content: `In classical computing, information is stored in bits—tiny units that can hold a value of either 0 or 1. Quantum computing introduces a new building block called the qubit (quantum bit), which behaves very differently from classical bits and unlocks entirely new computational possibilities.
 
 What Is a Qubit?
 A qubit is the fundamental unit of information in quantum computing. Unlike a classical bit, which must be either 0 or 1, a qubit is a quantum system—often represented by particles like electrons, photons, or superconducting circuits—that can exist in multiple states at once.
@@ -132,9 +386,7 @@ Qubits allow quantum computers to represent richer information, while superposit
     title: "Bloch Sphere Representation",
     difficulty: "Beginner",
     description: "Visualize single-qubit states on the Bloch sphere",
-    content: ` Bloch Sphere Representation
-
-The Bloch Sphere is a geometric representation of a single qubit’s state in quantum computing. It provides an intuitive way to visualize superposition, phase, and rotations of qubits.
+    content: `The Bloch Sphere is a geometric representation of a single qubit’s state in quantum computing. It provides an intuitive way to visualize superposition, phase, and rotations of qubits.
 
 The Bloch Sphere looks like a globe where:
   -The north pole represents the state |0⟩.
@@ -165,9 +417,7 @@ Phi (φ) – Azimuthal Angle
     title: "Quantum Measurement",
     difficulty: "Beginner",
     description: "Understand quantum measurement and wave function collapse",
-    content: ` Quantum Measurement
-
-Quantum measurement describes what happens when we observe or “measure” a quantum system, such as a qubit. Unlike classical measurement, which simply reveals a value, quantum measurement actively changes the system being measured.
+    content: `Quantum measurement describes what happens when we observe or “measure” a quantum system, such as a qubit. Unlike classical measurement, which simply reveals a value, quantum measurement actively changes the system being measured.
 
 What Happens During Quantum Measurement?
 Before measurement, a qubit can exist in a superposition—a blend of both |0⟩ and |1⟩.
@@ -228,9 +478,7 @@ Without measurement, quantum computers could perform incredible calculations but
     title: "Pauli Gates (X, Y, Z)",
     difficulty: "Beginner",
     description: "Learn fundamental Pauli operations",
-    content: `Pauli Gates (X, Y, Z)
-
-Pauli gates are fundamental single-qubit operations in quantum computing. They rotate or flip the state of a qubit along different axes of the Bloch sphere. Each gate corresponds to one of the three Pauli matrices used in quantum mechanics.
+    content: `Pauli gates are fundamental single-qubit operations in quantum computing. They rotate or flip the state of a qubit along different axes of the Bloch sphere. Each gate corresponds to one of the three Pauli matrices used in quantum mechanics.
 
 X Gate (Pauli-X)
   -Also called the “bit-flip” gate.
@@ -265,8 +513,7 @@ Z = [[1,  0],
     difficulty: "Beginner",
     description: "Create equal superposition",
     imageUrl: "/images/hadamard.svg",
-    content: ` Hadamard Gate
-- Creates equal superposition.`,
+    content: ` Creates equal superposition.`,
     contentAfterImage: ` Operation:
 H|0⟩ = (|0⟩ + |1⟩)/√2
 H|1⟩ = (|0⟩ - |1⟩)/√2
@@ -274,6 +521,10 @@ H|1⟩ = (|0⟩ - |1⟩)/√2
  Matrix:
 H = 1/√2 * [[1, 1], [1, -1]]
 
+**Intuition**
+  -The H gate acts like a quantum coin flip, spreading probability amplitudes evenly.
+  -It moves the qubit from the computational basis (Z-axis) to the superposition basis (X-axis).
+  -Applying H twice returns the qubit to its original state (H is its own inverse).
  Properties:
   -Creates equal superposition from classical states
   -Used in many quantum algorithms (e.g., Grover’s, Shor’s)
@@ -310,9 +561,7 @@ H = 1/√2 * [[1, 1], [1, -1]]
     title: "Bell States and Entanglement",
     difficulty: "Beginner",
     description: "Maximally entangled states",
-    content: ` Bell States and Entanglement
-
-Bell states are specific two-qubit quantum states that represent the strongest form of entanglement. Entanglement is a uniquely quantum phenomenon where two qubits become linked so deeply that the state of one instantly affects the state of the other, even if they are far apart.
+    content: `Bell states are specific two-qubit quantum states that represent the strongest form of entanglement. Entanglement is a uniquely quantum phenomenon where two qubits become linked so deeply that the state of one instantly affects the state of the other, even if they are far apart.
 
 Bell states are fundamental in quantum communication, teleportation, and many quantum algorithms.
 
@@ -361,9 +610,7 @@ Bell states are crucial for:
     title: "Quantum Circuit Basics",
     difficulty: "Beginner",
     description: "Understand circuit diagrams",
-    content: ` Quantum Circuit Basics
-
-A quantum circuit is the fundamental model used to design and run computations on a quantum computer. It works by applying a sequence of quantum gates to qubits, transforming their states step by step. Quantum circuits are the blueprint that define how information flows and evolves in a quantum algorithm.
+    content: `A quantum circuit is the fundamental model used to design and run computations on a quantum computer. It works by applying a sequence of quantum gates to qubits, transforming their states step by step. Quantum circuits are the blueprint that define how information flows and evolves in a quantum algorithm.
 
 Qubits as the Building Blocks
   -A quantum circuit operates on qubits, which can be in |0⟩, |1⟩, or a superposition of both.
@@ -424,10 +671,7 @@ Every major quantum algorithm—from Grover’s search to Shor’s factoring—s
     difficulty: "Intermediate",
     description: "Conditional multi-qubit operations",
     imageUrl: "/images/cnotandccnot.png",
-    content: `CNOT and CCNOT Gates
-CNOT Gate (Controlled-NOT)
-
-The CNOT gate is a 2-qubit controlled gate.
+    content: `The CNOT gate is a 2-qubit controlled gate.
 It flips the target qubit only when the control qubit is |1⟩.
 
 How it works:
@@ -455,8 +699,6 @@ Use cases:
   -Quantum teleportation
   -Many fundamental quantum algorithms
   
-CCNOT Gate (Toffoli Gate)
-
 The CCNOT gate, also known as the Toffoli gate, is a 3-qubit gate.
 It flips the target qubit only when both control qubits are |1⟩.
 
@@ -484,7 +726,7 @@ Use cases:
     contentAfterImage: `
 Notation Differences: CNOT vs CCNOT
 
-CNOT (Controlled-NOT):
+**CNOT (Controlled-NOT):**
 • Symbol: ⊕ with a control line (•)
 • Circuit notation: Control qubit has a filled circle (•), target has ⊕
 • Text representation: CNOT, CX, or sometimes just X with control
@@ -492,7 +734,7 @@ CNOT (Controlled-NOT):
 • Qiskit: cx(control, target)
 • Cirq: CNOT(control, target)
 
-CCNOT (Controlled-Controlled-NOT / Toffoli):
+**CCNOT (Controlled-Controlled-NOT / Toffoli):**
 • Symbol: ⊕ with two control lines (• •)
 • Circuit notation: Two control qubits have filled circles (•), target has ⊕
 • Text representation: CCNOT, CCX, Toffoli, or T
@@ -526,9 +768,7 @@ Used for phase control.`,
     title: "Quantum Fourier Transform",
     difficulty: "Intermediate",
     description: "Core of many algorithms",
-    content: `Quantum Fourier Transform (QFT)
-
-The Quantum Fourier Transform (QFT) is the quantum version of the classical discrete Fourier transform (DFT). It transforms a quantum state into a new basis where periodic patterns become easy to detect. QFT is one of the most important tools in quantum algorithms.
+    content: `The Quantum Fourier Transform (QFT) is the quantum version of the classical discrete Fourier transform (DFT). It transforms a quantum state into a new basis where periodic patterns become easy to detect. QFT is one of the most important tools in quantum algorithms.
 What QFT Does
 Given an input quantum state, the QFT maps each basis state |x⟩ to a superposition of all basis states with specific phase factors:
 |x⟩ → (1/√N) Σ(k=0 to N-1) e^(2πixk/N) |k⟩
@@ -572,9 +812,7 @@ Key Properties
     title: "Phase Kickback",
     difficulty: "Intermediate",
     description: "Eigensystem phase transfer",
-    content: `Phase Kickback
-
-Phase kickback is a fundamental quantum phenomenon where phase information from a target qubit "kicks back" to the control qubit in controlled operations. This mechanism is crucial for many quantum algorithms and allows us to extract eigenvalue information.
+    content: `Phase kickback is a fundamental quantum phenomenon where phase information from a target qubit "kicks back" to the control qubit in controlled operations. This mechanism is crucial for many quantum algorithms and allows us to extract eigenvalue information.
 
 What Is Phase Kickback?
 
@@ -638,21 +876,18 @@ Understanding phase kickback is essential for mastering advanced quantum algorit
     title: "SWAP and Fredkin Gates",
     difficulty: "Intermediate",
     description: "Qubit permutation operations",
-    content: `# SWAP and Fredkin Gates
+    content: `SWAP and Fredkin gates are fundamental permutation operations in quantum computing that exchange qubit states and enable complex routing and layout operations.
 
-SWAP and Fredkin gates are fundamental permutation operations in quantum computing that exchange qubit states and enable complex routing and layout operations.
-
-## SWAP Gate
-
+**1) SWAP Gate**
 The SWAP gate exchanges the states of two qubits:
 
-Mathematical Definition:
+**Mathematical Definition:**
 - SWAP|00⟩ = |00⟩
 - SWAP|01⟩ = |10⟩  
 - SWAP|10⟩ = |01⟩
 - SWAP|11⟩ = |11⟩
 
-Matrix Representation:
+**Matrix Representation:**
 \`\`\`
 SWAP = [1 0 0 0]
        [0 0 1 0]
@@ -660,7 +895,7 @@ SWAP = [1 0 0 0]
        [0 0 0 1]
 \`\`\`
 
-Circuit Implementation:
+**Circuit Implementation:**
 The SWAP gate can be decomposed into three CNOT gates:
 - CNOT₁₂ (control on qubit 1, target on qubit 2)
 - CNOT₂₁ (control on qubit 2, target on qubit 1)  
@@ -668,15 +903,14 @@ The SWAP gate can be decomposed into three CNOT gates:
 
 This decomposition is crucial for hardware implementations that don't have native SWAP gates.
 
- Fredkin Gate (Controlled-SWAP)
-
+**2) Fredkin Gate (Controlled-SWAP)**
 The Fredkin gate is a controlled version of SWAP that only swaps the target qubits when the control qubit is |1⟩.
 
-Operation
+**Operation**
 - If control = |0⟩: target qubits unchanged
 - If control = |1⟩: target qubits are swapped
 
-Truth Table:
+**Truth Table:**
 |c a b⟩ → |c a' b'⟩
 - |000⟩ → |000⟩
 - |001⟩ → |001⟩
@@ -687,45 +921,45 @@ Truth Table:
 - |110⟩ → |101⟩ (swap occurs)
 - |111⟩ → |111⟩
 
-## Practical Applications
+**Practical Applications**
 
-Quantum Circuit Layout:
+**Quantum Circuit Layout:**
 - Routing qubits through limited connectivity graphs
 - Mapping logical qubits to physical qubits
 - Optimizing gate sequences for hardware constraints
 
-Quantum Algorithms:
+**Quantum Algorithms:**
 - Quantum Sorting: SWAP networks for ordering quantum states
 - Quantum Fourier Transform: Bit-reversal permutations
 - Error Correction: Moving logical qubits for syndrome extraction
 
-Quantum Simulation:
+**Quantum Simulation:**
 - Implementing fermionic anticommutation relations
 - Jordan-Wigner transformations for spin systems
 - Particle exchange symmetries in many-body problems
 
-## Advanced Variations
+**Advanced Variations**
 
-iSWAP Gate:
+**iSWAP Gate:**
 Adds a phase to the swapped states:
 - iSWAP|01⟩ = i|10⟩
 - iSWAP|10⟩ = i|01⟩
 
-√SWAP Gate:
+**√SWAP Gate:**
 Square root of SWAP, useful for gradual state exchange and adiabatic quantum computing.
 
-SWAP Test:
+**SWAP Test:**
 Uses controlled-SWAP to measure overlap between quantum states:
 P(measure control as |0⟩) = (1 + |⟨ψ|φ⟩|²)/2
 
- Implementation Considerations
+**Implementation Considerations**
 
-Hardware Efficiency:
+**Hardware Efficiency:**
 - Direct SWAP gates require specific connectivity
 - Three-CNOT decomposition works on any connected pair
 - Optimal routing minimizes total gate count
 
-Error Rates:
+**Error Rates:**
 - SWAP operations can accumulate errors
 - Trade-off between routing convenience and fidelity
 - Consider gate error rates when choosing decomposition
@@ -737,9 +971,7 @@ Understanding SWAP and Fredkin gates is essential for quantum circuit optimizati
     title: "Deutsch-Jozsa Algorithm",
     difficulty: "Intermediate",
     description: "Constant vs balanced function test",
-    content: ` Deutsch-Jozsa Algorithm
-
-The Deutsch-Jozsa algorithm demonstrates quantum advantage by solving a specific computational problem with exponentially fewer function evaluations than any classical algorithm.
+    content: `The Deutsch-Jozsa algorithm demonstrates quantum advantage by solving a specific computational problem with exponentially fewer function evaluations than any classical algorithm.
 
  Problem Statement
 
@@ -755,7 +987,7 @@ Quantum Approach:
 - Requires exactly ONE oracle evaluation
 - Exponential speedup!
 
- Algorithm Steps
+Algorithm Steps
 
 Step 1: Initialization
 Start with n+1 qubits:
@@ -845,9 +1077,7 @@ While the problem is somewhat artificial, it proves that quantum computers can s
     title: "Grover's Algorithm - Amplitude Amplification",
     difficulty: "Intermediate",
     description: "Quadratic speedup for search",
-    content: ` Grover's Algorithm & Amplitude Amplification
-
-Grover's algorithm provides a quadratic speedup for unstructured search problems and demonstrates the power of amplitude amplification in quantum computing.
+    content: `Grover's algorithm provides a quadratic speedup for unstructured search problems and demonstrates the power of amplitude amplification in quantum computing.
 
  The Search Problem
 
@@ -945,7 +1175,7 @@ Applications Beyond Search:
 - Amplitude estimation
 - Quantum machine learning
 
- Practical Examples
+Practical Examples
 
 Database Search:
 - N = 10⁶ entries, M = 1 target
@@ -1033,11 +1263,7 @@ The algorithm bridges theoretical quantum computing with practical applications,
     title: "Quantum Phase Estimation",
     difficulty: "Intermediate",
     description: "Estimate eigenvalue phases",
-    content: ` Quantum Phase Estimation (QPE)
-
-Quantum Phase Estimation (QPE)
-
-Purpose:
+    content: `Purpose:
 QPE estimates the phase 𝜙 of an eigenvalue 𝑒^2𝜋𝑖𝜙of a unitary operator 𝑈
  given its eigenvector∣u⟩.
 
@@ -1073,9 +1299,7 @@ Applications
     title: "Quantum Approximate Optimization Algorithm (QAOA)",
     difficulty: "Advanced",
     description: "Hybrid variational optimization",
-    content: ` Quantum Approximate Optimization Algorithm (QAOA)
-
- What it is:
+    content: `What it is:
 A hybrid quantum-classical algorithm designed to solve combinatorial optimization problems. QAOA was introduced by Farhi et al. in 2014 as one of the first algorithms specifically designed for near-term quantum devices.
 
  How it works:
@@ -1167,9 +1391,7 @@ A hybrid quantum-classical algorithm designed to solve combinatorial optimizatio
     title: "Quantum Walks",
     difficulty: "Advanced",
     description: "Quantum analog of random walks",
-    content: ` Quantum Walks
-
- What they are:
+    content: `What they are:
 The quantum mechanical analog of classical random walks, where a quantum particle traverses a graph or lattice following superposition and interference rules rather than probabilistic transitions.
 
  Types of Quantum Walks:
@@ -1274,9 +1496,7 @@ The quantum mechanical analog of classical random walks, where a quantum particl
     title: "Quantum Error Correction Codes",
     difficulty: "Advanced",
     description: "Protect quantum information from noise",
-    content: ` Quantum Error Correction Codes
-
- The Problem:
+    content: `The Problem:
 Quantum information is fragile and susceptible to decoherence and operational errors. Unlike classical bits, quantum states cannot be copied (no-cloning theorem), making error correction fundamentally challenging.
 
  Core Principles:
@@ -1427,9 +1647,7 @@ Quantum information is fragile and susceptible to decoherence and operational er
     title: "Quantum Teleportation",
     difficulty: "Advanced",
     description: "Transmit unknown quantum states",
-    content: ` Quantum Teleportation
-
- What it is:
+    content: `What it is:
 A protocol to transfer an unknown quantum state from one location to another using entanglement and classical communication, without physically transmitting the quantum particle itself.
 
  Historical Context:
@@ -1606,9 +1824,7 @@ Correction Operations:
     title: "Quantum Key Distribution (BB84)",
     difficulty: "Advanced",
     description: "Unconditionally secure key exchange",
-    content: ` Quantum Key Distribution (BB84)
-
- What it is:
+    content: `What it is:
 A protocol that uses quantum mechanics to establish a shared secret key between two parties with information-theoretic security. Eavesdropping is detectable due to quantum measurement disturbance.
 
  Historical Background:
@@ -1836,9 +2052,7 @@ Expected QBER:
     title: "Amplitude Estimation",
     difficulty: "Advanced",
     description: "Quadratic speedup in amplitude evaluation",
-    content: ` Amplitude Estimation
-
- What it is:
+    content: `What it is:
 A quantum algorithm that estimates the amplitude (probability) of measuring a particular state, achieving quadratic speedup over classical Monte Carlo methods. It's a generalization of Grover's algorithm.
 
  The Problem:
@@ -2146,9 +2360,7 @@ Applications
     title: "Quantum Kernel Methods",
     difficulty: "Advanced",
     description: "Kernel evaluation via circuits",
-    content: `Quantum kernel methods are part of quantum machine learning. They extend classical kernel techniques by using quantum computers to map data into a high-dimensional Hilbert space, where linear separation of complex patterns becomes easier. By leveraging quantum properties like superposition and entanglement, quantum kernels can potentially provide advantages over classical kernels for certain datasets.
-
-Core Concepts
+    content: `Core Concepts
   Feature Mapping:
     -Classical input data x is transformed into a quantum state |φ(x)⟩ via a parameterized quantum circuit.
     -This mapping allows data to exist in an exponentially large feature space efficiently, without explicitly computing each dimension.
@@ -2167,7 +2379,7 @@ Advantages
   -Potential Quantum Advantage: Certain datasets may require exponentially large classical kernels to achieve the same performance that a quantum kernel can provide efficiently.
   -Hybrid Approach: Combines quantum kernel evaluation with classical optimization, making it implementable on near-term quantum devices (NISQ-era).
 
-Applications
+**Applications**
   -Classification: Quantum-enhanced SVMs for image recognition, anomaly detection, and pattern classification.
   -Regression: Predicting continuous outputs with complex, high-dimensional relationships.
   -Data Analysis: Feature extraction and dimensionality reduction in datasets that are difficult for classical methods.
@@ -2183,11 +2395,9 @@ Challenges
     title: "Quantum Simulation and Hamiltonian Dynamics",
     difficulty: "Advanced",
     description: "Simulate quantum systems directly",
-    content: `Quantum Simulation and Hamiltonian Dynamics
+    content: `Quantum simulation leverages quantum computers to study quantum systems that are intractable for classical computers, providing exponential advantages for understanding complex many-body physics.
 
-Quantum simulation leverages quantum computers to study quantum systems that are intractable for classical computers, providing exponential advantages for understanding complex many-body physics.
-
- Core Concept
+Core Concept
 
 Digital Quantum Simulation:
 Use gate-based quantum computers to simulate time evolution of quantum systems:
@@ -3298,43 +3508,108 @@ const LibraryPanel: React.FC = () => {
       >
         {selectedTopic ? (
           <>
-            <Box>
-              <Heading size="lg" mb={2}>{selectedTopic.title}</Heading>
-              <HStack>
-                <Badge colorScheme={getDifficultyColor(selectedTopic.difficulty)}>
-                  {selectedTopic.difficulty}
-                </Badge>
-              </HStack>
-            </Box>
-            <Divider />
-            <Text fontWeight="bold" color={textColor} mb={-2}>Overview:</Text>
-            <VStack align="start" spacing={4} flex={1} overflowY="auto" w="100%" maxW="100%">
+            <VStack spacing={6} align="stretch">
               <Box
-                p={[3, 4, 6]}
-                borderWidth={1}
-                borderColor={listBorderColor}
-                borderRadius="md"
-                w="100%"
                 bg={itemBg}
-                minW={0}
-                maxW="100%"
-                overflow="hidden"
-                wordBreak="break-word"
+                p={6}
+                borderRadius="xl"
+                border="1px solid"
+                borderColor={listBorderColor}
+                shadow="sm"
+                _hover={{ shadow: "md" }}
+                transition="all 0.2s"
               >
+                <HStack justify="space-between" align="center" mb={4}>
+                  <VStack align="start" spacing={1}>
+                    <Heading size="xl" color={textColor} letterSpacing="tight">
+                      {selectedTopic.title}
+                    </Heading>
+                    <Text fontSize="md" color="gray.600" _dark={{ color: "gray.400" }} fontStyle="italic">
+                      {selectedTopic.description}
+                    </Text>
+                  </VStack>
+                  <Badge
+                    colorScheme={getDifficultyColor(selectedTopic.difficulty)}
+                    size="lg"
+                    px={4}
+                    py={2}
+                    borderRadius="full"
+                    fontSize="sm"
+                    fontWeight="bold"
+                  >
+                    {selectedTopic.difficulty}
+                  </Badge>
+                </HStack>
+              </Box>
+              
+              <Box
+                bg={itemBg}
+                borderRadius="xl"
+                border="1px solid"
+                borderColor={listBorderColor}
+                shadow="sm"
+                overflow="hidden"
+              >
+                <Box
+                  px={6}
+                  py={4}
+                  borderBottom="1px solid"
+                  borderColor={listBorderColor}
+                  bg={useColorModeValue("gray.50", "gray.800")}
+                >
+                  <HStack spacing={3} align="center">
+                    <Text
+                      fontWeight="bold"
+                      color={textColor}
+                      fontSize="md"
+                      letterSpacing="wide"
+                      textTransform="uppercase"
+                    >
+                      📚 Prepare your brain… things are about to get superposed.
+                    </Text>
+                    <Divider orientation="vertical" height="20px" />
+                    
+                  </HStack>
+                </Box>
+                <Box p={6}>
+                  <VStack align="start" spacing={4} w="100%" maxW="100%">
+                    <Box
+                      p={[4, 5, 8]}
+                      borderWidth={1}
+                      borderColor={listBorderColor}
+                      borderRadius="xl"
+                      w="100%"
+                      bg={itemBg}
+                      minW={0}
+                      maxW="100%"
+                      overflow="hidden"
+                      wordBreak="break-word"
+                      shadow="sm"
+                      _hover={{ shadow: "md" }}
+                      transition="all 0.2s"
+                    >
                 {selectedTopic.id === "controlled-gates" ? (
                   <>
-                    <Text
+                    <Box
                       fontSize={contentFontSize}
                       color={textColor}
-                      whiteSpace="pre-wrap"
-                      lineHeight={2}
-                      fontFamily="system-ui"
+                      lineHeight="tall"
+                      fontFamily="system-ui, -apple-system, sans-serif"
                       wordBreak="break-word"
                       overflowWrap="anywhere"
                       maxWidth="100%"
+                      sx={{
+                        "& h3, & h4": {
+                          letterSpacing: "-0.025em"
+                        },
+                        "& pre": {
+                          fontSize: "sm",
+                          lineHeight: "shorter"
+                        }
+                      }}
                     >
-                      {selectedTopic.content}
-                    </Text>
+                      {formatText(selectedTopic.content)}
+                    </Box>
                     {selectedTopic.imageUrl && (
                       <Box mt={4} textAlign="center">
                         <img
@@ -3350,32 +3625,48 @@ const LibraryPanel: React.FC = () => {
                       </Box>
                     )}
                     {selectedTopic.contentAfterImage && (
-                      <Text
+                      <Box
                         fontSize={contentFontSize}
                         color={textColor}
-                        whiteSpace="pre-wrap"
-                        lineHeight={2}
-                        fontFamily="system-ui"
+                        lineHeight="tall"
+                        fontFamily="system-ui, -apple-system, sans-serif"
                         mt={4}
+                        sx={{
+                          "& h3, & h4": {
+                            letterSpacing: "-0.025em"
+                          },
+                          "& pre": {
+                            fontSize: "sm",
+                            lineHeight: "shorter"
+                          }
+                        }}
                       >
-                        {selectedTopic.contentAfterImage}
-                      </Text>
+                        {formatText(selectedTopic.contentAfterImage)}
+                      </Box>
                     )}
                   </>
                 ) : (
                   <>
-                    <Text
+                    <Box
                       fontSize={contentFontSize}
                       color={textColor}
-                      whiteSpace="pre-wrap"
-                      lineHeight={2}
-                      fontFamily="system-ui"
+                      lineHeight="tall"
+                      fontFamily="system-ui, -apple-system, sans-serif"
                       wordBreak="break-word"
                       overflowWrap="anywhere"
                       maxWidth="100%"
+                      sx={{
+                        "& h3, & h4": {
+                          letterSpacing: "-0.025em"
+                        },
+                        "& pre": {
+                          fontSize: "sm",
+                          lineHeight: "shorter"
+                        }
+                      }}
                     >
-                      {selectedTopic.content}
-                    </Text>
+                      {formatText(selectedTopic.content)}
+                    </Box>
                     {selectedTopic.id === "qubits-basics" && selectedTopic.imageUrl && (
                       <Box mt={3} textAlign="center">
                         <img
@@ -3405,19 +3696,27 @@ const LibraryPanel: React.FC = () => {
                       </Box>
                     )}
                     {selectedTopic.contentAfterImage && (
-                      <Text
+                      <Box
                         fontSize={contentFontSize}
                         color={textColor}
-                        whiteSpace="pre-wrap"
-                        lineHeight={2}
-                        fontFamily="system-ui"
+                        lineHeight="tall"
+                        fontFamily="system-ui, -apple-system, sans-serif"
                         wordBreak="break-word"
                         overflowWrap="anywhere"
                         maxWidth="100%"
                         mt={4}
+                        sx={{
+                          "& h3, & h4": {
+                            letterSpacing: "-0.025em"
+                          },
+                          "& pre": {
+                            fontSize: "sm",
+                            lineHeight: "shorter"
+                          }
+                        }}
                       >
-                        {selectedTopic.contentAfterImage}
-                      </Text>
+                        {formatText(selectedTopic.contentAfterImage)}
+                      </Box>
                     )}
                   </>
                 )}
@@ -3433,6 +3732,9 @@ const LibraryPanel: React.FC = () => {
                     <PhaseGateBloch />
                   </Box>
                 )}
+                    </Box>
+                  </VStack>
+                </Box>
               </Box>
             </VStack>
           </>
