@@ -74,37 +74,89 @@ class CircuitAssistant:
             "gate_types": {},
             "has_entanglement": False,
             "has_superposition": False,
+            "has_measurement": False,
+            "qubit_usage": [0] * num_qubits,  # Count gates on each qubit
             "issues": [],
-            "suggestions": []
+            "suggestions": [],
+            "strength": ""  # Circuit complexity assessment
         }
         
-        # Count gate types
+        # Count gate types and analyze properties
         for gate in gates:
-            gate_type = gate.get('type', gate.get('name', 'unknown'))
+            gate_type = gate.get('type', gate.get('name', 'unknown')).lower()
             analysis["gate_types"][gate_type] = analysis["gate_types"].get(gate_type, 0) + 1
             
+            # Track qubit usage
+            if gate.get('qubit') is not None:
+                qubit = gate.get('qubit')
+                if 0 <= qubit < num_qubits:
+                    analysis["qubit_usage"][qubit] += 1
+            
+            if gate.get('targets'):
+                for target in gate.get('targets', []):
+                    if 0 <= target < num_qubits:
+                        analysis["qubit_usage"][target] += 1
+            
             # Check for entanglement
-            if gate_type in ['cx', 'cnot', 'cz', 'swap']:
+            if gate_type in ['cx', 'cnot', 'cz', 'swap', 'cswap']:
                 analysis["has_entanglement"] = True
                 
             # Check for superposition
             if gate_type in ['h', 'hadamard', 'ry', 'rx']:
                 analysis["has_superposition"] = True
+            
+            # Check for measurement
+            if gate_type in ['measure', 'measurement']:
+                analysis["has_measurement"] = True
         
-        # Generate educational feedback
+        # Assess circuit strength
+        if len(gates) == 0:
+            analysis["strength"] = "empty"
+        elif len(gates) <= 2 and not analysis["has_entanglement"]:
+            analysis["strength"] = "beginner"
+        elif analysis["has_superposition"] and analysis["has_entanglement"]:
+            analysis["strength"] = "intermediate"
+        else:
+            analysis["strength"] = "basic"
+        
+        # Check for unused qubits
+        unused_qubits = [i for i, count in enumerate(analysis["qubit_usage"]) if count == 0]
+        if unused_qubits:
+            analysis["issues"].append(
+                f"Qubits {unused_qubits} are not being used yet"
+            )
+        
+        # Generate educational feedback based on what's present and what's missing
         if not analysis["has_superposition"]:
             analysis["suggestions"].append(
-                "💡 Try adding a Hadamard (H) gate to create superposition - it puts a qubit in a state where it's both 0 and 1 at the same time!"
+                "💡 Add a Hadamard (H) gate to create superposition - the foundation of quantum advantage!"
             )
             
         if num_qubits > 1 and not analysis["has_entanglement"]:
             analysis["suggestions"].append(
-                "🔗 You have multiple qubits but no entanglement yet. Try adding a CNOT gate to create quantum correlations between qubits!"
+                "🔗 Create entanglement with a CNOT gate - this is where quantum computing gets its power!"
+            )
+            analysis["suggestions"].append(
+                "🔗 Create entanglement with a CNOT gate - this is where quantum computing gets its power!"
             )
             
         if len(gates) == 0:
             analysis["suggestions"].append(
-                "🚀 Great! You're ready to build. What kind of circuit would you like to create? I can help you with Bell states, GHZ states, or quantum algorithms!"
+                "🚀 Ready to start! Try 'add a Hadamard gate' or 'create a Bell state'."
+            )
+        elif analysis["has_superposition"] and analysis["has_entanglement"] and not analysis["has_measurement"]:
+            analysis["suggestions"].append(
+                "📊 Add measurement gates to observe the quantum state and see the results!"
+            )
+        elif analysis["strength"] == "intermediate":
+            analysis["suggestions"].append(
+                "🎓 Great circuit! Try building quantum algorithms like Grover's search or quantum teleportation next!"
+            )
+        
+        # Add performance tips
+        if analysis["depth"] > 10:
+            analysis["issues"].append(
+                "⚠️ Circuit depth is high. On real quantum hardware, deeper circuits are more error-prone."
             )
         
         return analysis

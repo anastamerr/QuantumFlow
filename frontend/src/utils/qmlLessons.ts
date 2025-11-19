@@ -587,7 +587,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [0],
         controls: [],
-        params: { phi: 0.3 },
+        params: { phi: 0.314 },
         column: 0
       },
       {
@@ -595,7 +595,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [1],
         controls: [],
-        params: { phi: 1.1 },
+        params: { phi: 1.047 },
         column: 0
       },
       {
@@ -603,7 +603,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [2],
         controls: [],
-        params: { phi: -0.7 },
+        params: { phi: 0.785 },
         column: 0
       },
       {
@@ -675,14 +675,14 @@ export const QML_LESSONS: LessonCircuit[] = [
       {
         stepNumber: 1,
         title: "Encode Data Feature 1",
-        instruction: "Add RZ gate to qubit 0 with angle 0.3 (representing first data feature)",
+        instruction: "Add RZ gate to qubit 0 with angle 0.314 (representing first data feature)",
         hint: "This RZ gate encodes classical data into the quantum state. Place it at column 0",
         expectedGate: {
           id: "g1",
           gateType: "RZ",
           targets: [0],
           controls: [],
-          params: { phi: 0.3 },
+          params: { phi: 0.314 },
           column: 0
         },
         educationalNote: "📊 Data encoding is how we input classical information into quantum circuits! Each feature becomes a rotation angle.",
@@ -691,17 +691,17 @@ export const QML_LESSONS: LessonCircuit[] = [
       {
         stepNumber: 2,
         title: "Encode Data Features 2 and 3",
-        instruction: "Add RZ gates to qubits 1 and 2 with angles 1.1 and -0.7",
+        instruction: "Add RZ gates to qubits 1 and 2 with angles 1.047 and 0.785",
         hint: "These represent the second and third features of your data point. All in column 0",
         expectedGate: {
           id: "g2",
           gateType: "RZ",
           targets: [1],
           controls: [],
-          params: { phi: 1.1 },
+          params: { phi: 1.047 },
           column: 0
         },
-        educationalNote: "🔢 Notice the different angles - each represents a different feature value! Even negative values work.",
+        educationalNote: "🔢 Notice the different angles - each represents a different feature value! Different angles encode different information.",
         whyItMatters: "For a 3-feature dataset, we use 3 qubits. More features might need amplitude encoding or other tricks."
       },
       {
@@ -775,7 +775,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RX",
         targets: [0],
         controls: [],
-        params: { theta: 0.2 },
+        params: { theta: 0.314 },
         column: 0
       },
       {
@@ -783,7 +783,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RX",
         targets: [1],
         controls: [],
-        params: { theta: -0.5 },
+        params: { theta: 0.785 },
         column: 0
       },
       {
@@ -791,7 +791,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RX",
         targets: [2],
         controls: [],
-        params: { theta: 1.0 },
+        params: { theta: 1.047 },
         column: 0
       },
       {
@@ -799,7 +799,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RX",
         targets: [3],
         controls: [],
-        params: { theta: 0.7 },
+        params: { theta: 1.571 },
         column: 0
       },
       {
@@ -895,14 +895,14 @@ export const QML_LESSONS: LessonCircuit[] = [
       {
         stepNumber: 1,
         title: "RX Data Encoding Layer",
-        instruction: "Add RX gates to all 4 qubits with angles 0.2, -0.5, 1.0, and 0.7",
+        instruction: "Add RX gates to all 4 qubits with angles 0.314, 0.785, 1.047, and 1.571",
         hint: "RX encodes data differently than RZ - it rotates around the X-axis! Place all in column 0",
         expectedGate: {
           id: "g1",
           gateType: "RX",
           targets: [0],
           controls: [],
-          params: { theta: 0.2 },
+          params: { theta: 0.314 },
           column: 0
         },
         educationalNote: "🔄 RX encoding creates different quantum states than RZ! Choosing the right encoding matters for performance.",

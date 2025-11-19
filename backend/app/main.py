@@ -114,6 +114,7 @@ def generate_circuit_from_chat(req: ChatRequest) -> ChatResponse:
             next_suggestions=result.get("next_suggestions", []),
             warnings=result.get("warnings"),
             praise=result.get("praise"),
+            action_taken=result.get("action_taken"),
             num_qubits=req.num_qubits,
             status="success"
         )

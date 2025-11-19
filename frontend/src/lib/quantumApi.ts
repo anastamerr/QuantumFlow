@@ -100,6 +100,7 @@ export async function generateCircuitFromChat(
     next_suggestions?: string[];
     warnings?: string[];
     praise?: string;
+    action_taken?: string;
     num_qubits: number;
     status: string;
   }>;

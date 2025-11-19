@@ -45,6 +45,7 @@ class ChatResponse(BaseModel):
     next_suggestions: List[str] = Field(default=[], description="What to try next")
     warnings: Optional[List[str]] = Field(None, description="Validation warnings")
     praise: Optional[str] = Field(None, description="Encouraging feedback")
+    action_taken: Optional[str] = Field(None, description="Action performed: add_gates, remove_gates, analyze, explain")
     num_qubits: int = Field(default=2)
     status: str = "success"
 

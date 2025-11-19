@@ -166,8 +166,20 @@ const AIChatbot = () => {
       // Build rich AI response with educational content
       let aiResponse = response.response || response.explanation;
       
+      // Add action indicator
+      if (response.action_taken) {
+        const actionEmojis: Record<string, string> = {
+          'add_gates': '➕ Added gates',
+          'remove_gates': '➖ Removed gates', 
+          'analyze': '🔍 Analyzed circuit',
+          'explain': '💭 Explained'
+        };
+        const actionText = actionEmojis[response.action_taken] || '✅ Action completed';
+        aiResponse = `**${actionText}**\n\n${aiResponse}`;
+      }
+      
       if (response.teaching_note) {
-        aiResponse += `\n\n${response.teaching_note}`;
+        aiResponse += `\n\n📚 ${response.teaching_note}`;
       }
       
       if (response.praise) {
@@ -372,16 +384,20 @@ const AIChatbot = () => {
                     <Box textAlign="center" py={8} color="gray.500">
                       <ChatIcon boxSize={12} mb={3} />
                       <Text fontSize="lg" fontWeight="medium">
-                        Welcome to AI Circuit Assistant!
+                        AI Circuit Assistant 🤖
                       </Text>
-                      <Text fontSize="sm" mt={2}>
-                        Describe a quantum circuit and I'll generate it for you.
+                      <Text fontSize="sm" mt={2} mb={4}>
+                        I can help you build quantum circuits! I'm not just here to suggest - I'll actually add gates, build circuits, and help you learn.
                       </Text>
                       <Divider my={4} />
                       <VStack align="start" spacing={2} fontSize="xs" color="gray.400">
-                        <Text>💡 Try: "Create a Bell state"</Text>
-                        <Text>💡 Try: "Make a 3-qubit GHZ state"</Text>
-                        <Text>💡 Try: "Add a Hadamard on qubit 0"</Text>
+                        <Text fontWeight="bold" fontSize="sm" color="gray.500">✨ Try asking me to:</Text>
+                        <Text>• "Add a Hadamard gate"</Text>
+                        <Text>• "Create a Bell state"</Text>
+                        <Text>• "Build a GHZ state"</Text>
+                        <Text>• "Analyze my circuit"</Text>
+                        <Text>• "What can I do next?"</Text>
+                        <Text>• "Explain the X gate"</Text>
                       </VStack>
                     </Box>
                   </ScaleFade>
@@ -483,7 +499,7 @@ const AIChatbot = () => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder="Describe your circuit..."
+                    placeholder="Ask me to build something..."
                     size="sm"
                     bg={inputBg}
                     disabled={isLoading}
