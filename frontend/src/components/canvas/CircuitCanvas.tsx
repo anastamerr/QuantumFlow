@@ -198,7 +198,7 @@ const CircuitCanvas: React.FC = () => {
         const targetQubits = newGate.targets || [];
         
         // For CNOT and CZ, the control is implicitly the qubit the gate is dropped on,
-        // and the target is set in the previous block. We don't need to find additional control qubits.
+        // and the target is set in the previous block.
         if (gateDefinition.id === 'cnot' || gateDefinition.id === 'cz') {
           // Ensure the target is different from the control for CNOT/CZ
           if (targetQubits.includes(mainQubit)) {
@@ -211,6 +211,8 @@ const CircuitCanvas: React.FC = () => {
               });
               return;
           }
+          // Set the control qubit to the qubit where the gate was dropped
+          newGate.controls = [mainQubit];
         } else {
           // For other multi-control gates (e.g., Toffoli)
           const availableControlQubits = qubits

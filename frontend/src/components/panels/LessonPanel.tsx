@@ -43,6 +43,7 @@ import { RootState } from '../../store';
 import { selectGates, selectQubits } from '../../store/slices/circuitSlice';
 import { QML_LESSONS, getLessonById, getNextLesson, LessonCircuit, LessonStep as LessonStepType } from '../../utils/qmlLessons';
 import { quantumApi } from '../../lib/quantumApi';
+import CircuitCanvas from '../canvas/CircuitCanvas';
 
 interface LessonState {
   active: boolean;
@@ -589,6 +590,26 @@ export const LessonPanel: React.FC = () => {
               </VStack>
             </CardBody>
           </Card>
+        )}
+        
+        {/* Circuit Visualization - shown when lesson is active */}
+        {lessonState.active && lessonState.lessonData && (
+          <Box mt={4}>
+            <HStack mb={3}>
+              <Heading size="md">Circuit Visualization</Heading>
+              <Badge colorScheme="blue">{lessonState.lessonData.title}</Badge>
+            </HStack>
+            <Box 
+              borderWidth={1} 
+              borderRadius="lg" 
+              borderColor="gray.200"
+              bg="white"
+              p={4}
+              overflow="auto"
+            >
+              <CircuitCanvas />
+            </Box>
+          </Box>
         )}
       </VStack>
     </Box>

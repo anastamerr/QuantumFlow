@@ -131,13 +131,13 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {!isFullView && activePanel !== 'qml' && (
+              {!isFullView && activePanel !== 'qml' && activePanel !== 'lessons' && (
                 <Box flex={1} mb={4}>
                   <CircuitCanvas />
                 </Box>
               )}
-              {activePanel === 'qml' ? (
-                // QML takes full screen without ResizablePanel
+              {activePanel === 'qml' || activePanel === 'lessons' ? (
+                // QML and Lessons take full screen without ResizablePanel
                 <Box 
                   flex={1}
                   borderWidth={1} 
@@ -148,7 +148,8 @@ function App() {
                   height="calc(100vh - 120px)"
                   overflowY="auto"
                 >
-                  <QMLPanel />
+                  {activePanel === 'qml' && <QMLPanel />}
+                  {activePanel === 'lessons' && <LessonPanel />}
                 </Box>
               ) : (
                 <ResizablePanel 
@@ -168,7 +169,6 @@ function App() {
                   {activePanel === 'simulation' && <SimulationPanel />}
                   {activePanel === 'export' && <ExportPanel />}
                   {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
-                  {activePanel === 'lessons' && <LessonPanel />}
                 </ResizablePanel>
               )}
             </Flex>
