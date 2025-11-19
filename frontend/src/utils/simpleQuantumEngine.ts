@@ -1,66 +1,58 @@
 import { Gate, Qubit } from '../store/slices/circuitSlice';
 import { SimulationStep, BlochVector, QubitStateDetail } from '../store/slices/simulationSlice';
-
-const INITIAL_BLOCH: BlochVector = { x: 0, y: 0, z: 1 };
+import { C, applyGateMatrix, getGateMatrix, stateToBloch, mag, Complex } from './mathHelpers';
 
 /**
  * Helper: Converts Bloch coordinates (x,y,z) into Theta, Phi, and Amplitudes
+ * Uses 4-decimal precision and clamps noise to prevent "Superposition" flickering.
  */
-const calculateStateDetails = (id: number, v: BlochVector): QubitStateDetail => {
+const calculateAngles = (v: BlochVector, alpha: Complex, beta: Complex, id: number): QubitStateDetail => {
+  // --- CLAMPING FIX ---
+  // Force tiny numbers to 0 to prevent scientific notation confusion (e.g., 1e-16)
+  const clean = (n: number) => Math.abs(n) < 0.0001 ? 0 : n;
+  const x = clean(v.x);
+  const y = clean(v.y);
+  const z = Math.max(-1, Math.min(1, clean(v.z))); // Clamp Z rigidly to -1..1
+
   // 1. Calculate Theta (0 to PI)
-  // z = cos(theta) -> theta = acos(z)
-  // Clamp z to -1...1 to avoid floating point errors causing NaN
-  const zClamped = Math.max(-1, Math.min(1, v.z));
-  const theta = Math.acos(zClamped);
+  const theta = Math.acos(z);
 
   // 2. Calculate Phi (0 to 2PI)
-  // x = sin(theta)cos(phi), y = sin(theta)sin(phi)
-  // atan2 handles the quadrants correctly
-  let phi = Math.atan2(v.y, v.x);
-  if (phi < 0) phi += 2 * Math.PI; // Normalize to 0...2PI
+  let phi = Math.atan2(y, x);
+  if (phi < 0) phi += 2 * Math.PI;
   
-  // Handle the North/South pole edge cases where phi is undefined
-  if (Math.abs(zClamped) > 0.99) phi = 0;
+  // Pole Correction: If at |0> or |1>, Phi is irrelevant (set to 0 for clean UI)
+  if (Math.abs(z) > 0.999) phi = 0;
 
-  // 3. Calculate Complex Amplitudes (alpha, beta)
-  // state = cos(theta/2)|0> + e^(i*phi)sin(theta/2)|1>
-  const alpha = Math.cos(theta / 2);
-  const betaMag = Math.sin(theta / 2);
-  
-  // Beta is complex: betaMag * (cos(phi) + i*sin(phi))
-  const betaRe = betaMag * Math.cos(phi);
-  const betaIm = betaMag * Math.sin(phi);
-
-  // Format the complex string nicely
-  const formatComplex = (re: number, im: number) => {
-    if (Math.abs(im) < 0.01) return `${re.toFixed(2)}`;
-    const sign = im >= 0 ? '+' : '-';
-    return `${re.toFixed(2)} ${sign} ${Math.abs(im).toFixed(2)}i`;
+  // 3. Format Complex String
+  const formatC = (n: Complex) => {
+    if (Math.abs(n.imag) < 0.0001) return `${n.real.toFixed(4)}`;
+    const sign = n.imag >= 0 ? '+' : '-';
+    return `${n.real.toFixed(4)} ${sign} ${Math.abs(n.imag).toFixed(4)}i`;
   };
 
-  // Construct string: "a|0> + b|1>"
-  // We check if magnitude is significant to avoid clutter
   let complexStr = "";
-  if (Math.abs(alpha) > 0.01) complexStr += `${alpha.toFixed(2)}|0⟩`;
-  
-  if (betaMag > 0.01) {
+  if (mag(alpha) > 0.0001) complexStr += `${formatC(alpha)}|0⟩`;
+  if (mag(beta) > 0.0001) {
     if (complexStr !== "") complexStr += " + ";
-    // Wrap beta in parens if it has imaginary part
-    const betaStr = formatComplex(betaRe, betaIm);
-    const needsParens = Math.abs(betaIm) > 0.01;
+    const betaStr = formatC(beta);
+    const needsParens = Math.abs(beta.imag) > 0.0001 || beta.real < 0;
     complexStr += needsParens ? `(${betaStr})|1⟩` : `${betaStr}|1⟩`;
   }
 
-  // 4. Vector Text (simplified label)
+  // 4. Vector Text
   let vectorText = "Superposition";
-  if (v.z > 0.99) vectorText = "|0⟩";
-  else if (v.z < -0.99) vectorText = "|1⟩";
-  else if (v.x > 0.99) vectorText = "|+⟩";
-  else if (v.x < -0.99) vectorText = "|-⟩";
+  if (z > 0.999) vectorText = "|0⟩";
+  else if (z < -0.999) vectorText = "|1⟩";
+  else if (x > 0.999) vectorText = "|+⟩";
+  else if (x < -0.999) vectorText = "|-⟩";
+  // Add Y-axis labels for completeness
+  else if (y > 0.999) vectorText = "|+i⟩";
+  else if (y < -0.999) vectorText = "|-i⟩";
 
   return {
     qubitId: id,
-    bloch: v,
+    bloch: { x, y, z }, // Return cleaned coordinates
     vectorText,
     theta,
     phi,
@@ -74,57 +66,78 @@ export const calculateSimulationHistory = (
 ): SimulationStep[] => {
   
   const history: SimulationStep[] = [];
-  
   const lastGatePos = gates.length > 0 ? Math.max(...gates.map(g => g.position)) : 0;
+  
+  // Ensure we simulate at least one step if empty, or up to the last gate + 1
   const totalSteps = lastGatePos + 2;
 
-  // Initialize states
-  let currentBlochStates: Record<number, BlochVector> = {};
-  qubits.forEach(q => { currentBlochStates[q.id] = { ...INITIAL_BLOCH }; });
+  // Initialize State
+  let currentStates: Record<number, [Complex, Complex]> = {};
+  qubits.forEach(q => { currentStates[q.id] = [C(1), C(0)]; });
 
   for (let step = 0; step < totalSteps; step++) {
     const stepGates = gates.filter(g => g.position === step - 1);
     const stepDetails: QubitStateDetail[] = [];
 
+    // --- SHORT-CIRCUIT ---
+    // If this is not the initialization step (0) AND there are no gates here,
+    // we SKIP all math. This prevents floating point drift in empty cells.
+    if (step > 0 && stepGates.length === 0) {
+       // Just calculate visuals based on the EXISTING state
+       qubits.forEach(q => {
+         const [alpha, beta] = currentStates[q.id];
+         const bloch = stateToBloch(alpha, beta);
+         stepDetails.push(calculateAngles(bloch, alpha, beta, q.id));
+       });
+       
+       history.push({
+         step: step,
+         description: `Step ${step}`,
+         qubitStates: stepDetails
+       });
+       continue; // Skip to next loop iteration
+    }
+
+    // --- 1. Multi-Qubit Logic (CX/CNOT) ---
+    stepGates.forEach(gate => {
+        const type = gate.type.toLowerCase();
+        if (['cx', 'cnot'].includes(type)) {
+            const g = gate as any; 
+            if (g.targetQubit !== undefined) {
+                const controlState = currentStates[g.qubit];
+                const probOne = mag(controlState[1]) ** 2;
+                // Classical control check
+                if (probOne > 0.5) {
+                     const targetSt = currentStates[g.targetQubit];
+                     currentStates[g.targetQubit] = applyGateMatrix(getGateMatrix('x'), targetSt);
+                }
+            }
+        }
+    });
+
+    // --- 2. Single Qubit Logic ---
     qubits.forEach(q => {
-      let vector = { ...currentBlochStates[q.id] };
-      const gate = stepGates.find(g => g.qubit === q.id);
+      let [alpha, beta] = currentStates[q.id];
+      
+      // Find gate (ignoring multi-qubit ones we just handled)
+      const gate = stepGates.find(g => g.qubit === q.id && !['cx', 'cnot', 'cz', 'swap'].includes(g.type.toLowerCase()));
 
       if (gate) {
-        switch (gate.type.toLowerCase()) {
-          case 'x': vector.z = -vector.z; vector.y = -vector.y; break;
-          case 'y': vector.z = -vector.z; vector.x = -vector.x; break;
-          case 'z': vector.x = -vector.x; vector.y = -vector.y; break;
-          case 'h': 
-            const oldZ = vector.z; const oldX = vector.x;
-            vector.z = oldX; vector.x = oldZ; vector.y = -vector.y;
-            break;
-          case 's': 
-             const sX = vector.x; vector.x = -vector.y; vector.y = sX; 
-             break;
-          case 't': 
-             // T is 45 deg around Z
-             // Rotation matrix on (x,y)
-             const tCos = Math.cos(Math.PI/4);
-             const tSin = Math.sin(Math.PI/4);
-             const tX = vector.x * tCos - vector.y * tSin;
-             const tY = vector.x * tSin + vector.y * tCos;
-             vector.x = tX;
-             vector.y = tY;
-             break;
-        }
+        const matrix = getGateMatrix(gate.type, gate.params as any);
+        [alpha, beta] = applyGateMatrix(matrix, [alpha, beta]);
       }
 
-      currentBlochStates[q.id] = vector;
+      currentStates[q.id] = [alpha, beta];
       
-      // CALCULATE ALL THE NEW PHYSICS VALUES
-      stepDetails.push(calculateStateDetails(q.id, vector));
+      // Visuals
+      const bloch = stateToBloch(alpha, beta);
+      stepDetails.push(calculateAngles(bloch, alpha, beta, q.id));
     });
 
     history.push({
       step: step,
       description: step === 0 ? "Initial" : `Step ${step}`,
-      qubitStates: stepDetails // Use the new detailed array
+      qubitStates: stepDetails
     });
   }
 

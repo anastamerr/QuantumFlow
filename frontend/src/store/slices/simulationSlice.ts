@@ -16,18 +16,28 @@ import {
 } from './circuitSlice'
 
 // --- Types ---
+
 export interface BlochVector {
   x: number
   y: number
   z: number
 }
 
+// Detailed physics data for a single qubit at a specific step
+export interface QubitStateDetail {
+  qubitId: number
+  vectorText: string      // e.g. "|0>", "|+>"
+  bloch: BlochVector      // { x, y, z }
+  theta: number           // Polar angle (radians)
+  phi: number             // Azimuthal angle (radians)
+  complexStr: string      // e.g. "0.70|0> + 0.70|1>"
+}
+
 export interface SimulationStep {
   step: number
   description: string
-  stateVector: string[]
-  probabilities: number[]
-  blochVectors: BlochVector[] 
+  // The array of states for all qubits at this step
+  qubitStates: QubitStateDetail[]
 }
 
 export interface SimulationState {
@@ -55,14 +65,20 @@ export const simulationSlice = createSlice({
   initialState,
   reducers: {
     setCurrentStep: (state, action: PayloadAction<number>) => {
+      // Clamp between 0 and max steps
       state.currentStep = Math.max(0, Math.min(action.payload, state.totalSteps - 1))
     },
     stepForward: (state) => {
-      if (state.currentStep < state.totalSteps - 1) state.currentStep += 1
-      else state.isPlaying = false 
+      if (state.currentStep < state.totalSteps - 1) {
+        state.currentStep += 1
+      } else {
+        state.isPlaying = false // Stop playing if we hit the end
+      }
     },
     stepBackward: (state) => {
-      if (state.currentStep > 0) state.currentStep -= 1
+      if (state.currentStep > 0) {
+        state.currentStep -= 1
+      }
     },
     setPlaying: (state, action: PayloadAction<boolean>) => {
       state.isPlaying = action.payload
@@ -72,19 +88,23 @@ export const simulationSlice = createSlice({
       state.totalSteps = action.payload.length
       state.currentStep = 0
     },
+    
+    // The Action that triggers the Frontend Physics Engine
     runPredictiveSimulation: (state, action: PayloadAction<{qubits: Qubit[], gates: Gate[]}>) => {
       const { qubits, gates } = action.payload;
+      
+      // Calculate the history using our new utility
       const history = calculateSimulationHistory(qubits, gates);
+      
       state.history = history;
       state.totalSteps = history.length;
       state.currentStep = 0;
       state.isPlaying = false;
+      state.error = null;
     }
   },
-  // --- FIX: Listen for Circuit Changes ---
+  // --- FIX: Listen for Circuit Changes to prevent crashes ---
   extraReducers: (builder) => {
-    // When ANY of these actions happen, we must reset the simulation
-    // to prevent "Stale State" crashes.
     builder
       .addCase(addGate, (state) => resetSimulation(state))
       .addCase(removeGate, (state) => resetSimulation(state))
@@ -107,7 +127,11 @@ const resetSimulation = (state: SimulationState) => {
 }
 
 export const { 
-  setCurrentStep, stepForward, stepBackward, setPlaying, setSimulationData, 
+  setCurrentStep, 
+  stepForward, 
+  stepBackward, 
+  setPlaying, 
+  setSimulationData, 
   runPredictiveSimulation 
 } = simulationSlice.actions
 
