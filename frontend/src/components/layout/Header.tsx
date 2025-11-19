@@ -3,7 +3,11 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
 import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
 
-const Header = () => {
+type HeaderProps = {
+  onOpenQubitTouchdown?: () => void
+}
+
+const Header = ({ onOpenQubitTouchdown }: HeaderProps) => {
   const dispatch = useDispatch()
   const activePanel = useSelector(selectActivePanel)
   const circuitName = useSelector(selectCircuitName)
@@ -40,6 +44,14 @@ const Header = () => {
             colorScheme="blue"
           >
             Circuit
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            colorScheme="blue"
+            onClick={onOpenQubitTouchdown}
+          >
+            Qubit Touchdown
           </Button>
           <Button
             size="sm"

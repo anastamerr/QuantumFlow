@@ -1,7 +1,7 @@
 import { Box, Flex, VStack, useColorModeValue, useToast } from '@chakra-ui/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Header from './components/layout/Header'
 import Sidebar from './components/layout/Sidebar'
 import CircuitCanvas from './components/canvas/CircuitCanvas'
@@ -14,6 +14,10 @@ import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
+import QubitTouchdownPage from './components/pages/QubitTouchdownPage'
+
+type ViewMode = 'workbench' | 'qubitTouchdown'
+
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
@@ -21,6 +25,8 @@ function App() {
   const toast = useToast()
   const panelBg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
+  const [viewMode, setViewMode] = useState<ViewMode>('workbench')
+
 
   // Handle keyboard shortcuts globally
   useEffect(() => {
@@ -84,76 +90,85 @@ function App() {
     return () => window.removeEventListener('error', handleError)
   }, [toast])
 
+ 
   return (
     <DndProvider backend={HTML5Backend}>
       <VStack spacing={0} align="stretch" h="100vh">
-        <Header />
-        <Flex flex={1} overflow="hidden">
-          {/* Fixed sidebar that doesn't scroll */}
-          <Box
-            position="sticky"
-            top={0}
-            h="calc(100vh - 60px)" // Adjust based on header height
-            zIndex={10}
-            flexShrink={0}
-          >
-            <Sidebar />
-          </Box>
-          
-          {/* Main content area with vertical scrolling */}
-          <Box 
-            flex={1} 
-            p={4} 
-            overflowY="auto" 
-            h="calc(100vh - 60px)" // Adjust based on header height
-            css={{
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                width: '10px',
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(0, 0, 0, 0.2)',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb:hover': {
-                background: 'rgba(0, 0, 0, 0.3)',
-              },
-            }}
-          >
-            <Flex direction="column" minH="100%">
-              {!isFullView && (
-                <Box flex={1} mb={4}>
-                  <CircuitCanvas />
-                </Box>
-              )}
-              <ResizablePanel 
-                direction="vertical" 
-                defaultSize={isFullView ? 600 : 300} 
-                minSize={150} 
-                maxSize={isFullView ? 800 : 500}
-                borderWidth={1} 
-                borderRadius="md" 
-                bg={panelBg}
-                borderColor={borderColor}
-                p={4}
-                flex={isFullView ? 1 : undefined}
-                height={isFullView ? "calc(100vh - 120px)" : undefined}
-              >
-                {activePanel === 'code' && <CodePanel />}
-                {activePanel === 'simulation' && <SimulationPanel />}
-                {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
-              </ResizablePanel>
-            </Flex>
-          </Box>
-            {/* Gate parameters panel - will only render when a gate is selected */}
-          <GateParamsPanel />
-        </Flex>
-        
-        {/* Tutorial panel - modal overlay */}
+        <Header
+          onOpenQubitTouchdown={() => setViewMode('qubitTouchdown')}
+          //onOpenWorkbench={() => setViewMode('workbench')}
+          //currentView={viewMode}
+        />
+
+        {viewMode === 'workbench' ? (
+          // your existing layout exactly as before:
+          <Flex flex={1} overflow="hidden">
+            <Box
+              position="sticky"
+              top={0}
+              h="calc(100vh - 60px)"
+              zIndex={10}
+              flexShrink={0}
+            >
+              <Sidebar
+               // onQubitTouchdown={() => setViewMode('qubitTouchdown')}
+              />
+            </Box>
+
+            <Box
+              flex={1}
+              p={4}
+              overflowY="auto"
+              h="calc(100vh - 60px)"
+              css={{
+                '&::-webkit-scrollbar': { width: '8px' },
+                '&::-webkit-scrollbar-track': {
+                  width: '10px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  background: 'rgba(0, 0, 0, 0.3)',
+                },
+              }}
+            >
+              <Flex direction="column" minH="100%">
+                {!isFullView && (
+                  <Box flex={1} mb={4}>
+                    <CircuitCanvas />
+                  </Box>
+                )}
+                <ResizablePanel
+                  direction="vertical"
+                  defaultSize={isFullView ? 600 : 300}
+                  minSize={150}
+                  maxSize={isFullView ? 800 : 500}
+                  borderWidth={1}
+                  borderRadius="md"
+                  bg={panelBg}
+                  borderColor={borderColor}
+                  p={4}
+                  flex={isFullView ? 1 : undefined}
+                  height={isFullView ? 'calc(100vh - 120px)' : undefined}
+                >
+                  {activePanel === 'code' && <CodePanel />}
+                  {activePanel === 'simulation' && <SimulationPanel />}
+                  {activePanel === 'export' && <ExportPanel />}
+                  {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                </ResizablePanel>
+              </Flex>
+            </Box>
+
+            <GateParamsPanel />
+          </Flex>
+        ) : (
+          // New dedicated full-page game view
+          <QubitTouchdownPage />
+        )}
+
         <TutorialPanel />
       </VStack>
     </DndProvider>

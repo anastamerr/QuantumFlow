@@ -3,8 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from .models import ExecuteRequest, ExecuteResponse
+from .models import ExecuteRequest, ExecuteResponse ,NewGameRequest,NewGameResponse,MoveRequest,MoveResponse
+
 from .qiskit_runner import run_circuit
+
+
+
+from .models import (
+    QubitNewGameRequest,
+    QubitPlayCardRequest,
+    QubitTouchdownState,
+)
+from .qubit_touchdown_runner import create_new_game, play_card
 
 
 load_dotenv()
@@ -52,9 +62,40 @@ def execute(req: ExecuteRequest) -> ExecuteResponse:
         return ExecuteResponse(**result, status="success")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@app.post("/api/v1/qubit-touchdown/new-game", response_model=QubitTouchdownState)
+async def qubit_touchdown_new_game(req: QubitNewGameRequest) -> QubitTouchdownState:
+    """
+    Create a new Qubit Touchdown game.
 
+    mode:
+      - PVP: 2 local human players.
+      - PVC: player 1 vs. a simple computer player.
+    """
+    try:
+        return create_new_game(req)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/v1/qubit-touchdown/play-card", response_model=QubitTouchdownState)
+async def qubit_touchdown_play_card(req: QubitPlayCardRequest) -> QubitTouchdownState:
+    """
+    Play a card from the current player's hand.
+
+    If the mode is PVC and it becomes the computer's turn, the computer move
+    will also be simulated and included in the returned state.
+    """
+    try:
+        return play_card(req.game_id, req.player_id, req.card_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host=HOST, port=PORT)
+
+
