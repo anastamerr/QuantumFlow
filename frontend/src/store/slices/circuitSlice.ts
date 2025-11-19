@@ -4,9 +4,14 @@ import { RootState } from '../index'
 // Define types for our state
 export interface Gate {
   id: string
+  name: string
+  symbol: string
+  description: string
+  category: string
+  color: string
   type: string
-  qubit: number
-  position: number
+  qubit?: number
+  position?: number
   params?: {
     [key: string]: number | string
   }
@@ -190,6 +195,22 @@ export const selectGates = (state: RootState) => state.circuit.gates
 export const selectCircuitName = (state: RootState) => state.circuit.name
 export const selectCircuitDescription = (state: RootState) => state.circuit.description
 export const selectMaxPosition = (state: RootState) => state.circuit.maxPosition
+export const selectQubitCount = (state: RootState) => state.circuit.qubits.length
+export const selectGateCount = (state: RootState) => state.circuit.gates.length
+export const selectCircuitDepth = (state: RootState) =>
+  state.circuit.gates.length > 0
+    ? Math.max(
+        ...state.circuit.gates.map((gate) =>
+          typeof gate.position === 'number' ? gate.position : 0,
+        ),
+      ) + 1
+    : 0
+export const selectGateFrequency = (state: RootState) =>
+  state.circuit.gates.reduce<Record<string, number>>((acc, gate) => {
+    const type = gate.type || 'unknown'
+    acc[type] = (acc[type] || 0) + 1
+    return acc
+  }, {})
 
 // Export the reducer
 export default circuitSlice.reducer

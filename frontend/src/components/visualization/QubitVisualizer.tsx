@@ -23,13 +23,41 @@ import {
   Divider
 } from '@chakra-ui/react';
 import { InfoIcon, ChevronDownIcon } from '@chakra-ui/icons';
-import BlochSphereVisualization from './BlochSphereVisualizer';
-import { 
-  Complex, 
-  BlochCoordinates, 
-  extractQubitAmplitudes, 
-  calculateQubitProbabilities 
-} from '../../utils/blochSphereUtils';
+// Helper functions for extracting qubit amplitudes and probabilities
+const extractQubitAmplitudes = (stateVector: Record<string, [number, number]>, qubitIndex: number) => {
+  let alpha: [number, number] = [0, 0];
+  let beta: [number, number] = [0, 0];
+  
+  Object.entries(stateVector).forEach(([state, amplitude]) => {
+    if (!amplitude || state.length <= qubitIndex) return;
+    const bit = state[state.length - 1 - qubitIndex];
+    if (bit === '0') {
+      alpha = [alpha[0] + amplitude[0], alpha[1] + amplitude[1]];
+    } else if (bit === '1') {
+      beta = [beta[0] + amplitude[0], beta[1] + amplitude[1]];
+    }
+  });
+  
+  const normSquared = alpha[0] * alpha[0] + alpha[1] * alpha[1] + beta[0] * beta[0] + beta[1] * beta[1];
+  if (normSquared > 1e-10) {
+    const norm = Math.sqrt(normSquared);
+    alpha = [alpha[0] / norm, alpha[1] / norm];
+    beta = [beta[0] / norm, beta[1] / norm];
+  } else {
+    alpha = [1, 0];
+    beta = [0, 0];
+  }
+  
+  return { alpha, beta };
+};
+
+const calculateQubitProbabilities = (stateVector: Record<string, [number, number]>, qubitIndex: number): [number, number] => {
+  const { alpha, beta } = extractQubitAmplitudes(stateVector, qubitIndex);
+  const prob0 = alpha[0] * alpha[0] + alpha[1] * alpha[1];
+  const prob1 = beta[0] * beta[0] + beta[1] * beta[1];
+  const sum = prob0 + prob1;
+  return sum > 1e-10 ? [prob0 / sum, prob1 / sum] : [1, 0];
+};
 
 interface QubitVisualizationProps {
   // The state vector as an object with basis states as keys and complex amplitudes as [real, imag] arrays
@@ -136,16 +164,6 @@ const QubitVisualization: React.FC<QubitVisualizationProps> = ({
               }}
               fontWeight="medium"
             >
-              Bloch Sphere
-            </Tab>
-            <Tab 
-              _selected={{ 
-                color: "white", 
-                bg: "blue.500",
-                boxShadow: "md" 
-              }}
-              fontWeight="medium"
-            >
               Probability
             </Tab>
             <Tab 
@@ -161,37 +179,6 @@ const QubitVisualization: React.FC<QubitVisualizationProps> = ({
           </TabList>
           
           <TabPanels>
-            <TabPanel>
-              <Flex justify="center" p={4}>
-                <BlochSphereVisualization 
-                  stateVector={validStateVector}
-                  qubitIndex={selectedQubit}
-                  width={350}
-                  height={350}
-                  title={`Bloch Sphere - Qubit ${selectedQubit}`}
-                />
-              </Flex>
-              
-              {/* Add a helpful explanation */}
-              <Box 
-                bg={accentBg} 
-                p={3} 
-                borderRadius="md" 
-                mt={2}
-                boxShadow="sm"
-              >
-                <Flex alignItems="center" mb={2}>
-                  <Icon as={InfoIcon} color={accentColor} mr={2} />
-                  <Text fontWeight="medium" color={accentColor}>What is the Bloch sphere?</Text>
-                </Flex>
-                <Text fontSize="sm">
-                  The Bloch sphere is a geometric representation of a single-qubit quantum state.
-                  The north pole corresponds to |0⟩, the south pole to |1⟩, and superposition states lie on the sphere's surface.
-                  X, Y, and Z axes represent the Pauli operators.
-                </Text>
-              </Box>
-            </TabPanel>
-            
             <TabPanel>
               <ProbabilityVisualization 
                 stateVector={validStateVector} 
@@ -220,23 +207,13 @@ const QubitVisualization: React.FC<QubitVisualizationProps> = ({
               borderRightRadius={0}
               fontWeight="medium"
             >
-              Bloch
+              Probability
             </Button>
             <Button 
               colorScheme={activeTab === 1 ? "blue" : undefined}
               onClick={() => setActiveTab(1)}
               bg={activeTab === 1 ? "blue.500" : undefined}
               color={activeTab === 1 ? "white" : undefined}
-              borderRadius={0}
-              fontWeight="medium"
-            >
-              Probability
-            </Button>
-            <Button 
-              colorScheme={activeTab === 2 ? "blue" : undefined}
-              onClick={() => setActiveTab(2)}
-              bg={activeTab === 2 ? "blue.500" : undefined}
-              color={activeTab === 2 ? "white" : undefined}
               borderLeftRadius={0}
               borderRightRadius="md"
               fontWeight="medium"
@@ -441,7 +418,7 @@ const PhaseVisualization: React.FC<{
       <VStack spacing={6} align="stretch">
         <Heading size="sm" mb={2}>Qubit {qubitIndex} Phase Information</Heading>
         <Text fontSize="sm" color="gray.500" mt={-2}>
-          The phase of a qubit determines its position around the equator of the Bloch sphere
+          The phase of a qubit determines its relative orientation in the quantum state
         </Text>
         
         <Divider />
@@ -540,7 +517,7 @@ const PhaseVisualization: React.FC<{
               mt={4}
             >
               <Text fontSize="sm">
-                The relative phase determines the qubit's position around the Bloch sphere's equator.
+                The relative phase determines the qubit's orientation in the quantum state.
                 A phase of 0° places it on the +X axis, 90° on the +Y axis, 180° on -X, and 270° on -Y.
               </Text>
             </Box>

@@ -1,10 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from dotenv import load_dotenv
 import os
 
-from .models import ExecuteRequest, ExecuteResponse
-from .qiskit_runner import run_circuit
+from .models import ExecuteRequest, ExecuteResponse, OptimizeRequest, OptimizeResponse
+from .qiskit_runner import run_circuit, optimize_circuit, generate_mpl_circuit_image
 
 
 load_dotenv()
@@ -17,7 +18,8 @@ app = FastAPI(title="QuantumFlow Backend", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ["*"] else ["*"],
+    # FIX: Hardcode to allow all origins, bypassing the .env file
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,6 +54,48 @@ def execute(req: ExecuteRequest) -> ExecuteResponse:
         return ExecuteResponse(**result, status="success")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/optimize", response_model=OptimizeResponse)
+def optimize(req: OptimizeRequest) -> OptimizeResponse:
+    try:
+        optimized_gates = optimize_circuit(
+            num_qubits=req.num_qubits,
+            gates=[g.model_dump() for g in req.gates],
+        )
+        return OptimizeResponse(
+            num_qubits=req.num_qubits,
+            gates=[gate for gate in optimized_gates],
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/mpl-circuit")
+def mpl_circuit(req: ExecuteRequest) -> Response:
+    """Generate an optimized matplotlib visualization of the quantum circuit."""
+    try:
+        image_bytes = generate_mpl_circuit_image(
+            num_qubits=req.num_qubits,
+            gates=[g.model_dump() for g in req.gates],
+        )
+        return Response(content=image_bytes, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to generate circuit image: {str(e)}")
+
+
+@app.post("/api/text-circuit")
+def text_circuit(req: ExecuteRequest) -> Response:
+    """Generate a text (ASCII) visualization of the quantum circuit."""
+    try:
+        from .qiskit_runner import generate_text_circuit
+        text_output = generate_text_circuit(
+            num_qubits=req.num_qubits,
+            gates=[g.model_dump() for g in req.gates],
+        )
+        return Response(content=text_output, media_type="text/plain")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to generate text circuit: {str(e)}")
 
 
 if __name__ == "__main__":

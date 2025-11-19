@@ -1,6 +1,7 @@
 import { Box, Flex, Heading, IconButton, Spacer, useColorMode, Button, HStack } from '@chakra-ui/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
+import type { UiState } from '../../store/slices/uiSlice'
 import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
 
 const Header = () => {
@@ -9,7 +10,7 @@ const Header = () => {
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
 
-  const handlePanelChange = (panel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms') => {
+  const handlePanelChange = (panel: UiState['activePanel']) => {
     dispatch(setActivePanel(panel))
   }
 
@@ -23,6 +24,15 @@ const Header = () => {
     dispatch(toggleTutorial())
   }
 
+  // Helper for navigation button styles to keep them consistent
+  const getNavBtnStyles = (panelName: string) => ({
+    variant: activePanel === panelName ? 'solid' : 'ghost',
+    bg: activePanel === panelName ? 'whiteAlpha.300' : 'transparent',
+    _hover: { bg: 'whiteAlpha.200' },
+    color: 'white',
+    // Remove default colorScheme props to avoid color clashes
+  })
+
   return (
     <Box as="header" bg="quantum.primary" color="white" p={3} boxShadow="md">
       <Flex align="center">
@@ -35,49 +45,48 @@ const Header = () => {
         <HStack spacing={2}>
           <Button
             size="sm"
-            variant={activePanel === 'circuit' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('circuit')}
-            colorScheme="blue"
+            {...getNavBtnStyles('circuit')}
           >
             Circuit
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'code' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('code')}
-            colorScheme="blue"
+            {...getNavBtnStyles('code')}
           >
             Code
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'simulation' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('simulation')}
-            colorScheme="blue"
+            {...getNavBtnStyles('simulation')}
           >
             Simulation
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'export' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('export')}
-            colorScheme="blue"
+            {...getNavBtnStyles('export')}
           >
             Export
           </Button>
           <Button
             size="sm"
-            variant={activePanel === 'algorithms' ? 'solid' : 'ghost'}
             onClick={() => handlePanelChange('algorithms')}
-            colorScheme="purple"
+            {...getNavBtnStyles('algorithms')}
           >
             Algorithms
           </Button>
+          
+          {/* Divider or spacing could go here */}
+          
           <Button
             size="sm"
             variant="ghost"
             onClick={handleClearCircuit}
-            colorScheme="red"
+            color="red.300" // Light red text for visibility on dark bg
+            _hover={{ bg: 'whiteAlpha.200', color: 'red.200' }}
           >
             Clear
           </Button>
@@ -85,16 +94,21 @@ const Header = () => {
             size="sm"
             variant="ghost"
             onClick={handleToggleTutorial}
-            colorScheme="teal"
+            color="teal.200" // Light teal text
+            _hover={{ bg: 'whiteAlpha.200', color: 'teal.100' }}
           >
             Tutorial
           </Button>
+          
           <IconButton
             aria-label="Toggle color mode"
-            // icon={colorMode === 'light' ? '🌙' : '☀️'}
+            // FIX: Uncommented and wrapped in span
+            icon={<span>{colorMode === 'light' ? '🌙' : '☀️'}</span>}
             size="sm"
             onClick={toggleColorMode}
             variant="ghost"
+            color="white"
+            _hover={{ bg: 'whiteAlpha.200' }}
           />
         </HStack>
       </Flex>
