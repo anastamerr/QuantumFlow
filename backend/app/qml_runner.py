@@ -3,8 +3,11 @@ Quantum Machine Learning circuit execution and training.
 """
 import numpy as np
 from typing import List, Dict, Any, Tuple, Optional
+import logging
 from .qiskit_runner import run_circuit
 from .qml_templates import create_qnn_circuit
+
+logger = logging.getLogger(__name__)
 
 
 def cost_function_mse(predictions: List[float], labels: List[float]) -> float:
@@ -45,25 +48,27 @@ def execute_qnn_circuit(
     Returns:
         Expectation value (prediction)
     """
+    # Preprocess data: scale to [0, π] for better quantum encoding
+    scaled_data = [x * np.pi for x in data_point]
+    
     # Build QNN circuit
-    gates = create_qnn_circuit(data_point, num_qubits, num_layers, parameters, encoding)
+    gates = create_qnn_circuit(scaled_data, num_qubits, num_layers, parameters, encoding)
     
     # Execute circuit
     result = run_circuit(num_qubits, gates, shots=shots, memory=False)
     
     # Calculate expectation value from measurement probabilities
-    # Use Z expectation on first qubit: <Z> = P(0) - P(1)
+    # For XOR-like problems, use parity measurement (measure all qubits)
     probs = result["probabilities"]
     
-    prob_0 = sum(float(p) for state, p in probs.items() if state.endswith('0'))
-    prob_1 = sum(float(p) for state, p in probs.items() if state.endswith('1'))
+    # Compute parity: count 1s in bitstring, if odd -> 1, if even -> 0
+    parity_expectation = 0.0
+    for state, prob in probs.items():
+        num_ones = state.count('1')
+        parity = 1 if num_ones % 2 == 1 else 0
+        parity_expectation += prob * parity
     
-    expectation = prob_0 - prob_1
-    
-    # Map to [0, 1] for classification
-    prediction = (expectation + 1) / 2
-    
-    return float(prediction)
+    return float(parity_expectation)
 
 
 def train_qnn(
@@ -94,9 +99,10 @@ def train_qnn(
     Returns:
         Training results with parameters and history
     """
-    # Initialize parameters randomly
+    # Initialize parameters with better initialization strategy
     num_params = num_qubits * 3 * num_layers
-    parameters = np.random.uniform(0, 2 * np.pi, num_params).tolist()
+    # Use small random initialization near zero
+    parameters = np.random.uniform(-0.5, 0.5, num_params).tolist()
     
     # Training history
     history = {
@@ -110,8 +116,14 @@ def train_qnn(
     else:
         cost_func = cost_function_mse
     
+    # Adaptive learning rate - start higher for QML
+    current_lr = max(learning_rate, 0.05)  # Ensure minimum LR of 0.05
+    best_loss = float('inf')
+    patience = 5
+    no_improve_count = 0
+    
     # Training loop (simplified - just a few epochs for demo)
-    for epoch in range(min(epochs, 3)):  # Limit to 3 for speed
+    for epoch in range(min(epochs, 30)):  # Limit to 30 for speed
         predictions = []
         
         # Forward pass: get predictions for all samples
@@ -126,11 +138,67 @@ def train_qnn(
         history["loss"].append(float(cost))
         history["epoch"].append(epoch + 1)
         
-        # Simplified parameter update (random perturbation for demo)
-        # In production, use proper gradient descent or SPSA
-        if epoch < min(epochs, 3) - 1:  # Don't update on last epoch
-            perturbation = np.random.normal(0, learning_rate, num_params)
-            parameters = (np.array(parameters) + perturbation).tolist()
+        logger.info(f"Epoch {epoch + 1}/{min(epochs, 30)}: Loss = {cost:.4f}, LR = {current_lr:.4f}")
+        logger.info(f"  Sample predictions: {predictions[:5]}")
+        logger.info(f"  Sample labels: {train_labels[:5]}")
+        
+        # Check for improvement
+        if cost < best_loss - 1e-4:
+            best_loss = cost
+            no_improve_count = 0
+        else:
+            no_improve_count += 1
+            # Reduce learning rate if no improvement
+            if no_improve_count >= patience:
+                current_lr *= 0.5
+                no_improve_count = 0
+                logger.info(f"  Reducing learning rate to {current_lr:.4f}")
+        
+        # Early stopping if loss is very small
+        if cost < 1e-3:
+            logger.info("  Converged! Loss < 0.001")
+            break
+        
+        # Parameter update using two-sided SPSA for better gradient estimation
+        if epoch < min(epochs, 30) - 1:  # Don't update on last epoch
+            # Generate random perturbation direction
+            delta = np.random.choice([-1, 1], size=num_params)
+            epsilon = 0.1  # Fixed perturbation size
+            
+            # Evaluate at both perturbed points (two-sided SPSA)
+            params_plus = np.array(parameters) + epsilon * delta
+            preds_plus = []
+            for data_point in train_data:
+                pred = execute_qnn_circuit(
+                    data_point, params_plus.tolist(), num_qubits, num_layers, encoding, shots
+                )
+                preds_plus.append(pred)
+            cost_plus = cost_func(preds_plus, train_labels)
+            
+            params_minus = np.array(parameters) - epsilon * delta
+            preds_minus = []
+            for data_point in train_data:
+                pred = execute_qnn_circuit(
+                    data_point, params_minus.tolist(), num_qubits, num_layers, encoding, shots
+                )
+                preds_minus.append(pred)
+            cost_minus = cost_func(preds_minus, train_labels)
+            
+            # Two-sided SPSA gradient: g ≈ (f(θ+ε·δ) - f(θ-ε·δ)) / (2ε) · δ
+            gradient_estimate = ((cost_plus - cost_minus) / (2 * epsilon)) * delta
+            
+            # Gradient descent update with clipping
+            grad_norm = np.linalg.norm(gradient_estimate)
+            if grad_norm > 5:  # Clip large gradients
+                gradient_estimate = gradient_estimate / grad_norm * 5
+                logger.info(f"  Clipped gradient from {grad_norm:.4f} to 5.0")
+            
+            # Move OPPOSITE to gradient (gradient descent)
+            parameters = np.array(parameters) - current_lr * gradient_estimate
+            parameters = parameters.tolist()
+            
+            logger.info(f"  Costs: {cost_minus:.4f} <- {cost:.4f} -> {cost_plus:.4f}")
+            logger.info(f"  Gradient norm: {grad_norm:.4f}, Update: -{current_lr * grad_norm:.4f}")
     
     return {
         "parameters": parameters,

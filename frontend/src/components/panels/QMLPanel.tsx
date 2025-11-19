@@ -196,29 +196,30 @@ const QMLPanel = () => {
   
   const generateSampleData = () => {
     // Generate simple XOR-like dataset
-    const samples = 20;
+    const samples = 100;
     const data: number[][] = [];
     const labels: number[] = [];
     
     for (let i = 0; i < samples; i++) {
-      const x1 = Math.random() * 2;
-      const x2 = Math.random() * 2;
+      // Normalize to [0, 1] range for better quantum encoding
+      const x1 = Math.random();
+      const x2 = Math.random();
       data.push([x1, x2]);
       
-      // XOR pattern
-      const label = (x1 > 1) !== (x2 > 1) ? 1 : 0;
+      // XOR pattern: threshold at 0.5
+      const label = (x1 > 0.5) !== (x2 > 0.5) ? 1 : 0;
       labels.push(label);
     }
     
-    setTrainData(data.slice(0, 15));
-    setTrainLabels(labels.slice(0, 15));
-    setTestData(data.slice(15));
-    setTestLabels(labels.slice(15));
+    setTrainData(data.slice(0, 80));
+    setTrainLabels(labels.slice(0, 80));
+    setTestData(data.slice(80));
+    setTestLabels(labels.slice(80));
     setDatasetName('Sample XOR Dataset');
     
     toast({
       title: 'Sample data generated',
-      description: '15 training samples, 5 test samples',
+      description: '80 training samples, 20 test samples',
       status: 'success',
       duration: 3000,
     });
@@ -333,12 +334,86 @@ const QMLPanel = () => {
     setNumLayers(template.num_layers);
     setEncoding(template.encoding);
     
-    toast({
-      title: 'Template loaded',
-      description: template.name,
-      status: 'info',
-      duration: 2000,
-    });
+    // Generate and visualize the circuit locally
+    try {
+      const gates: any[] = [];
+      let position = 0;
+      
+      // Generate encoding layer (simplified visualization with sample data)
+      if (template.encoding === 'angle') {
+        for (let i = 0; i < template.num_qubits; i++) {
+          gates.push({
+            id: `template-ry-${i}-${position}`,
+            type: 'ry',
+            qubit: i,
+            position: position,
+            params: { theta: 45 }, // Sample angle in degrees
+          });
+        }
+        position++;
+      } else if (template.encoding === 'amplitude') {
+        // Amplitude encoding uses Hadamard + controlled rotations
+        for (let i = 0; i < template.num_qubits; i++) {
+          gates.push({
+            id: `template-h-${i}-${position}`,
+            type: 'h',
+            qubit: i,
+            position: position,
+            params: {},
+          });
+        }
+        position++;
+      }
+      
+      // Generate variational layers
+      for (let layer = 0; layer < template.num_layers; layer++) {
+        // Local rotations on each qubit
+        for (let q = 0; q < template.num_qubits; q++) {
+          ['ry', 'rz', 'ry'].forEach((gateType, idx) => {
+            gates.push({
+              id: `template-${gateType}-L${layer}-q${q}-${position}`,
+              type: gateType,
+              qubit: q,
+              position: position,
+              params: { theta: Math.random() * 90 }, // Random sample angles
+            });
+            position++;
+          });
+        }
+        
+        // Entangling CNOTs in a chain pattern
+        for (let q = 0; q < template.num_qubits - 1; q++) {
+          gates.push({
+            id: `template-cnot-L${layer}-${q}-${position}`,
+            type: 'cnot',
+            qubit: q + 1,
+            position: position,
+            targets: [q + 1],
+            controls: [q],
+            params: {},
+          });
+        }
+        position++;
+      }
+      
+      // Dispatch template gates to circuit canvas
+      dispatch(addGates(gates));
+      
+      toast({
+        title: 'Template loaded',
+        description: `${template.name} - ${gates.length} gates visualized on canvas`,
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Failed to visualize circuit:', error);
+      toast({
+        title: 'Visualization failed',
+        description: 'Could not generate template circuit',
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
   
   const chartData = trainingHistory
@@ -619,25 +694,69 @@ const QMLPanel = () => {
               {trainingHistory && (
                 <Card>
                   <CardHeader>
-                    <Heading size="sm">Training Progress</Heading>
+                    <HStack justify="space-between">
+                      <Heading size="sm">Training Progress</Heading>
+                      <Badge colorScheme="blue">
+                        {trainingHistory.loss.length} epochs completed
+                      </Badge>
+                    </HStack>
                   </CardHeader>
                   <CardBody>
-                    <ResponsiveContainer width="100%" height={250}>
+                    <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="epoch" />
-                        <YAxis />
-                        <RechartsTooltip />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                        <XAxis 
+                          dataKey="epoch" 
+                          label={{ value: 'Epoch', position: 'insideBottom', offset: -5 }}
+                        />
+                        <YAxis 
+                          label={{ value: 'Loss', angle: -90, position: 'insideLeft' }}
+                        />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                            border: '1px solid #E2E8F0',
+                            borderRadius: '8px',
+                            padding: '8px 12px'
+                          }}
+                          formatter={(value: number) => [`${value.toFixed(4)}`, 'Loss']}
+                        />
                         <Legend />
                         <Line
                           type="monotone"
                           dataKey="loss"
                           stroke={accentColor}
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
+                          strokeWidth={3}
+                          dot={{ r: 5, fill: accentColor }}
+                          activeDot={{ r: 7 }}
+                          animationDuration={500}
                         />
                       </LineChart>
                     </ResponsiveContainer>
+                    
+                    <HStack justify="space-between" mt={4} fontSize="sm">
+                      <Stat size="sm">
+                        <StatLabel>Initial Loss</StatLabel>
+                        <StatNumber fontSize="md">
+                          {trainingHistory.loss[0]?.toFixed(4) || 'N/A'}
+                        </StatNumber>
+                      </Stat>
+                      <Stat size="sm">
+                        <StatLabel>Final Loss</StatLabel>
+                        <StatNumber fontSize="md" color={successColor}>
+                          {trainingHistory.loss[trainingHistory.loss.length - 1]?.toFixed(4) || 'N/A'}
+                        </StatNumber>
+                      </Stat>
+                      <Stat size="sm">
+                        <StatLabel>Improvement</StatLabel>
+                        <StatNumber fontSize="md">
+                          {trainingHistory.loss.length > 1
+                            ? `${(((trainingHistory.loss[0] - trainingHistory.loss[trainingHistory.loss.length - 1]) / trainingHistory.loss[0]) * 100).toFixed(1)}%`
+                            : 'N/A'
+                          }
+                        </StatNumber>
+                      </Stat>
+                    </HStack>
                   </CardBody>
                 </Card>
               )}
@@ -738,10 +857,29 @@ const QMLPanel = () => {
             <VStack spacing={4} align="stretch">
               <Alert status="info" borderRadius="md">
                 <AlertIcon />
-                <Text fontSize="sm">
-                  Pre-configured QML architectures for common tasks
-                </Text>
+                <Box>
+                  <Text fontSize="sm" fontWeight="bold">
+                    Pre-configured QML architectures for common tasks
+                  </Text>
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Click a template to load its configuration and visualize the circuit
+                  </Text>
+                </Box>
               </Alert>
+              
+              {selectedTemplate && (
+                <Alert status="success" borderRadius="md">
+                  <AlertIcon />
+                  <Box>
+                    <Text fontSize="sm" fontWeight="bold">
+                      Active Template: {selectedTemplate.name}
+                    </Text>
+                    <Text fontSize="xs" color="gray.600">
+                      Circuit visualized on canvas with {selectedTemplate.num_qubits} qubits and {selectedTemplate.num_layers} layers
+                    </Text>
+                  </Box>
+                </Alert>
+              )}
               
               <Grid templateColumns="repeat(2, 1fr)" gap={4}>
                 {templates.map((template) => (

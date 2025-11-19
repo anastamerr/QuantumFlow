@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+import logging
 
 from .models import (
     ExecuteRequest, ExecuteResponse,
@@ -25,6 +26,13 @@ from .lesson_assistant import LessonAssistant
 
 
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -210,6 +218,13 @@ def get_step_guidance(req: LessonStepGuidanceRequest):
 def validate_step(req: LessonValidationRequest):
     """Validate if the user completed the current step correctly."""
     try:
+        logger.info(f"=== Validating lesson step ===")
+        logger.info(f"Lesson ID: {req.lesson_id}")
+        logger.info(f"Step Number: {req.step_number}")
+        logger.info(f"User ID: {req.user_id}")
+        logger.info(f"User Circuit: {req.user_circuit}")
+        logger.info(f"Number of gates in circuit: {len(req.user_circuit)}")
+        
         result = lesson_assistant.validate_step(
             req.lesson_id,
             req.step_number,
@@ -217,8 +232,11 @@ def validate_step(req: LessonValidationRequest):
             req.lesson_data,
             req.user_id
         )
+        
+        logger.info(f"Validation result: {result}")
         return result
     except Exception as e:
+        logger.error(f"Validation error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -5,6 +5,9 @@ Provides step-by-step guidance for building quantum circuits.
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -143,11 +146,18 @@ class LessonAssistant:
         Returns:
             Validation result with feedback
         """
+        logger.info(f"validate_step called: lesson={lesson_id}, step={step_number}, user={user_id}")
+        logger.info(f"User circuit has {len(user_circuit)} gates")
+        
         if step_number < 1 or step_number > len(lesson_data.get("steps", [])):
+            logger.warning(f"Invalid step number: {step_number}")
             return {"error": "Invalid step number"}
         
         step = lesson_data["steps"][step_number - 1]
         expected_gate = step["expectedGate"]
+        
+        logger.info(f"Expected gate: {expected_gate}")
+        logger.info(f"User gates: {user_circuit}")
         
         # Find the expected gate in the user's circuit
         validation = self._check_gate_presence(user_circuit, expected_gate, step_number)
@@ -206,11 +216,17 @@ class LessonAssistant:
         params = expected_gate.get("params", {})
         column = expected_gate["column"]
         
+        logger.info(f"Checking for gate: type={gate_type}, targets={targets}, controls={controls}, params={params}, column={column}")
+        
         # Find matching gates
         matching_gates = [
             gate for gate in user_circuit
             if gate.get("gateType") == gate_type
         ]
+        
+        logger.info(f"Found {len(matching_gates)} gates of type {gate_type}")
+        for i, gate in enumerate(matching_gates):
+            logger.info(f"  Gate {i}: {gate}")
         
         if not matching_gates:
             return {
@@ -304,9 +320,10 @@ class LessonAssistant:
             actual_value = actual_params.get(key)
             if actual_value is None or not math.isclose(actual_value, expected_value, rel_tol=1e-2):
                 issues.append(f"wrong_param_{key}")
+                actual_str = f"{float(actual_value):.3f}" if actual_value is not None else "not set"
                 hints.append(
-                    f"The {key} parameter should be {expected_value:.3f} radians, "
-                    f"but it's currently {actual_value:.3f if actual_value else 'not set'}"
+                    f"The {key} parameter should be {float(expected_value):.3f} radians, "
+                    f"but it's currently {actual_str}"
                 )
         
         # Check column

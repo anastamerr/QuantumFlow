@@ -52,6 +52,26 @@ interface LessonState {
   lessonData: LessonCircuit | null;
 }
 
+// Helper function to convert gate parameters from degrees to radians
+const convertParamsToRadians = (params: Record<string, any>) => {
+  const convertedParams: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'number') {
+      // Convert degrees to radians if the value is greater than 2*PI (6.28)
+      // This matches the logic in qiskitGenerator.ts
+      const numValue = value as number;
+      convertedParams[key] = Math.abs(numValue) <= 2 * Math.PI 
+        ? numValue 
+        : numValue * Math.PI / 180;
+    } else {
+      convertedParams[key] = value;
+    }
+  }
+  
+  return convertedParams;
+};
+
 export const LessonPanel: React.FC = () => {
   const [lessonState, setLessonState] = useState<LessonState>({
     active: false,
@@ -126,10 +146,10 @@ export const LessonPanel: React.FC = () => {
       // Convert gates to the format expected by backend
       const userCircuit = gates.map((gate) => ({
         id: gate.id,
-        gateType: gate.type,
+        gateType: gate.type.toUpperCase(), // Normalize to uppercase
         targets: gate.targets || (gate.qubit !== undefined ? [gate.qubit] : []),
         controls: gate.controls || [],
-        params: gate.params || {},
+        params: convertParamsToRadians(gate.params || {}), // Convert degrees to radians
         column: gate.position || 0,
       }));
 
@@ -221,7 +241,7 @@ export const LessonPanel: React.FC = () => {
     try {
       const userCircuit = gates.map((gate) => ({
         id: gate.id,
-        gateType: gate.type,
+        gateType: gate.type.toUpperCase(), // Normalize to uppercase
         targets: gate.targets || (gate.qubit !== undefined ? [gate.qubit] : []),
         controls: gate.controls || [],
         params: gate.params || {},

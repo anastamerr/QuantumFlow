@@ -60,6 +60,7 @@ def create_amplitude_encoding_circuit(data_point: List[float], num_qubits: int) 
 def create_variational_layer(num_qubits: int, layer_index: int, params: List[float]) -> List[Dict[str, Any]]:
     """
     Create a variational layer with RY rotations and CNOT entanglement.
+    Optimized for XOR-like problems with all-to-all connectivity.
     
     Args:
         num_qubits: Number of qubits
