@@ -4,7 +4,7 @@ import { RootState } from '../index'
 // Define types for UI state
 export interface UiState {
   selectedGateId: string | null
-  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms'
+  activePanel: 'circuit' | 'code' | 'simulation' | 'export' | 'algorithms' | 'lessons' | 'qml'
   showGateParams: boolean
   codeFormat: 'qiskit' | 'cirq' | 'json'
   isDragging: boolean
@@ -12,6 +12,8 @@ export interface UiState {
   zoomLevel: number
   showTutorial: boolean
   isFullView: boolean
+  currentLessonId: string | null
+  currentLessonStep: number
 }
 
 // Define the initial state
@@ -25,6 +27,8 @@ const initialState: UiState = {
   zoomLevel: 1,
   showTutorial: false,
   isFullView: false,
+  currentLessonId: null,
+  currentLessonStep: 1,
 }
 
 export const uiSlice = createSlice({
@@ -59,6 +63,18 @@ export const uiSlice = createSlice({
     toggleFullView: (state) => {
       state.isFullView = !state.isFullView
     },
+    setCurrentLesson: (state, action: PayloadAction<{ lessonId: string; step: number }>) => {
+      state.currentLessonId = action.payload.lessonId
+      state.currentLessonStep = action.payload.step
+      state.activePanel = 'lessons'
+    },
+    setCurrentLessonStep: (state, action: PayloadAction<number>) => {
+      state.currentLessonStep = action.payload
+    },
+    clearCurrentLesson: (state) => {
+      state.currentLessonId = null
+      state.currentLessonStep = 1
+    },
     resetUi: () => initialState,
   },
 })
@@ -74,6 +90,9 @@ export const {
   setZoomLevel,
   toggleTutorial,
   toggleFullView,
+  setCurrentLesson,
+  setCurrentLessonStep,
+  clearCurrentLesson,
   resetUi,
 } = uiSlice.actions
 
@@ -87,6 +106,8 @@ export const selectShowGrid = (state: RootState) => state.ui.showGrid
 export const selectZoomLevel = (state: RootState) => state.ui.zoomLevel
 export const selectShowTutorial = (state: RootState) => state.ui.showTutorial
 export const selectIsFullView = (state: RootState) => state.ui.isFullView
+export const selectCurrentLessonId = (state: RootState) => state.ui.currentLessonId
+export const selectCurrentLessonStep = (state: RootState) => state.ui.currentLessonStep
 
 // Export the reducer
 export default uiSlice.reducer

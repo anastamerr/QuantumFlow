@@ -8,16 +8,21 @@ import CircuitCanvas from './components/canvas/CircuitCanvas'
 import CodePanel from './components/panels/CodePanel'
 import { useSelector } from 'react-redux'
 import { selectActivePanel, selectIsFullView } from './store/slices/uiSlice'
+import { selectChatVisible } from './store/slices/aiChatSlice'
 import SimulationPanel from './components/panels/SimulationPanel'
 import ExportPanel from './components/panels/ExportPanel'
 import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
 import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
+import QMLPanel from './components/panels/QMLPanel'
+import { LessonPanel } from './components/panels/LessonPanel'
+import AIChatbot from './components/ai/AIChatbot'
 import ResizablePanel from './components/layout/ResizablePanel'
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
   const isFullView = useSelector(selectIsFullView)
+  const isChatVisible = useSelector(selectChatVisible)
   const toast = useToast()
   const panelBg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
@@ -90,15 +95,17 @@ function App() {
         <Header />
         <Flex flex={1} overflow="hidden">
           {/* Fixed sidebar that doesn't scroll */}
-          <Box
-            position="sticky"
-            top={0}
-            h="calc(100vh - 60px)" // Adjust based on header height
-            zIndex={10}
-            flexShrink={0}
-          >
-            <Sidebar />
-          </Box>
+          {activePanel !== 'qml' && (
+            <Box
+              position="sticky"
+              top={0}
+              h="calc(100vh - 60px)" // Adjust based on header height
+              zIndex={10}
+              flexShrink={0}
+            >
+              <Sidebar />
+            </Box>
+          )}
           
           {/* Main content area with vertical scrolling */}
           <Box 
@@ -124,34 +131,54 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {!isFullView && (
+              {!isFullView && activePanel !== 'qml' && activePanel !== 'lessons' && (
                 <Box flex={1} mb={4}>
                   <CircuitCanvas />
                 </Box>
               )}
-              <ResizablePanel 
-                direction="vertical" 
-                defaultSize={isFullView ? 600 : 300} 
-                minSize={150} 
-                maxSize={isFullView ? 800 : 500}
-                borderWidth={1} 
-                borderRadius="md" 
-                bg={panelBg}
-                borderColor={borderColor}
-                p={4}
-                flex={isFullView ? 1 : undefined}
-                height={isFullView ? "calc(100vh - 120px)" : undefined}
-              >
-                {activePanel === 'code' && <CodePanel />}
-                {activePanel === 'simulation' && <SimulationPanel />}
-                {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
-              </ResizablePanel>
+              {activePanel === 'qml' || activePanel === 'lessons' ? (
+                // QML and Lessons take full screen without ResizablePanel
+                <Box 
+                  flex={1}
+                  borderWidth={1} 
+                  borderRadius="md" 
+                  bg={panelBg}
+                  borderColor={borderColor}
+                  p={4}
+                  height="calc(100vh - 120px)"
+                  overflowY="auto"
+                >
+                  {activePanel === 'qml' && <QMLPanel />}
+                  {activePanel === 'lessons' && <LessonPanel />}
+                </Box>
+              ) : (
+                <ResizablePanel 
+                  direction="vertical" 
+                  defaultSize={isFullView ? 600 : 300} 
+                  minSize={150} 
+                  maxSize={isFullView ? 800 : 500}
+                  borderWidth={1} 
+                  borderRadius="md" 
+                  bg={panelBg}
+                  borderColor={borderColor}
+                  p={4}
+                  flex={isFullView ? 1 : undefined}
+                  height={isFullView ? "calc(100vh - 120px)" : undefined}
+                >
+                  {activePanel === 'code' && <CodePanel />}
+                  {activePanel === 'simulation' && <SimulationPanel />}
+                  {activePanel === 'export' && <ExportPanel />}
+                  {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                </ResizablePanel>
+              )}
             </Flex>
           </Box>
             {/* Gate parameters panel - will only render when a gate is selected */}
           <GateParamsPanel />
         </Flex>
+        
+        {/* AI Chatbot - floating draggable */}
+        {isChatVisible && <AIChatbot />}
         
         {/* Tutorial panel - modal overlay */}
         <TutorialPanel />

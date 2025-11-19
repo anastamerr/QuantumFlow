@@ -166,6 +166,41 @@ export const circuitSlice = createSlice({
       const maxPosition = positions.length > 0 ? Math.max(...positions) : 0;
       state.maxPosition = Math.max(maxPosition + 5, state.maxPosition);
     },
+    appendGates: (state, action: PayloadAction<Omit<Gate, 'id'>[]>) => {
+      const newGates = action.payload.map((gate, index) => ({
+        ...gate,
+        id: `gate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        position: typeof gate.position === 'number' ? gate.position : (state.gates.length + index),
+        qubit: gate.qubit ?? 0
+      }))
+      
+      // Append to existing gates instead of clearing
+      state.gates.push(...newGates)
+      
+      // Ensure we have enough qubits for the new gates
+      const allQubits = newGates.flatMap(gate => {
+        const qubits = [gate.qubit];
+        if (gate.targets) qubits.push(...gate.targets);
+        if (gate.controls) qubits.push(...gate.controls);
+        return qubits.filter(q => typeof q === 'number' && q >= 0);
+      });
+      
+      const maxQubit = allQubits.length > 0 ? Math.max(...allQubits) : 0;
+      
+      // Add qubits if needed
+      while (state.qubits.length <= maxQubit) {
+        const newId = state.qubits.length;
+        state.qubits.push({
+          id: newId,
+          name: `q${newId}`,
+        });
+      }
+      
+      // Update maxPosition based on gate positions
+      const positions = newGates.map(gate => gate.position).filter(p => typeof p === 'number');
+      const maxPosition = positions.length > 0 ? Math.max(...positions) : 0;
+      state.maxPosition = Math.max(maxPosition + 5, state.maxPosition);
+    },
   },
 })
 
@@ -182,6 +217,7 @@ export const {
   importCircuit,
   extendCircuit,
   addGates,
+  appendGates,
 } = circuitSlice.actions
 
 // Export selectors
