@@ -20,9 +20,6 @@ export default function QSphereTest() {
   return (
     <Box>
       <VStack spacing={4} align="stretch">
-        <Text fontSize="xl" fontWeight="bold" color="white" textAlign="center">
-          🚀 Q-Sphere 3D Visualization Test
-        </Text>
         <Text color="gray.300" textAlign="center">
           Check console (Ctrl+Shift+I) - Functions are available for testing!
         </Text>

@@ -30,7 +30,8 @@ import {
   Stack,
   Tag,  
   useBreakpointValue,
-  Switch
+  Switch,
+  Collapse
 } from '@chakra-ui/react';
 import { useSelector } from 'react-redux';
 import { selectQubits, selectGates } from '../../store/slices/circuitSlice';
@@ -41,7 +42,7 @@ import { transformStoreGatesToCircuitGates } from '../../utils/circuitUtils';
 import { simulateGateApplication, QuantumState } from '../../utils/stateEvolution';
 import { getProbabilitiesFromQuantumState, getStateMatrixFromQuantumState } from '../../utils/localMeasurement';
 import StateMatrixPanel from './StateMatrixPanel';
-import { InfoIcon, RepeatIcon, ChevronRightIcon, StarIcon } from '@chakra-ui/icons';
+import { InfoIcon, RepeatIcon, ChevronRightIcon, StarIcon, ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import FullViewToggle from '../common/FullViewToggle';
 import {
   ResponsiveContainer,
@@ -53,6 +54,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import CircuitTimelineGraph from '../visualization/CircuitTimelineGraph';
+import QSphereTest from '../visualization/qspheretest';
 
 const SimulationPanel = () => {
   const qubits = useSelector(selectQubits);
@@ -69,6 +71,7 @@ const SimulationPanel = () => {
   const [simulationComplete, setSimulationComplete] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'histogram' | 'timeline'>('histogram');
   const [stateMatrix, setStateMatrix] = useState<Array<{state: string; amplitude: number | string; probability: number}> | null>(null);
+  const [showBlochSphere, setShowBlochSphere] = useState<boolean>(false); // Hidden by default
   
   // Store visualization instance reference
   // const visualizerRef = useRef<any>(null);
@@ -282,6 +285,17 @@ const SimulationPanel = () => {
             
             <HStack>
               <FullViewToggle />
+              <Button
+                leftIcon={showBlochSphere ? <ViewOffIcon /> : <ViewIcon />}
+                colorScheme="purple"
+                variant="solid"
+                onClick={() => setShowBlochSphere(!showBlochSphere)}
+                size="sm"
+                aria-expanded={showBlochSphere}
+                aria-label={showBlochSphere ? "Hide Bloch Sphere" : "Show Bloch Sphere"}
+              >
+                Bloch Sphere
+              </Button>
               <Button 
                 colorScheme="blue" 
                 onClick={runSimulation} 
@@ -954,6 +968,13 @@ const SimulationPanel = () => {
               </TabPanel>
             </TabPanels>
           </Tabs>
+          
+          {/* Bloch Sphere Section */}
+          <Collapse in={showBlochSphere} animateOpacity>
+            <Box mt={4}>
+              <QSphereTest />
+            </Box>
+          </Collapse>
         </CardBody>
       </Card>
     </Box>

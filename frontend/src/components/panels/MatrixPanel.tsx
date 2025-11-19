@@ -79,7 +79,7 @@ export default function MatrixPanel() {
       
       <HStack justify="space-between">
         <HStack>
-          <Text fontSize="sm" fontWeight="bold">Unitary Operator</Text>
+          <Text fontSize="sm" fontWeight="bold">Unitary Operator (working progress)</Text>
           <Tooltip label="The linear algebra matrix representing the entire circuit's transformation." hasArrow>
             <InfoIcon color="gray.400" boxSize={3} />
           </Tooltip>
