@@ -1,12 +1,12 @@
-import { 
-  Box, 
-  Flex, 
-  Heading, 
-  IconButton, 
-  Spacer, 
-  useColorMode, 
-  Button, 
-  HStack, 
+import {
+  Box,
+  Flex,
+  Heading,
+  IconButton,
+  Spacer,
+  useColorMode,
+  Button,
+  HStack,
   Badge,
   Menu,
   MenuButton,
@@ -18,8 +18,9 @@ import {
 import { HamburgerIcon } from '@chakra-ui/icons'
 import { keyframes } from '@emotion/react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
+import {setActivePanel, selectActivePanel, toggleTutorial, setTutorialStep} from '../../store/slices/uiSlice'
 import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
+
 
 const pulse = keyframes`
   0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,212,0, 0.85); }
@@ -32,7 +33,7 @@ const Header = () => {
   const activePanel = useSelector(selectActivePanel)
   const circuitName = useSelector(selectCircuitName)
   const { colorMode, toggleColorMode } = useColorMode()
-  
+
   // Show full navigation on larger screens; default to mobile layout during hydration
   const isDesktop = useBreakpointValue({ base: false, lg: true }) ?? false
 
@@ -48,6 +49,11 @@ const Header = () => {
 
   const handleToggleTutorial = () => {
     dispatch(toggleTutorial())
+  }
+
+  const handleOpenQKDTutorial = () => {
+    dispatch(setTutorialStep(5))   // go to slide 5
+    dispatch(toggleTutorial())     // open the modal
   }
 
   const renderDesktopBadge = (withEmoji = false) => (
@@ -160,16 +166,12 @@ const Header = () => {
               Simulation
             </Button>
             <Button
-                as="a"
-                href="https://colab.research.google.com/drive/1p5L1Vj9DlnPd72E7o3SzEJiWJCVbH_5B?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
                 colorScheme="blue"
-                color="white"
-                fontWeight="bold"
-                _hover={{ bg: '#009900', color: 'white' }}
+                variant="outline"
+                size="sm"
+                onClick={handleOpenQKDTutorial}
             >
-              Open QKD Colab Notebook
+              QKD Colab Notebook?
             </Button>
             <Button
               size="sm"
@@ -218,7 +220,7 @@ const Header = () => {
             <Button
               size="sm"
               variant="ghost"
-              onClick={handleToggleTutorial}
+              onClick={handleOpenQKDTutorial}
               colorScheme="teal"
               color="white"
             fontWeight="bold"
