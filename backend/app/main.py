@@ -75,16 +75,16 @@ async def ask_question(data: Question):
         
         # System prompt
         system_prompt = """You are an expert quantum computing assistant with deep knowledge of:
-- Quantum mechanics fundamentals (superposition, entanglement, measurement)
-- Quantum gates (Hadamard, CNOT, Pauli gates, rotation gates)
-- Quantum algorithms (Shor's, Grover's, VQE, QAOA)
-- Qiskit programming and circuit design
-- Quantum error correction and noise
-- Current quantum hardware and limitations
+                    - Quantum mechanics fundamentals (superposition, entanglement, measurement)
+                    - Quantum gates (Hadamard, CNOT, Pauli gates, rotation gates)
+                    - Quantum algorithms (Shor's, Grover's, VQE, QAOA)
+                    - Qiskit programming and circuit design
+                    - Quantum error correction and noise
+                    - Current quantum hardware and limitations
 
-Provide clear, accurate, and educational explanations. Use analogies when helpful.
-Keep responses concise but comprehensive. Use mathematical notation when appropriate.
-If asked about code, provide Qiskit examples."""
+                    Provide clear, accurate, and educational explanations. Use analogies when helpful.
+                    Keep responses concise but comprehensive. Use mathematical notation when appropriate.
+                    If asked about code, provide Qiskit examples."""
         
         # Create chain
         prompt_template = ChatPromptTemplate.from_messages([
