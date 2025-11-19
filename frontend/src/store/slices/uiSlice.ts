@@ -55,7 +55,12 @@ export const uiSlice = createSlice({
       if (action.payload === 'circuit' && state.isFullView) {
         state.isFullView = false
       }
-      if (action.payload === 'projects' || action.payload === 'library' || action.payload === 'blochSphere') {
+      if (
+        action.payload === 'projects' ||
+        action.payload === 'library' ||
+        action.payload === 'blochSphere' ||
+        action.payload === 'qkd'
+      ) {
         state.showGateParams = false
         state.selectedGateId = null
       }

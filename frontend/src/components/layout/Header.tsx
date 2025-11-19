@@ -18,7 +18,7 @@ import {
 import { HamburgerIcon } from '@chakra-ui/icons'
 import { keyframes } from '@emotion/react'
 import { useDispatch, useSelector } from 'react-redux'
-import {setActivePanel, selectActivePanel, toggleTutorial, setTutorialStep} from '../../store/slices/uiSlice'
+import { setActivePanel, selectActivePanel, toggleTutorial } from '../../store/slices/uiSlice'
 import { clearCircuit, selectCircuitName } from '../../store/slices/circuitSlice'
 
 
@@ -51,11 +51,6 @@ const Header = () => {
     dispatch(toggleTutorial())
   }
 
-  const handleOpenQKDTutorial = () => {
-    dispatch(setTutorialStep(5))   // go to slide 5
-    dispatch(toggleTutorial())     // open the modal
-  }
-
   const renderDesktopBadge = (withEmoji = false) => (
     <Box
       position="absolute"
@@ -85,9 +80,23 @@ const Header = () => {
       {isDesktop ? (
         <Flex align="center" gap={3} minH="56px">
           <Flex align="center" minW="200px" flex="0 0 auto">
-            <Heading size="md" fontWeight="bold" color="white">
-              QuantumFlow
-            </Heading>
+            <HStack spacing={3} align="center">
+              <Heading size="md" fontWeight="bold" color="white">
+                QuantumFlow
+              </Heading>
+              <Button
+                size="sm"
+                variant="ghost"
+                fontWeight="bold"
+                color="white"
+                bg={activePanel === 'qkd' ? 'purple.600' : 'transparent'}
+                _hover={{ bg: 'purple.500', color: 'white' }}
+                _active={{ bg: 'purple.600', color: 'white' }}
+                onClick={() => dispatch(setActivePanel('qkd'))}
+              >
+                Colab QKD
+              </Button>
+            </HStack>
           </Flex>
 
           <HStack spacing={2} flexShrink={0}>
@@ -166,14 +175,6 @@ const Header = () => {
               Simulation
             </Button>
             <Button
-                colorScheme="blue"
-                variant="outline"
-                size="sm"
-                onClick={handleOpenQKDTutorial}
-            >
-              QKD Colab Notebook?
-            </Button>
-            <Button
               size="sm"
               variant={activePanel === 'export' ? 'solid' : 'ghost'}
               onClick={() => handlePanelChange('export')}
@@ -220,7 +221,7 @@ const Header = () => {
             <Button
               size="sm"
               variant="ghost"
-              onClick={handleOpenQKDTutorial}
+              onClick={handleToggleTutorial}
               colorScheme="teal"
               color="white"
             fontWeight="bold"
@@ -239,10 +240,22 @@ const Header = () => {
         </Flex>
       ) : (
         <Flex align="center" justify="space-between" minH="48px">
-          <Flex align="center" flex="1" minW={0}>
+          <Flex align="center" flex="1" minW={0} justify="space-between" mr={2}>
             <Heading size={["xs", "sm"]} fontWeight="bold" noOfLines={1}>
               QuantumFlow
             </Heading>
+            <Button
+              size="xs"
+              variant="ghost"
+              fontWeight="bold"
+              color="white"
+              bg={activePanel === 'qkd' ? 'purple.600' : 'transparent'}
+              _hover={{ bg: 'purple.500', color: 'white' }}
+              _active={{ bg: 'purple.600', color: 'white' }}
+              onClick={() => dispatch(setActivePanel('qkd'))}
+            >
+              Colab QKD
+            </Button>
           </Flex>
 
           <HStack spacing={1}>
@@ -317,13 +330,11 @@ const Header = () => {
                   ⚡ Simulation
                 </MenuItem>
                 <MenuItem
-                    as="a"
-                    href="https://colab.research.google.com/drive/1p5L1Vj9DlnPd72E7o3SzEJiWJCVbH_5B?usp=sharing"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    _hover={{ bg: 'whiteAlpha.200' }}
+                  bg={activePanel === 'qkd' ? 'whiteAlpha.200' : 'transparent'}
+                  _hover={{ bg: 'whiteAlpha.200' }}
+                  onClick={() => dispatch(setActivePanel('qkd'))}
                 >
-                  QKD Simulation
+                  QKD Colab Experience
                 </MenuItem>
                 <MenuItem
                   bg={activePanel === 'export' ? 'whiteAlpha.200' : 'transparent'}

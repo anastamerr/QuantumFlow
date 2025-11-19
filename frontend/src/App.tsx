@@ -17,6 +17,7 @@ import ResizablePanel from './components/layout/ResizablePanel'
 import AIPanel from './components/panels/AIPanel'
 import LibraryPanel from './components/panels/LibraryPanel'
 import ProjectPanel from './components/panels/ProjectPanel'
+import QKDModal from './components/panels/QKDModal'
 import BlochSpherePage from './components/visualization/BlochSpherePage'
 
 function App() {
@@ -178,6 +179,8 @@ function App() {
         <TutorialPanel />
         {/* Projects panel - modal overlay (renders like TutorialPanel) */}
         <ProjectPanel />
+        {/* QKD modal overlay */}
+        <QKDModal />
       </VStack>
     </DndProvider>
   )
