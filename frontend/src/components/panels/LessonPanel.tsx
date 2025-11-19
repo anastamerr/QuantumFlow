@@ -245,7 +245,7 @@ export const LessonPanel: React.FC = () => {
         gateType: gate.type.toUpperCase(), // Normalize to uppercase
         targets: gate.targets || (gate.qubit !== undefined ? [gate.qubit] : []),
         controls: gate.controls || [],
-        params: gate.params || {},
+        params: convertParamsToRadians(gate.params || {}), // Convert degrees to radians
         column: gate.position || 0,
       }));
 

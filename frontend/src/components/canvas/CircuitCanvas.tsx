@@ -188,8 +188,19 @@ const CircuitCanvas: React.FC = () => {
             return;
           }
           
-          // Set default target to the first available qubit(s)
-          newGate.targets = availableQubits.slice(0, gateDefinition.targets);
+          // For CNOT/CZ gates, prefer the next adjacent qubit if available
+          if ((gateDefinition.id === 'cnot' || gateDefinition.id === 'cz') && gateDefinition.targets === 1) {
+            const nextQubit = position.qubit + 1;
+            if (availableQubits.includes(nextQubit)) {
+              newGate.targets = [nextQubit];
+            } else {
+              // If next qubit not available, use first available
+              newGate.targets = availableQubits.slice(0, gateDefinition.targets);
+            }
+          } else {
+            // Set default target to the first available qubit(s)
+            newGate.targets = availableQubits.slice(0, gateDefinition.targets);
+          }
         }
       }
       

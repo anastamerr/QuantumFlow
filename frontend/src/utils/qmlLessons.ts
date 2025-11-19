@@ -235,7 +235,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [0],
         controls: [],
-        params: { theta: 1.571 },
+        params: { phi: 1.571 },
         column: 3
       },
       {
@@ -243,7 +243,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [1],
         controls: [],
-        params: { theta: 1.571 },
+        params: { phi: 1.571 },
         column: 3
       },
       {
@@ -251,7 +251,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [2],
         controls: [],
-        params: { theta: 1.571 },
+        params: { phi: 1.571 },
         column: 3
       },
       {
@@ -332,13 +332,13 @@ export const QML_LESSONS: LessonCircuit[] = [
         stepNumber: 4,
         title: "Add RZ Phase Rotations",
         instruction: "Add RZ gates to all 3 qubits with angle π/2 (1.571 radians)",
-        hint: "Add three RZ gates in column 3, one for each qubit, all with theta=1.571",
+        hint: "Add three RZ gates in column 3, one for each qubit, all with phi=1.571",
         expectedGate: {
           id: "g6",
           gateType: "RZ",
           targets: [0],
           controls: [],
-          params: { theta: 1.571 },
+          params: { phi: 1.571 },
           column: 3
         },
         educationalNote: "🎭 RZ gates add phase information without changing the measurement probabilities in the Z-basis!",
@@ -587,7 +587,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [0],
         controls: [],
-        params: { theta: 0.3 },
+        params: { phi: 0.3 },
         column: 0
       },
       {
@@ -595,7 +595,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [1],
         controls: [],
-        params: { theta: 1.1 },
+        params: { phi: 1.1 },
         column: 0
       },
       {
@@ -603,7 +603,7 @@ export const QML_LESSONS: LessonCircuit[] = [
         gateType: "RZ",
         targets: [2],
         controls: [],
-        params: { theta: -0.7 },
+        params: { phi: -0.7 },
         column: 0
       },
       {
@@ -682,7 +682,7 @@ export const QML_LESSONS: LessonCircuit[] = [
           gateType: "RZ",
           targets: [0],
           controls: [],
-          params: { theta: 0.3 },
+          params: { phi: 0.3 },
           column: 0
         },
         educationalNote: "📊 Data encoding is how we input classical information into quantum circuits! Each feature becomes a rotation angle.",
@@ -698,7 +698,7 @@ export const QML_LESSONS: LessonCircuit[] = [
           gateType: "RZ",
           targets: [1],
           controls: [],
-          params: { theta: 1.1 },
+          params: { phi: 1.1 },
           column: 0
         },
         educationalNote: "🔢 Notice the different angles - each represents a different feature value! Even negative values work.",
