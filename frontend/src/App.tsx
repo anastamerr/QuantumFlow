@@ -95,15 +95,17 @@ function App() {
         <Header />
         <Flex flex={1} overflow="hidden">
           {/* Fixed sidebar that doesn't scroll */}
-          <Box
-            position="sticky"
-            top={0}
-            h="calc(100vh - 60px)" // Adjust based on header height
-            zIndex={10}
-            flexShrink={0}
-          >
-            <Sidebar />
-          </Box>
+          {activePanel !== 'qml' && (
+            <Box
+              position="sticky"
+              top={0}
+              h="calc(100vh - 60px)" // Adjust based on header height
+              zIndex={10}
+              flexShrink={0}
+            >
+              <Sidebar />
+            </Box>
+          )}
           
           {/* Main content area with vertical scrolling */}
           <Box 
@@ -129,7 +131,7 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {!isFullView && (
+              {!isFullView && activePanel !== 'qml' && activePanel !== 'lessons' && (
                 <Box flex={1} mb={4}>
                   <CircuitCanvas />
                 </Box>
