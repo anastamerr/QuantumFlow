@@ -160,6 +160,18 @@ const Header = () => {
               Simulation
             </Button>
             <Button
+                as="a"
+                href="https://colab.research.google.com/drive/1p5L1Vj9DlnPd72E7o3SzEJiWJCVbH_5B?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                colorScheme="blue"
+                color="white"
+                fontWeight="bold"
+                _hover={{ bg: '#009900', color: 'white' }}
+            >
+              Open QKD Colab Notebook
+            </Button>
+            <Button
               size="sm"
               variant={activePanel === 'export' ? 'solid' : 'ghost'}
               onClick={() => handlePanelChange('export')}
@@ -301,6 +313,15 @@ const Header = () => {
                   onClick={() => handlePanelChange('simulation')}
                 >
                   ⚡ Simulation
+                </MenuItem>
+                <MenuItem
+                    as="a"
+                    href="https://colab.research.google.com/drive/1p5L1Vj9DlnPd72E7o3SzEJiWJCVbH_5B?usp=sharing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                >
+                  QKD Simulation
                 </MenuItem>
                 <MenuItem
                   bg={activePanel === 'export' ? 'whiteAlpha.200' : 'transparent'}
