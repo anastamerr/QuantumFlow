@@ -95,15 +95,17 @@ function App() {
         <Header />
         <Flex flex={1} overflow="hidden">
           {/* Fixed sidebar that doesn't scroll */}
-          <Box
-            position="sticky"
-            top={0}
-            h="calc(100vh - 60px)" // Adjust based on header height
-            zIndex={10}
-            flexShrink={0}
-          >
-            <Sidebar />
-          </Box>
+          {activePanel !== 'qml' && (
+            <Box
+              position="sticky"
+              top={0}
+              h="calc(100vh - 60px)" // Adjust based on header height
+              zIndex={10}
+              flexShrink={0}
+            >
+              <Sidebar />
+            </Box>
+          )}
           
           {/* Main content area with vertical scrolling */}
           <Box 
@@ -129,31 +131,46 @@ function App() {
             }}
           >
             <Flex direction="column" minH="100%">
-              {!isFullView && (
+              {!isFullView && activePanel !== 'qml' && (
                 <Box flex={1} mb={4}>
                   <CircuitCanvas />
                 </Box>
               )}
-              <ResizablePanel 
-                direction="vertical" 
-                defaultSize={isFullView ? 600 : 300} 
-                minSize={150} 
-                maxSize={isFullView ? 800 : 500}
-                borderWidth={1} 
-                borderRadius="md" 
-                bg={panelBg}
-                borderColor={borderColor}
-                p={4}
-                flex={isFullView ? 1 : undefined}
-                height={isFullView ? "calc(100vh - 120px)" : undefined}
-              >
-                {activePanel === 'code' && <CodePanel />}
-                {activePanel === 'simulation' && <SimulationPanel />}
-                {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
-                {activePanel === 'qml' && <QMLPanel />}
-                {activePanel === 'lessons' && <LessonPanel />}
-              </ResizablePanel>
+              {activePanel === 'qml' ? (
+                // QML takes full screen without ResizablePanel
+                <Box 
+                  flex={1}
+                  borderWidth={1} 
+                  borderRadius="md" 
+                  bg={panelBg}
+                  borderColor={borderColor}
+                  p={4}
+                  height="calc(100vh - 120px)"
+                  overflowY="auto"
+                >
+                  <QMLPanel />
+                </Box>
+              ) : (
+                <ResizablePanel 
+                  direction="vertical" 
+                  defaultSize={isFullView ? 600 : 300} 
+                  minSize={150} 
+                  maxSize={isFullView ? 800 : 500}
+                  borderWidth={1} 
+                  borderRadius="md" 
+                  bg={panelBg}
+                  borderColor={borderColor}
+                  p={4}
+                  flex={isFullView ? 1 : undefined}
+                  height={isFullView ? "calc(100vh - 120px)" : undefined}
+                >
+                  {activePanel === 'code' && <CodePanel />}
+                  {activePanel === 'simulation' && <SimulationPanel />}
+                  {activePanel === 'export' && <ExportPanel />}
+                  {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                  {activePanel === 'lessons' && <LessonPanel />}
+                </ResizablePanel>
+              )}
             </Flex>
           </Box>
             {/* Gate parameters panel - will only render when a gate is selected */}

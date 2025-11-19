@@ -69,6 +69,7 @@ import { addGates } from '../../store/slices/circuitSlice';
 import Papa from 'papaparse';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ScatterChart, Scatter, Cell } from 'recharts';
 import FullViewToggle from '../common/FullViewToggle';
+import CircuitCanvas from '../canvas/CircuitCanvas';
 
 interface QMLTemplate {
   id: string;
@@ -959,6 +960,26 @@ const QMLPanel = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
+      
+      {/* Circuit Visualization - shown when template is selected */}
+      {selectedTemplate && (
+        <Box mt={6}>
+          <HStack mb={3}>
+            <Heading size="md">Circuit Visualization</Heading>
+            <Badge colorScheme="purple">{selectedTemplate.name}</Badge>
+          </HStack>
+          <Box 
+            borderWidth={1} 
+            borderRadius="lg" 
+            borderColor={borderColor}
+            bg={cardBg}
+            p={4}
+            overflow="auto"
+          >
+            <CircuitCanvas />
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };
