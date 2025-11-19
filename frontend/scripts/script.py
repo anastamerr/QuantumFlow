@@ -59,4 +59,3 @@ def inject_env(target: Path | None = None, export: bool = True) -> Path:
 
 if __name__ == "__main__":
     out_path = inject_env()
-    print(f"Injected VITE_HF_API_KEY into {out_path}")
