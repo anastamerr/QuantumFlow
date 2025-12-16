@@ -235,14 +235,15 @@ const GateParamsPanel = () => {
   const handleClose = () => {
     dispatch(toggleGateParams());
   };
-  
+
+  const gateTypeColor = gateDefinition?.color || 'gray';
+  const gateInfoBg = useColorModeValue(`${gateTypeColor}.50`, `${gateTypeColor}.900`);
+  const helpBg = useColorModeValue('gray.50', 'gray.700');
+
   // If no gate is selected or panel is hidden, return null
   if (!selectedGate || !gateDefinition || !showGateParams) {
     return null;
   }
-  
-  // Generate color for gate based on gate definition
-  const gateTypeColor = gateDefinition.color || 'gray';
   
   // For CNOT and CZ gates, the control is the main qubit and we only need to set targets
   const isCNOTorCZ = selectedGate.type === 'cnot' || selectedGate.type === 'cz';
@@ -268,7 +269,7 @@ const GateParamsPanel = () => {
           borderWidth={1}
           borderRadius="md"
           borderColor={borderColor}
-          bg={useColorModeValue(`${gateTypeColor}.50`, `${gateTypeColor}.900`)}
+          bg={gateInfoBg}
         >
           <Heading size="sm" mb={2}>{gateDefinition.name}</Heading>
           <Text fontSize="sm">{gateDefinition.description}</Text>
@@ -469,7 +470,7 @@ const GateParamsPanel = () => {
           mt={4} 
           p={3} 
           borderRadius="md" 
-          bg={useColorModeValue("gray.50", "gray.700")}
+          bg={helpBg}
           fontSize="sm"
         >
           <Text fontWeight="medium" mb={2}>Gate Info:</Text>

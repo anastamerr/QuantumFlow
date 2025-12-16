@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Heading, Text, VStack, HStack, Spinner, useColorModeValue } from '@chakra-ui/react';
 import * as THREE from 'three';
 import { stateVectorToBloch } from '../../utils/blochSphereUtils';
@@ -35,6 +35,7 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
   height = 300,
   title = 'Bloch Sphere',
 }) => {
+  const [isRendererInitialized, setIsRendererInitialized] = useState(false);
   // Container ref for the Three.js scene
   const containerRef = useRef<HTMLDivElement>(null);
   // Track animation frame to cancel if component unmounts
@@ -48,6 +49,31 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const stateVectorArrowRef = useRef<THREE.Group | THREE.ArrowHelper>();
   const sphereRef = useRef<THREE.Mesh>();
+  const guideMaterialsRef = useRef<Array<{ material: THREE.Material; baseOpacity: number }>>([]);
+
+  const targetRef = useRef<{
+    quaternion: THREE.Quaternion;
+    length: number;
+  } | null>(null);
+  if (!targetRef.current) {
+    targetRef.current = { quaternion: new THREE.Quaternion(), length: 1 };
+  }
+
+  const currentLengthRef = useRef<number>(1);
+  const tmpObjectsRef = useRef<{
+    direction: THREE.Vector3;
+    matrix: THREE.Matrix4;
+    origin: THREE.Vector3;
+    up: THREE.Vector3;
+  } | null>(null);
+  if (!tmpObjectsRef.current) {
+    tmpObjectsRef.current = {
+      direction: new THREE.Vector3(),
+      matrix: new THREE.Matrix4(),
+      origin: new THREE.Vector3(0, 0, 0),
+      up: new THREE.Vector3(0, 1, 0),
+    };
+  }
   
   // Modern glassmorphism-inspired color palette
   const sphereColor = useColorModeValue('#f1f5f9', '#1e293b'); // Subtle slate
@@ -61,18 +87,16 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
   // Modern guide colors with gradients
   const guideColor = useColorModeValue('#e2e8f0', '#475569');
   const guideGlowColor = useColorModeValue('#cbd5e1', '#64748b');
+
+  const loadingOverlayBg = useColorModeValue('rgba(255,255,255,0.9)', 'rgba(15,15,35,0.9)');
+  const loadingPulseBg = useColorModeValue('purple.100', 'purple.900');
+  const loadingTextColor = useColorModeValue('gray.600', 'gray.400');
   
-  // Calculate Bloch coordinates from state vector
-  const calculateBlochCoordinates = (): BlochCoordinates | null => {
-    if (blochCoordinates) {
-      return blochCoordinates;
-    }
-    
+  const computedBlochCoordinates = useMemo((): BlochCoordinates | null => {
+    if (blochCoordinates) return blochCoordinates;
     if (!stateVector) return null;
-    
-    // Use the utility function from blochSphereUtils
     return stateVectorToBloch(stateVector, qubitIndex);
-  };
+  }, [stateVector, blochCoordinates, qubitIndex]);
   
   // Initialize Three.js scene
   const initThree = () => {
@@ -93,16 +117,14 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
     cameraRef.current = camera;
     
     // Create renderer with modern settings
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true, 
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
       alpha: true,
-      powerPreference: 'high-performance'
+      powerPreference: 'high-performance',
     });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimize for retina
     renderer.setClearColor(0x000000, 0); // Transparent background
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     containerRef.current.appendChild(renderer.domElement);
@@ -114,7 +136,6 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
     
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(10, 10, 5);
-    directionalLight.castShadow = true;
     scene.add(directionalLight);
     
     // Create modern glassmorphism Bloch sphere
@@ -251,6 +272,8 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
       ring.rotation.copy(rotation);
       glow.rotation.copy(rotation);
       
+      guideMaterialsRef.current.push({ material: ringMaterial, baseOpacity: 0.6 });
+      guideMaterialsRef.current.push({ material: glowMaterial, baseOpacity: 0.15 });
       scene.add(glow);
       scene.add(ring);
     };
@@ -341,6 +364,7 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
     
     // Set renderer as initialized
     rendererInitializedRef.current = true;
+    setIsRendererInitialized(true);
     
     // Initial render
     renderer.render(scene, camera);
@@ -401,31 +425,17 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
   const updateStateVector = () => {
     if (!stateVectorArrowRef.current) return;
     
-    const blochCoords = calculateBlochCoordinates();
-    if (!blochCoords) return;
-    
-    const { x, y, z } = blochCoords;
-    
-    // Normalize the direction vector
-    const direction = new THREE.Vector3(x, y, z);
-    const length = direction.length();
-    if (length < 1e-10) return; // Avoid division by zero
-    direction.normalize();
+    if (!targetRef.current) return;
+
+    const targetQuaternion = targetRef.current.quaternion;
+    const targetLength = targetRef.current.length;
+    if (targetLength < 1e-10) return;
     
     // Check if we're using the modern group or fallback arrow
     const stateVector = stateVectorArrowRef.current;
     
     if (stateVector instanceof THREE.Group) {
       // Modern grouped state vector
-      
-      // Smooth rotation towards target direction
-      const targetQuaternion = new THREE.Quaternion();
-      const targetMatrix = new THREE.Matrix4();
-      const upVector = new THREE.Vector3(0, 1, 0);
-      
-      // Create rotation matrix to align with direction
-      targetMatrix.lookAt(new THREE.Vector3(0, 0, 0), direction, upVector);
-      targetQuaternion.setFromRotationMatrix(targetMatrix);
       
       // Smooth interpolation
       stateVector.quaternion.slerp(targetQuaternion, 0.1);
@@ -436,19 +446,16 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
       const tip = stateVector.children[2] as THREE.Mesh;
       const halo = stateVector.children[3] as THREE.Mesh;
       
-      // Scale components based on vector length
-      const scale = Math.max(0.3, Math.min(length, 1.0));
+      // Smooth length changes without re-computing Bloch coordinates each frame
+      currentLengthRef.current += (targetLength - currentLengthRef.current) * 0.15;
+      const scale = Math.max(0.3, Math.min(currentLengthRef.current, 1.0));
       
       if (shaft && head && tip && halo) {
         // Update positions relative to group origin
-        const shaftDirection = new THREE.Vector3(0, 0, 1);
-        const headDirection = new THREE.Vector3(0, 0, 1);
-        const tipDirection = new THREE.Vector3(0, 0, 1);
-        
-        shaft.position.copy(shaftDirection.multiplyScalar(0.5 * scale));
-        head.position.copy(headDirection.multiplyScalar(1.075 * scale));
-        tip.position.copy(tipDirection.multiplyScalar(1.15 * scale));
-        halo.position.copy(new THREE.Vector3(0, 0, 1.15 * scale));
+        shaft.position.set(0, 0, 0.5 * scale);
+        head.position.set(0, 0, 1.075 * scale);
+        tip.position.set(0, 0, 1.15 * scale);
+        halo.position.set(0, 0, 1.15 * scale);
         
         // Adjust opacity based on vector magnitude
         const opacity = Math.max(0.6, scale);
@@ -461,8 +468,9 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
       }
     } else if (stateVector instanceof THREE.ArrowHelper) {
       // Fallback to simple arrow helper
-      stateVector.setDirection(direction);
-      stateVector.setLength(length, 0.08, 0.04);
+      if (!tmpObjectsRef.current) return;
+      stateVector.setDirection(tmpObjectsRef.current.direction);
+      stateVector.setLength(targetLength, 0.08, 0.04);
     }
   };
   
@@ -486,13 +494,10 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
     }
     
     // Animate guide circles with subtle pulsing
-    sceneRef.current.children.forEach(child => {
-      if (child instanceof THREE.Mesh && child.geometry instanceof THREE.TorusGeometry) {
-        const material = child.material as THREE.Material;
-        if ('opacity' in material) {
-          const baseOpacity = 0.6;
-          material.opacity = baseOpacity + Math.sin(time * 2) * 0.1;
-        }
+    const pulse = Math.sin(time * 2) * 0.1;
+    guideMaterialsRef.current.forEach(({ material, baseOpacity }) => {
+      if ('opacity' in material) {
+        (material as THREE.Material & { opacity: number }).opacity = baseOpacity + pulse;
       }
     });
     
@@ -508,6 +513,7 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
   
   // Initialize and clean up Three.js
   useEffect(() => {
+    setIsRendererInitialized(false);
     initThree();
     
     // Start animation loop
@@ -523,14 +529,33 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
         containerRef.current.removeChild(rendererRef.current.domElement);
         rendererRef.current.dispose();
         rendererInitializedRef.current = false;
+        guideMaterialsRef.current = [];
       }
     };
   }, [width, height]);
   
-  // Update state vector when it changes
+  // Update target direction when state changes (avoid stale animation closures)
   useEffect(() => {
-    updateStateVector();
-  }, [stateVector, blochCoordinates, qubitIndex]);
+    if (!computedBlochCoordinates || !targetRef.current || !tmpObjectsRef.current) return;
+
+    const { x, y, z } = computedBlochCoordinates;
+    tmpObjectsRef.current.direction.set(x, y, z);
+    const length = tmpObjectsRef.current.direction.length();
+    targetRef.current.length = length;
+
+    if (length < 1e-10) {
+      targetRef.current.quaternion.identity();
+      return;
+    }
+
+    tmpObjectsRef.current.direction.normalize();
+    tmpObjectsRef.current.matrix.lookAt(
+      tmpObjectsRef.current.origin,
+      tmpObjectsRef.current.direction,
+      tmpObjectsRef.current.up
+    );
+    targetRef.current.quaternion.setFromRotationMatrix(tmpObjectsRef.current.matrix);
+  }, [computedBlochCoordinates]);
   
   return (
     <VStack spacing={4} w="100%" align="stretch">
@@ -574,7 +599,7 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
         transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
         mx="auto"
       >
-        {!rendererInitializedRef.current && (
+        {!isRendererInitialized && (
           <Box 
             position="absolute" 
             top="0" 
@@ -585,7 +610,7 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
             flexDirection="column"
             alignItems="center" 
             justifyContent="center"
-            bg={useColorModeValue('rgba(255,255,255,0.9)', 'rgba(15,15,35,0.9)')}
+            bg={loadingOverlayBg}
             backdropFilter="blur(10px)"
           >
             <VStack spacing={4}>
@@ -604,14 +629,14 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
                   w="60px"
                   h="60px"
                   borderRadius="full"
-                  bg={useColorModeValue('purple.100', 'purple.900')}
+                  bg={loadingPulseBg}
                   opacity={0.3}
                   animation="ping 2s cubic-bezier(0, 0, 0.2, 1) infinite"
                 />
               </Box>
               <Text 
                 fontSize="sm" 
-                color={useColorModeValue('gray.600', 'gray.400')}
+                color={loadingTextColor}
                 fontWeight="medium"
                 textAlign="center"
               >
@@ -641,7 +666,7 @@ const BlochSphereVisualization: React.FC<BlochSphereVisualizationProps> = ({
           Bloch Coordinates
         </Text>
         {(() => {
-          const coords = calculateBlochCoordinates();
+          const coords = computedBlochCoordinates;
           return coords ? (
             <HStack 
               spacing={6} 

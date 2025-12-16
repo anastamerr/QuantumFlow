@@ -45,6 +45,7 @@ def execute(req: ExecuteRequest) -> ExecuteResponse:
         result = run_circuit(
             num_qubits=req.num_qubits,
             gates=[g.model_dump() for g in req.gates],
+            method=req.method,
             shots=req.shots,
             memory=req.memory,
             override_backend=req.backend,

@@ -152,7 +152,7 @@ export const gateLibrary: GateDefinition[] = [
     description: 'Swaps the states of two qubits',
     category: 'Multi-Qubit Gates',
     color: 'gray',
-    targets: 2,
+    targets: 1,
   },
   {
     id: 'toffoli',

@@ -1,7 +1,7 @@
 import { Gate, Qubit } from '../../../types/circuit';
 import { OptimizationOptions, defaultOptimizationOptions } from '../../../types/optimizationTypes';
 import { optimizeCircuit } from '../optimizers/circuitOptimizer';
-import { validateCircuitInput } from './codeGeneratorUtils';
+import { coerceAngleToRadians, validateCircuitInput } from './codeGeneratorUtils';
 
 /**
  * Generates Amazon Braket Python code from the circuit representation
@@ -112,7 +112,7 @@ function generateGateDefinitions(gates: Gate[]): string {
           gateSection += `circuit.rx(${gate.qubit}, 0)\n`;
         } else {
           // Check if value is already in radians (between -2π and 2π) or degrees
-          const rxAngle = Math.abs(rxTheta) <= 2 * Math.PI ? rxTheta : rxTheta * Math.PI / 180;
+          const rxAngle = coerceAngleToRadians(rxTheta);
           gateSection += `circuit.rx(${gate.qubit}, ${rxAngle})\n`;
         }
         break;
@@ -123,7 +123,7 @@ function generateGateDefinitions(gates: Gate[]): string {
           gateSection += `# Warning: Invalid parameter for RY gate, using 0\n`;
           gateSection += `circuit.ry(${gate.qubit}, 0)\n`;
         } else {
-          const ryAngle = Math.abs(ryTheta) <= 2 * Math.PI ? ryTheta : ryTheta * Math.PI / 180;
+          const ryAngle = coerceAngleToRadians(ryTheta);
           gateSection += `circuit.ry(${gate.qubit}, ${ryAngle})\n`;
         }
         break;
@@ -134,7 +134,7 @@ function generateGateDefinitions(gates: Gate[]): string {
           gateSection += `# Warning: Invalid parameter for RZ gate, using 0\n`;
           gateSection += `circuit.rz(${gate.qubit}, 0)\n`;
         } else {
-          const rzAngle = Math.abs(rzPhi) <= 2 * Math.PI ? rzPhi : rzPhi * Math.PI / 180;
+          const rzAngle = coerceAngleToRadians(rzPhi);
           gateSection += `circuit.rz(${gate.qubit}, ${rzAngle})\n`;
         }
         break;
@@ -145,8 +145,22 @@ function generateGateDefinitions(gates: Gate[]): string {
           gateSection += `# Warning: Invalid parameter for P gate, using 0\n`;
           gateSection += `circuit.phaseshift(${gate.qubit}, 0)\n`;
         } else {
-          const phaseAngle = Math.abs(phasePhi) <= 2 * Math.PI ? phasePhi : phasePhi * Math.PI / 180;
-          gateSection += `circuit.phaseshift(${gate.qubit}, ${phaseAngle})\n`;
+          const phaseAngle = coerceAngleToRadians(phasePhi);
+          const targetQubit = gate.qubit ?? (gate.targets && gate.targets.length > 0 ? gate.targets[0] : undefined);
+
+          if (gate.controls && gate.controls.length > 0) {
+            if (targetQubit === undefined) {
+              gateSection += `# Warning: Controlled-P gate missing target qubit\n`;
+            } else if (gate.controls.length === 1) {
+              gateSection += `circuit.cphaseshift(${gate.controls[0]}, ${targetQubit}, ${phaseAngle})\n`;
+            } else {
+              gateSection += `# Warning: Multi-controlled phase not directly supported in this Braket generator\n`;
+            }
+          } else if (targetQubit === undefined) {
+            gateSection += `# Warning: P gate missing target qubit\n`;
+          } else {
+            gateSection += `circuit.phaseshift(${targetQubit}, ${phaseAngle})\n`;
+          }
         }
         break;
       case 'cnot':

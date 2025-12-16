@@ -20,6 +20,7 @@ export type StoreGate = {
 export type ExecutePayload = {
   num_qubits: number;
   gates: StoreGate[];
+  method?: 'qasm' | 'statevector' | 'noisy';
   shots?: number;
   memory?: boolean;
   backend?: string;
@@ -40,9 +41,12 @@ export async function executeCircuit(payload: ExecutePayload) {
   }
   return res.json() as Promise<{
     backend: string;
+    method?: string;
     shots: number;
     counts: Record<string, number>;
     probabilities: Record<string, number>;
+    statevector?: Record<string, [number, number]> | null;
+    warnings?: string[] | null;
     memory?: string[] | null;
     status: string;
   }>;

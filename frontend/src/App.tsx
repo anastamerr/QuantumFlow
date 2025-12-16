@@ -1,19 +1,20 @@
-import { Box, Flex, VStack, useColorModeValue, useToast } from '@chakra-ui/react'
+import { Box, Flex, Spinner, VStack, useColorModeValue, useToast } from '@chakra-ui/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import Header from './components/layout/Header'
 import Sidebar from './components/layout/Sidebar'
 import CircuitCanvas from './components/canvas/CircuitCanvas'
-import CodePanel from './components/panels/CodePanel'
 import { useSelector } from 'react-redux'
 import { selectActivePanel, selectIsFullView } from './store/slices/uiSlice'
-import SimulationPanel from './components/panels/SimulationPanel'
-import ExportPanel from './components/panels/ExportPanel'
 import GateParamsPanel from './components/panels/GateParamsPanel'
 import TutorialPanel from './components/panels/TutorialPanel'
-import AlgorithmLibraryPanel from './components/panels/AlgorithmLibraryPanel'
 import ResizablePanel from './components/layout/ResizablePanel'
+
+const CodePanel = lazy(() => import('./components/panels/CodePanel'))
+const SimulationPanel = lazy(() => import('./components/panels/SimulationPanel'))
+const ExportPanel = lazy(() => import('./components/panels/ExportPanel'))
+const AlgorithmLibraryPanel = lazy(() => import('./components/panels/AlgorithmLibraryPanel'))
 
 function App() {
   const activePanel = useSelector(selectActivePanel)
@@ -142,10 +143,18 @@ function App() {
                 flex={isFullView ? 1 : undefined}
                 height={isFullView ? "calc(100vh - 120px)" : undefined}
               >
-                {activePanel === 'code' && <CodePanel />}
-                {activePanel === 'simulation' && <SimulationPanel />}
-                {activePanel === 'export' && <ExportPanel />}
-                {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                <Suspense
+                  fallback={
+                    <Flex align="center" justify="center" h="100%" minH="200px">
+                      <Spinner size="lg" />
+                    </Flex>
+                  }
+                >
+                  {activePanel === 'code' && <CodePanel />}
+                  {activePanel === 'simulation' && <SimulationPanel />}
+                  {activePanel === 'export' && <ExportPanel />}
+                  {activePanel === 'algorithms' && <AlgorithmLibraryPanel />}
+                </Suspense>
               </ResizablePanel>
             </Flex>
           </Box>

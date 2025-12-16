@@ -1,6 +1,6 @@
 import { Gate, Qubit } from '../../../types/circuit';
 import { OptimizationOptions, defaultOptimizationOptions } from '../types/optimizationTypes';
-import { prepareGatesForCodeGeneration, validateCircuitInput, groupGatesByPosition } from './codeGeneratorUtils';
+import { coerceAngleToRadians, prepareGatesForCodeGeneration, validateCircuitInput, groupGatesByPosition } from './codeGeneratorUtils';
 import { hardwareModels } from '../../../utils/circuitOptimizer';
 
 /**
@@ -112,7 +112,7 @@ function generateGateSection(gates: Gate[]): string {
             gateSection += `circuit.append(cirq.rx(0)(qubits[${gate.qubit}]))\n`;
           } else {
             // Check if value is already in radians or degrees
-            const rxAngle = Math.abs(theta) <= 2 * Math.PI ? theta : theta * Math.PI / 180;
+            const rxAngle = coerceAngleToRadians(theta);
             gateSection += `circuit.append(cirq.rx(${rxAngle})(qubits[${gate.qubit}]))\n`;
           }
           break;
@@ -123,7 +123,7 @@ function generateGateSection(gates: Gate[]): string {
             gateSection += `# Warning: Invalid parameter for RY gate, using 0\n`;
             gateSection += `circuit.append(cirq.ry(0)(qubits[${gate.qubit}]))\n`;
           } else {
-            const ryAngle = Math.abs(ryTheta) <= 2 * Math.PI ? ryTheta : ryTheta * Math.PI / 180;
+            const ryAngle = coerceAngleToRadians(ryTheta);
             gateSection += `circuit.append(cirq.ry(${ryAngle})(qubits[${gate.qubit}]))\n`;
           }
           break;
@@ -134,7 +134,7 @@ function generateGateSection(gates: Gate[]): string {
             gateSection += `# Warning: Invalid parameter for RZ gate, using 0\n`;
             gateSection += `circuit.append(cirq.rz(0)(qubits[${gate.qubit}]))\n`;
           } else {
-            const rzAngle = Math.abs(rzPhi) <= 2 * Math.PI ? rzPhi : rzPhi * Math.PI / 180;
+            const rzAngle = coerceAngleToRadians(rzPhi);
             gateSection += `circuit.append(cirq.rz(${rzAngle})(qubits[${gate.qubit}]))\n`;
           }
           break;
@@ -146,11 +146,27 @@ function generateGateSection(gates: Gate[]): string {
             gateSection += `circuit.append(cirq.ZPowGate(exponent=0)(qubits[${gate.qubit}]))\n`;
           } else {
             // Check if value is already in radians or degrees
-            const phaseAngle = Math.abs(phasePhi) <= 2 * Math.PI ? phasePhi : phasePhi * Math.PI / 180;
+            const phaseAngle = coerceAngleToRadians(phasePhi);
             // Convert to exponent for ZPowGate: ZPowGate(e) applies phase of e×π
             // So for phase φ, exponent = φ/π
             const phaseExponent = phaseAngle / Math.PI;
-            gateSection += `circuit.append(cirq.ZPowGate(exponent=${phaseExponent})(qubits[${gate.qubit}]))\n`;
+            const targetQubit = gate.qubit !== undefined
+              ? gate.qubit
+              : (gate.targets && gate.targets.length > 0 ? gate.targets[0] : undefined);
+
+            if (gate.controls && gate.controls.length > 0) {
+              if (targetQubit === undefined) {
+                gateSection += `# Warning: Controlled-P gate missing target qubit\n`;
+              } else if (gate.controls.length === 1) {
+                gateSection += `circuit.append(cirq.CZPowGate(exponent=${phaseExponent})(qubits[${gate.controls[0]}], qubits[${targetQubit}]))\n`;
+              } else {
+                gateSection += `# Warning: Multi-controlled phase not directly supported in this Cirq generator\n`;
+              }
+            } else if (targetQubit === undefined) {
+              gateSection += `# Warning: P gate missing target qubit\n`;
+            } else {
+              gateSection += `circuit.append(cirq.ZPowGate(exponent=${phaseExponent})(qubits[${targetQubit}]))\n`;
+            }
           }
           break;
         case 'cnot':

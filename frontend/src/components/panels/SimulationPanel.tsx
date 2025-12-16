@@ -1,4 +1,4 @@
-import { 
+import {
   Box, 
   Heading, 
   Text, 
@@ -33,10 +33,8 @@ import {
 } from '@chakra-ui/react';
 import { useSelector } from 'react-redux';
 import { selectQubits, selectGates } from '../../store/slices/circuitSlice';
-import { useState, useCallback, useEffect } from 'react';
+import { Suspense, lazy, useState, useCallback, useEffect } from 'react';
 // import QuantumStateVisualizer from '../visualization/QuantumStateVisualizer'; // removed
-import QubitVisualization from '../visualization/QubitVisualizer';
-import BlochSphereVisualization from '../visualization/BlochSphereVisualizer';
 // Local mock measurement removed in favor of backend
 import { executeCircuit, checkHealth } from '@/lib/quantumApi';
 import { transformStoreGatesToCircuitGates } from '../../utils/circuitUtils';
@@ -44,15 +42,19 @@ import { stateVectorToBloch } from '../../utils/blochSphereUtils';
 import { InfoIcon, RepeatIcon, ChevronRightIcon, StarIcon } from '@chakra-ui/icons';
 import FullViewToggle from '../common/FullViewToggle';
 
+const QubitVisualization = lazy(() => import('../visualization/QubitVisualizer'));
+const BlochSphereVisualization = lazy(() => import('../visualization/BlochSphereVisualizer'));
+
 const SimulationPanel = () => {
   const qubits = useSelector(selectQubits);
   const storeGates = useSelector(selectGates);
   const toast = useToast();
   const [isSimulating, setIsSimulating] = useState(false);
   const [results, setResults] = useState<Record<string, number> | null>(null);
+  const [stateVector, setStateVector] = useState<Record<string, [number, number]> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shots, setShots] = useState<number>(1024);
-  const [method, setMethod] = useState<string>('statevector');
+  const [method, setMethod] = useState<'statevector' | 'noisy'>('statevector');
   const [serverConnected, setServerConnected] = useState<boolean | null>(null);
   // Real-time visualization removed: backend-only measurements
   // const [showRealTimeVisualization, setShowRealTimeVisualization] = useState<boolean>(true);
@@ -75,6 +77,13 @@ const SimulationPanel = () => {
   const accentColor = useColorModeValue('blue.600', 'blue.300');
   const warningBg = useColorModeValue('orange.50', 'orange.900');
   const warningColor = useColorModeValue('orange.600', 'orange.300');
+  const inputBg = useColorModeValue('white', 'gray.700');
+  const optionsBorderColor = useColorModeValue('blue.200', 'blue.700');
+  const neutralBg = useColorModeValue('gray.50', 'gray.700');
+  const errorBg = useColorModeValue('red.50', 'red.900');
+  const errorTextColor = useColorModeValue('red.600', 'red.200');
+  const gradientStart = useColorModeValue('#3182CE', '#63B3ED');
+  const gradientEnd = useColorModeValue('#805AD5', '#B794F4');
   
   // Responsive design
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -84,6 +93,7 @@ const SimulationPanel = () => {
   useEffect(() => {
     if (results !== null || simulationComplete) {
       setResults(null);
+      setStateVector(null);
       setSimulationComplete(false);
       setActiveTab(0); // Reset to simulation tab when circuit changes
     }
@@ -125,6 +135,7 @@ const SimulationPanel = () => {
     setIsSimulating(true);
     setSimulationComplete(false);
     setResults(null);
+    setStateVector(null);
     setError(null);
     
     try {
@@ -138,21 +149,27 @@ const SimulationPanel = () => {
         const response = await executeCircuit({
           num_qubits: qubits.length,
           gates: storeGates,
+          method,
           shots,
           memory: false,
         });
         setServerConnected(true);
         setResults(response.probabilities);
+        setStateVector(response.statevector ?? null);
         setSimulationComplete(true);
         setActiveTab(1);
       } catch (err) {
         console.error('Backend execution error:', err);
-        setServerConnected(false);
-        setError('Server issue: failed to retrieve measurements');
+        const message = err instanceof Error ? err.message : 'Failed to simulate circuit';
+        const isBackendError = typeof message === 'string' && message.startsWith('Backend error');
+
+        // Backend errors mean the server is reachable but rejected the circuit.
+        setServerConnected(isBackendError ? true : false);
+        setError(message);
         setSimulationComplete(false);
         toast({
-          title: 'Server issue',
-          description: 'Unable to reach measurement backend',
+          title: isBackendError ? 'Simulation error' : 'Server issue',
+          description: message,
           status: 'error',
           duration: 3000,
           isClosable: true,
@@ -219,7 +236,7 @@ const SimulationPanel = () => {
                     fontSize="md" 
                     fontWeight="medium" 
                     fontFamily="monospace"
-                    bg={useColorModeValue("gray.100", "gray.700")} 
+                    bg={barBg} 
                     px={2} 
                     py={1} 
                     borderRadius="md"
@@ -240,7 +257,7 @@ const SimulationPanel = () => {
               >
                 <Box
                   h="100%" 
-                  bg={`linear-gradient(90deg, ${useColorModeValue('#3182CE', '#63B3ED')} 0%, ${useColorModeValue('#805AD5', '#B794F4')} 100%)`}
+                  bg={`linear-gradient(90deg, ${gradientStart} 0%, ${gradientEnd} 100%)`}
                   w={`${(prob / maxValue) * 100}%`}
                   transition="width 0.3s ease-in-out"
                   borderRadius="full"
@@ -325,7 +342,7 @@ const SimulationPanel = () => {
             borderRadius="lg" 
             bg={accentBg}
             border="1px solid"
-            borderColor={useColorModeValue('blue.200', 'blue.700')}
+            borderColor={optionsBorderColor}
           >
             <Grid 
               templateColumns={isMobile ? "1fr" : "repeat(auto-fit, minmax(200px, 1fr))"}
@@ -337,10 +354,10 @@ const SimulationPanel = () => {
                   <Select 
                     size="sm" 
                     value={method} 
-                    onChange={(e) => setMethod(e.target.value)}
+                    onChange={(e) => setMethod(e.target.value as 'statevector' | 'noisy')}
                     isDisabled={isSimulating}
                     borderRadius="md"
-                    bg={useColorModeValue('white', 'gray.700')}
+                    bg={inputBg}
                     boxShadow="sm"
                   >
                     <option value="statevector">State Vector</option>
@@ -358,7 +375,7 @@ const SimulationPanel = () => {
                     onChange={(e) => setShots(parseInt(e.target.value))}
                     isDisabled={isSimulating}
                     borderRadius="md"
-                    bg={useColorModeValue('white', 'gray.700')}
+                    bg={inputBg}
                     boxShadow="sm"
                   >
                     <option value="100">100</option>
@@ -483,16 +500,16 @@ const SimulationPanel = () => {
                       <VStack spacing={3} align="stretch">
                         <Flex 
                           p={4} 
-                          bg={useColorModeValue('red.50', 'red.900')} 
-                          color={useColorModeValue('red.600', 'red.200')}
+                          bg={errorBg} 
+                          color={errorTextColor}
                           borderRadius="md"
                           align="center"
                         >
                           <Icon as={InfoIcon} mr={2} />
                           <Text fontWeight="medium">Error:</Text>
                         </Flex>
-                        <Text color={useColorModeValue('red.600', 'red.200')}>{error}</Text>
-                        <Box mt={2} p={3} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                        <Text color={errorTextColor}>{error}</Text>
+                        <Box mt={2} p={3} bg={neutralBg} borderRadius="md">
                           <Text fontSize="sm">Try simplifying your circuit or checking for invalid gate configurations.</Text>
                         </Box>
                       </VStack>
@@ -787,7 +804,7 @@ const SimulationPanel = () => {
                                       key={gateType} 
                                       p={2} 
                                       borderRadius="md" 
-                                      bg={useColorModeValue('gray.50', 'gray.700')}
+                                      bg={neutralBg}
                                       textAlign="center"
                                     >
                                       <Text fontSize="xs" fontWeight="bold" mb={1}>
@@ -814,68 +831,57 @@ const SimulationPanel = () => {
                             </CardHeader>
                             <CardBody py={3} px={4}>
                               {(() => {
-                                // Convert probability results to complex amplitude format for Bloch calculation
-                                const stateVector = Object.fromEntries(
-                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
+                                const bloch = stateVector ? stateVectorToBloch(stateVector, 0) : null;
+                                if (!bloch) {
+                                  return (
+                                    <Text fontSize="sm" color="gray.500">
+                                      Bloch coordinates require statevector data. Switch "Simulation Method" to "State Vector".
+                                    </Text>
+                                  );
+                                }
+
+                                return (
+                                  <Grid 
+                                    templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} 
+                                    gap={4}
+                                    textAlign="center"
+                                  >
+                                    <Box>
+                                      <Text fontSize="sm" color="gray.500">X COORDINATE</Text>
+                                      <Text 
+                                        fontSize="lg" 
+                                        fontWeight="bold" 
+                                        fontFamily="monospace"
+                                        color="red.500"
+                                      >
+                                        {bloch.x.toFixed(4)}
+                                      </Text>
+                                    </Box>
+                                    <Box>
+                                      <Text fontSize="sm" color="gray.500">Y COORDINATE</Text>
+                                      <Text 
+                                        fontSize="lg" 
+                                        fontWeight="bold" 
+                                        fontFamily="monospace"
+                                        color="green.500"
+                                      >
+                                        {bloch.y.toFixed(4)}
+                                      </Text>
+                                    </Box>
+                                    <Box>
+                                      <Text fontSize="sm" color="gray.500">Z COORDINATE</Text>
+                                      <Text 
+                                        fontSize="lg" 
+                                        fontWeight="bold" 
+                                        fontFamily="monospace"
+                                        color="blue.500"
+                                      >
+                                        {bloch.z.toFixed(4)}
+                                      </Text>
+                                    </Box>
+                                  </Grid>
                                 );
-                                const blochCoords = stateVectorToBloch(stateVector, 0);
-                                return blochCoords;
-                              })() && (
-                                <Grid 
-                                  templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} 
-                                  gap={4}
-                                  textAlign="center"
-                                >
-                                  <Box>
-                                    <Text fontSize="sm" color="gray.500">X COORDINATE</Text>
-                                    <Text 
-                                      fontSize="lg" 
-                                      fontWeight="bold" 
-                                      fontFamily="monospace"
-                                      color="red.500"
-                                    >
-                                      {(() => {
-                                        const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                        );
-                                        return stateVectorToBloch(stateVector, 0)?.x.toFixed(4);
-                                      })()}
-                                    </Text>
-                                  </Box>
-                                  <Box>
-                                    <Text fontSize="sm" color="gray.500">Y COORDINATE</Text>
-                                    <Text 
-                                      fontSize="lg" 
-                                      fontWeight="bold" 
-                                      fontFamily="monospace"
-                                      color="green.500"
-                                    >
-                                      {(() => {
-                                        const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                        );
-                                        return stateVectorToBloch(stateVector, 0)?.y.toFixed(4);
-                                      })()}
-                                    </Text>
-                                  </Box>
-                                  <Box>
-                                    <Text fontSize="sm" color="gray.500">Z COORDINATE</Text>
-                                    <Text 
-                                      fontSize="lg" 
-                                      fontWeight="bold" 
-                                      fontFamily="monospace"
-                                      color="blue.500"
-                                    >
-                                      {(() => {
-                                        const stateVector = Object.fromEntries(
-                                          Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                        );
-                                        return stateVectorToBloch(stateVector, 0)?.z.toFixed(4);
-                                      })()}
-                                    </Text>
-                                  </Box>
-                                </Grid>
-                              )}
+                              })()}
                               <Divider my={3} />
                               <Text fontSize="sm" color="gray.500" mt={1}>
                                 These coordinates represent the position of your qubit state on the Bloch sphere.
@@ -889,7 +895,7 @@ const SimulationPanel = () => {
                           mt={4} 
                           p={4} 
                           borderRadius="md" 
-                          bg={useColorModeValue('gray.50', 'gray.700')}
+                          bg={neutralBg}
                           borderWidth="1px"
                           borderColor={borderColor}
                         >
@@ -935,89 +941,99 @@ const SimulationPanel = () => {
                           Run the simulation to see Bloch sphere visualization.
                         </Text>
                       </VStack>
+                    ) : !stateVector ? (
+                      <VStack spacing={4} align="stretch" justify="center" h="300px">
+                        <Text color="gray.500" textAlign="center" fontWeight="medium">
+                          Statevector visualization is unavailable for this run. Select "State Vector" as the simulation method.
+                        </Text>
+                      </VStack>
                     ) : (
                       <Box>
                         <Heading size="md" mb={4}>Qubit Visualization</Heading>
                         
-                        {qubits.length === 1 ? (
-                          <Flex direction={isMobile ? "column" : "row"} align="center" justify="center">
-                            {/* Single qubit case - Show just the Bloch sphere */}
-                            <Box flex="1">
-                              <BlochSphereVisualization
-                                stateVector={Object.fromEntries(
-                                  Object.entries(results || {}).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                                )}
-                                width={isMobile ? 300 : 400}
-                                height={isMobile ? 300 : 400}
-                                title="Single Qubit Bloch Sphere"
-                              />
-                            </Box>
-                            
-                            <Box 
-                              flex="1" 
-                              mt={isMobile ? 6 : 0} 
-                              ml={isMobile ? 0 : 6}
-                              p={4}
-                              borderRadius="md"
-                              bg={accentBg}
-                            >
-                              <Heading size="sm" mb={3}>Bloch Sphere Explained</Heading>
-                              <Text fontSize="sm" mb={3}>
-                                The Bloch sphere is a geometrical representation of a single-qubit quantum state.
-                                Any pure state of a qubit can be represented as a point on the surface of the sphere.
-                              </Text>
+                        <Suspense
+                          fallback={
+                            <Flex align="center" justify="center" h="400px">
+                              <Spinner size="lg" />
+                            </Flex>
+                          }
+                        >
+                          {qubits.length === 1 ? (
+                            <Flex direction={isMobile ? "column" : "row"} align="center" justify="center">
+                              {/* Single qubit case - Show just the Bloch sphere */}
+                              <Box flex="1">
+                                <BlochSphereVisualization
+                                  stateVector={stateVector}
+                                  width={isMobile ? 300 : 400}
+                                  height={isMobile ? 300 : 400}
+                                  title="Single Qubit Bloch Sphere"
+                                />
+                              </Box>
                               
-                              <VStack align="start" spacing={2} fontSize="sm">
-                                <HStack>
-                                  <Box 
-                                    w="12px" 
-                                    h="12px" 
-                                    borderRadius="full" 
-                                    bg="red.400" 
-                                  />
-                                  <Text>X-axis: Corresponds to the Pauli-X operator</Text>
-                                </HStack>
-                                <HStack>
-                                  <Box 
-                                    w="12px" 
-                                    h="12px" 
-                                    borderRadius="full" 
-                                    bg="green.400" 
-                                  />
-                                  <Text>Y-axis: Corresponds to the Pauli-Y operator</Text>
-                                </HStack>
-                                <HStack>
-                                  <Box 
-                                    w="12px" 
-                                    h="12px" 
-                                    borderRadius="full" 
-                                    bg="blue.400" 
-                                  />
-                                  <Text>Z-axis: Corresponds to the Pauli-Z operator</Text>
-                                </HStack>
-                              </VStack>
-                              
-                              <Text fontSize="sm" mt={3}>
-                                <strong>North pole (|0⟩):</strong> The standard computational basis state |0⟩
-                              </Text>
-                              <Text fontSize="sm">
-                                <strong>South pole (|1⟩):</strong> The standard computational basis state |1⟩
-                              </Text>
-                              <Text fontSize="sm">
-                                <strong>Equator:</strong> Equal superpositions of |0⟩ and |1⟩, differing by phase
-                              </Text>
-                            </Box>
-                          </Flex>
-                        ) : (
-                          // Multi-qubit case - Show the full QubitVisualization component
-                          <QubitVisualization
-                            stateVector={Object.fromEntries(
-                              Object.entries(results).map(([key, prob]) => [key, [Math.sqrt(prob), 0] as [number, number]])
-                            )}
-                            numQubits={qubits.length}
-                            title="Qubit State Visualization"
-                          />
-                        )}
+                              <Box 
+                                flex="1" 
+                                mt={isMobile ? 6 : 0} 
+                                ml={isMobile ? 0 : 6}
+                                p={4}
+                                borderRadius="md"
+                                bg={accentBg}
+                              >
+                                <Heading size="sm" mb={3}>Bloch Sphere Explained</Heading>
+                                <Text fontSize="sm" mb={3}>
+                                  The Bloch sphere is a geometrical representation of a single-qubit quantum state.
+                                  Any pure state of a qubit can be represented as a point on the surface of the sphere.
+                                </Text>
+                                
+                                <VStack align="start" spacing={2} fontSize="sm">
+                                  <HStack>
+                                    <Box 
+                                      w="12px" 
+                                      h="12px" 
+                                      borderRadius="full" 
+                                      bg="red.400" 
+                                    />
+                                    <Text>X-axis: Corresponds to the Pauli-X operator</Text>
+                                  </HStack>
+                                  <HStack>
+                                    <Box 
+                                      w="12px" 
+                                      h="12px" 
+                                      borderRadius="full" 
+                                      bg="green.400" 
+                                    />
+                                    <Text>Y-axis: Corresponds to the Pauli-Y operator</Text>
+                                  </HStack>
+                                  <HStack>
+                                    <Box 
+                                      w="12px" 
+                                      h="12px" 
+                                      borderRadius="full" 
+                                      bg="blue.400" 
+                                    />
+                                    <Text>Z-axis: Corresponds to the Pauli-Z operator</Text>
+                                  </HStack>
+                                </VStack>
+                                
+                                <Text fontSize="sm" mt={3}>
+                                  <strong>North pole (|0⟩):</strong> The standard computational basis state |0⟩
+                                </Text>
+                                <Text fontSize="sm">
+                                  <strong>South pole (|1⟩):</strong> The standard computational basis state |1⟩
+                                </Text>
+                                <Text fontSize="sm">
+                                  <strong>Equator:</strong> Equal superpositions of |0⟩ and |1⟩, differing by phase
+                                </Text>
+                              </Box>
+                            </Flex>
+                          ) : (
+                            // Multi-qubit case - Show the full QubitVisualization component
+                            <QubitVisualization
+                              stateVector={stateVector}
+                              numQubits={qubits.length}
+                              title="Qubit State Visualization"
+                            />
+                          )}
+                        </Suspense>
                       </Box>
                     )}
                   </CardBody>

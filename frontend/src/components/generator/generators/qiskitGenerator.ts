@@ -1,6 +1,6 @@
 import { Gate, Qubit } from '../../../types/circuit';
 import { OptimizationOptions, defaultOptimizationOptions } from '../types/optimizationTypes';
-import { prepareGatesForCodeGeneration, validateCircuitInput } from './codeGeneratorUtils';
+import { coerceAngleToRadians, prepareGatesForCodeGeneration, validateCircuitInput } from './codeGeneratorUtils';
 import { hardwareModels } from '../../../utils/circuitOptimizer';
 
 /**
@@ -113,7 +113,7 @@ function generateGateSection(gates: Gate[]): string {
           gateSection += `qc.rx(0, ${gate.qubit})\n`;
         } else {
           // Check if value is already in radians (between -2π and 2π) or degrees  
-          const rxAngle = Math.abs(rxTheta) <= 2 * Math.PI ? rxTheta : rxTheta * Math.PI / 180;
+          const rxAngle = coerceAngleToRadians(rxTheta);
           gateSection += `qc.rx(${rxAngle}, ${gate.qubit})\n`;
         }
         break;
@@ -124,7 +124,7 @@ function generateGateSection(gates: Gate[]): string {
           gateSection += `# Warning: Invalid parameter for RY gate, using 0\n`;
           gateSection += `qc.ry(0, ${gate.qubit})\n`;
         } else {
-          const ryAngle = Math.abs(ryTheta) <= 2 * Math.PI ? ryTheta : ryTheta * Math.PI / 180;
+          const ryAngle = coerceAngleToRadians(ryTheta);
           gateSection += `qc.ry(${ryAngle}, ${gate.qubit})\n`;
         }
         break;
@@ -135,7 +135,7 @@ function generateGateSection(gates: Gate[]): string {
           gateSection += `# Warning: Invalid parameter for RZ gate, using 0\n`;
           gateSection += `qc.rz(0, ${gate.qubit})\n`;
         } else {
-          const rzAngle = Math.abs(rzPhi) <= 2 * Math.PI ? rzPhi : rzPhi * Math.PI / 180;
+          const rzAngle = coerceAngleToRadians(rzPhi);
           gateSection += `qc.rz(${rzAngle}, ${gate.qubit})\n`;
         }
         break;
@@ -146,8 +146,22 @@ function generateGateSection(gates: Gate[]): string {
           gateSection += `# Warning: Invalid parameter for P gate, using 0\n`;
           gateSection += `qc.p(0, ${gate.qubit})\n`;
         } else {
-          const phaseAngle = Math.abs(phasePhi) <= 2 * Math.PI ? phasePhi : phasePhi * Math.PI / 180;
-          gateSection += `qc.p(${phaseAngle}, ${gate.qubit})\n`;
+          const phaseAngle = coerceAngleToRadians(phasePhi);
+          const targetQubit = gate.qubit ?? (gate.targets && gate.targets.length > 0 ? gate.targets[0] : undefined);
+
+          if (gate.controls && gate.controls.length > 0) {
+            if (targetQubit === undefined) {
+              gateSection += `# Warning: Controlled-P gate missing target qubit\n`;
+            } else if (gate.controls.length === 1) {
+              gateSection += `qc.cp(${phaseAngle}, ${gate.controls[0]}, ${targetQubit})\n`;
+            } else {
+              gateSection += `qc.mcp(${phaseAngle}, [${gate.controls.join(', ')}], ${targetQubit})\n`;
+            }
+          } else if (targetQubit === undefined) {
+            gateSection += `# Warning: P gate missing target qubit\n`;
+          } else {
+            gateSection += `qc.p(${phaseAngle}, ${targetQubit})\n`;
+          }
         }
         break;
       case 'cnot':

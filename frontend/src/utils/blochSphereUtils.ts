@@ -15,6 +15,68 @@ export type Complex = [number, number];
 // Type for a quantum state as a mapping from basis state to complex amplitude
 export type QuantumState = Record<string, Complex>;
 
+const complexConjugate = (z: Complex): Complex => [z[0], -z[1]];
+
+const complexAdd = (a: Complex, b: Complex): Complex => [a[0] + b[0], a[1] + b[1]];
+
+const complexMultiply = (a: Complex, b: Complex): Complex => [
+  a[0] * b[0] - a[1] * b[1],
+  a[0] * b[1] + a[1] * b[0],
+];
+
+const complexAbsSquared = (z: Complex): number => z[0] * z[0] + z[1] * z[1];
+
+const inferNumQubits = (stateVector: QuantumState): number => {
+  const keys = Object.keys(stateVector);
+  if (keys.length === 0) return 0;
+  return Math.max(...keys.map(k => k.length));
+};
+
+const reducedDensityMatrixForQubit = (
+  stateVector: QuantumState,
+  qubitIndex: number
+): { rho00: number; rho11: number; rho01: Complex } | null => {
+  const numQubits = inferNumQubits(stateVector);
+  if (numQubits === 0) return null;
+  if (qubitIndex < 0 || qubitIndex >= numQubits) return null;
+  if (numQubits > 30) return null;
+
+  const dim = 1 << numQubits;
+  const halfDim = dim >> 1;
+  const bit = 1 << qubitIndex;
+  const lowMask = bit - 1;
+
+  let rho00 = 0;
+  let rho11 = 0;
+  let rho01: Complex = [0, 0];
+
+  for (let r = 0; r < halfDim; r++) {
+    const low = r & lowMask;
+    const high = r >> qubitIndex;
+    const i0 = low | (high << (qubitIndex + 1));
+    const i1 = i0 | bit;
+
+    const s0 = i0.toString(2).padStart(numQubits, '0');
+    const s1 = i1.toString(2).padStart(numQubits, '0');
+
+    const a0 = stateVector[s0] || [0, 0];
+    const a1 = stateVector[s1] || [0, 0];
+
+    rho00 += complexAbsSquared(a0);
+    rho11 += complexAbsSquared(a1);
+    rho01 = complexAdd(rho01, complexMultiply(a0, complexConjugate(a1)));
+  }
+
+  const trace = rho00 + rho11;
+  if (trace <= 1e-15) return null;
+
+  rho00 /= trace;
+  rho11 /= trace;
+  rho01 = [rho01[0] / trace, rho01[1] / trace];
+
+  return { rho00, rho11, rho01 };
+};
+
 /**
  * Calculate Bloch sphere coordinates from quantum amplitudes
  * @param alpha Complex amplitude of |0⟩
@@ -106,6 +168,27 @@ export const stateVectorToBloch = (
   qubitIndex: number = 0
 ): BlochCoordinates | null => {
   try {
+    const numQubits = inferNumQubits(stateVector);
+
+    if (numQubits === 1) {
+      const alpha: Complex = stateVector['0'] || [1, 0];
+      const beta: Complex = stateVector['1'] || [0, 0];
+      return amplitudesToBloch(alpha, beta);
+    }
+
+    const reduced = reducedDensityMatrixForQubit(stateVector, qubitIndex);
+    if (reduced) {
+      const x = 2 * reduced.rho01[0];
+      const y = -2 * reduced.rho01[1];
+      const z = reduced.rho00 - reduced.rho11;
+
+      return {
+        x: isNaN(x) ? 0 : Math.max(-1, Math.min(1, x)),
+        y: isNaN(y) ? 0 : Math.max(-1, Math.min(1, y)),
+        z: isNaN(z) ? 1 : Math.max(-1, Math.min(1, z)),
+      };
+    }
+
     // Default values to prevent NaN
     let alpha: Complex = [1, 0];
     let beta: Complex = [0, 0];
@@ -192,6 +275,26 @@ export const extractQubitAmplitudes = (
   stateVector: QuantumState, 
   qubitIndex: number
 ): { alpha: Complex, beta: Complex } => {
+  const numQubits = inferNumQubits(stateVector);
+  if (numQubits > 1) {
+    const reduced = reducedDensityMatrixForQubit(stateVector, qubitIndex);
+    if (reduced) {
+      const prob0 = Math.max(0, Math.min(1, reduced.rho00));
+      const prob1 = Math.max(0, Math.min(1, reduced.rho11));
+
+      const alphaMag = Math.sqrt(prob0);
+      const betaMag = Math.sqrt(prob1);
+      const phase = (Math.abs(reduced.rho01[0]) > 1e-12 || Math.abs(reduced.rho01[1]) > 1e-12)
+        ? -Math.atan2(reduced.rho01[1], reduced.rho01[0])
+        : 0;
+
+      return {
+        alpha: [alphaMag, 0],
+        beta: [betaMag * Math.cos(phase), betaMag * Math.sin(phase)],
+      };
+    }
+  }
+
   // Initialize amplitudes
   let alpha: Complex = [0, 0];
   let beta: Complex = [0, 0];

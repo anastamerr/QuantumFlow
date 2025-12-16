@@ -89,6 +89,7 @@ import {
     const sectionBg = useColorModeValue('blue.50', 'blue.900');
     const highlightBg = useColorModeValue('green.50', 'green.900');
     const borderColor = useColorModeValue('gray.200', 'gray.600');
+    const detailsBg = useColorModeValue('gray.50', 'gray.800');
     
     // Apply changes to options and notify parent
     const handleOptionChange = <K extends keyof AdvancedOptimizationOptions>(
@@ -350,7 +351,7 @@ import {
                   
                   {/* Detailed optimization breakdown */}
                   {(impactEstimation.gatesRemoved > 0 || impactEstimation.gatesAdded > 0) && (
-                    <VStack spacing={1} align="stretch" mt={2} p={2} bg={useColorModeValue('gray.50', 'gray.800')} borderRadius="sm">
+                    <VStack spacing={1} align="stretch" mt={2} p={2} bg={detailsBg} borderRadius="sm">
                       <Text fontSize="xs" fontWeight="medium" color="gray.600">Optimization Details:</Text>
                       {impactEstimation.optimizationDetails.cancelledPairs > 0 && (
                         <Text fontSize="xs">• {impactEstimation.optimizationDetails.cancelledPairs} gate pairs cancelled (X-X, Y-Y, Z-Z, H-H)</Text>

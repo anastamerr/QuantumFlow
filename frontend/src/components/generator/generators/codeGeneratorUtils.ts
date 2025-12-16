@@ -72,3 +72,23 @@ export const groupGatesByPosition = (gates: Gate[]): Record<number, Gate[]> => {
 export const validateCircuitInput = (qubits: Qubit[], gates: Gate[]): boolean => {
   return qubits.length > 0 && gates.length > 0;
 };
+
+/**
+ * Convert a user-provided angle to radians.
+ * UI sliders typically provide degrees (often near-integers), while algorithm templates may use radians.
+ */
+export const coerceAngleToRadians = (value: unknown): number => {
+  const angle = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(angle)) return 0;
+
+  const nearInteger = Math.abs(angle - Math.round(angle)) < 1e-9;
+  if (nearInteger && Math.abs(angle) <= 360) {
+    return angle * Math.PI / 180;
+  }
+
+  if (Math.abs(angle) <= 2 * Math.PI) {
+    return angle;
+  }
+
+  return angle * Math.PI / 180;
+};

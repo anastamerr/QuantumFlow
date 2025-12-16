@@ -13,6 +13,8 @@ const Sidebar = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const searchBg = useColorModeValue('white', 'gray.800')
   const searchBorder = useColorModeValue('gray.300', 'gray.600')
+  const searchTipBg = useColorModeValue('blue.50', 'blue.900')
+  const searchTipColor = useColorModeValue('blue.700', 'blue.300')
   
   // State for search functionality
   const [searchQuery, setSearchQuery] = useState('')
@@ -136,8 +138,8 @@ const Sidebar = () => {
         
         {/* Show search tips if actively searching */}
         {searchQuery.trim() !== '' && (
-          <Box mt={2} p={3} bg={useColorModeValue('blue.50', 'blue.900')} borderRadius="md">
-            <Text fontSize="xs" color={useColorModeValue('blue.700', 'blue.300')}>
+          <Box mt={2} p={3} bg={searchTipBg} borderRadius="md">
+            <Text fontSize="xs" color={searchTipColor}>
               Search by name, symbol, or description. Clear the search to see all gates.
             </Text>
           </Box>

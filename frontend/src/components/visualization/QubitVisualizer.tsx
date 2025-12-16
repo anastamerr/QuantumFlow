@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { 
   Box, 
   Flex, 
   Heading, 
   Text, 
+  Spinner,
   Tabs, 
   TabList, 
   TabPanels, 
@@ -23,13 +24,14 @@ import {
   Divider
 } from '@chakra-ui/react';
 import { InfoIcon, ChevronDownIcon } from '@chakra-ui/icons';
-import BlochSphereVisualization from './BlochSphereVisualizer';
 import { 
   Complex, 
   BlochCoordinates, 
   extractQubitAmplitudes, 
   calculateQubitProbabilities 
 } from '../../utils/blochSphereUtils';
+
+const BlochSphereVisualization = lazy(() => import('./BlochSphereVisualizer'));
 
 interface QubitVisualizationProps {
   // The state vector as an object with basis states as keys and complex amplitudes as [real, imag] arrays
@@ -57,6 +59,8 @@ const QubitVisualization: React.FC<QubitVisualizationProps> = ({
   const cardBg = useColorModeValue('white', 'gray.800');
   const accentBg = useColorModeValue('blue.50', 'blue.900');
   const accentColor = useColorModeValue('blue.600', 'blue.200');
+  const selectorBg = useColorModeValue('gray.50', 'gray.700');
+  const selectorHoverBorder = useColorModeValue('blue.400', 'blue.300');
   
   // Handle qubit selection change
   const handleQubitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -100,9 +104,9 @@ const QubitVisualization: React.FC<QubitVisualizationProps> = ({
                 size="sm"
                 width="140px"
                 borderRadius="full"
-                bg={useColorModeValue('gray.50', 'gray.700')}
+                bg={selectorBg}
                 _hover={{ 
-                  borderColor: useColorModeValue('blue.400', 'blue.300'),
+                  borderColor: selectorHoverBorder,
                   boxShadow: "sm"
                 }}
                 icon={<ChevronDownIcon color="blue.400" />}
@@ -162,15 +166,23 @@ const QubitVisualization: React.FC<QubitVisualizationProps> = ({
           
           <TabPanels>
             <TabPanel>
-              <Flex justify="center" p={4}>
-                <BlochSphereVisualization 
-                  stateVector={validStateVector}
-                  qubitIndex={selectedQubit}
-                  width={350}
-                  height={350}
-                  title={`Bloch Sphere - Qubit ${selectedQubit}`}
-                />
-              </Flex>
+              <Suspense
+                fallback={
+                  <Flex justify="center" p={4}>
+                    <Spinner size="lg" />
+                  </Flex>
+                }
+              >
+                <Flex justify="center" p={4}>
+                  <BlochSphereVisualization 
+                    stateVector={validStateVector}
+                    qubitIndex={selectedQubit}
+                    width={350}
+                    height={350}
+                    title={`Bloch Sphere - Qubit ${selectedQubit}`}
+                  />
+                </Flex>
+              </Suspense>
               
               {/* Add a helpful explanation */}
               <Box 

@@ -115,6 +115,37 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
           svg += `<text x="${x}" y="${targetY}" class="gate-text" fill="#2D3748">Z</text>
 `
         }
+      } else if (gate.type === 'p' && gate.controls && gate.controls.length > 0) {
+        // Draw controlled phase gate as a control + target box
+        const controlQubit = gate.controls[0]
+        const targetQubit = gate.qubit !== undefined
+          ? gate.qubit
+          : (gate.targets && gate.targets.length > 0 ? gate.targets[0] : 0)
+
+        const controlY = padding + (controlQubit * wireSpacing)
+        const targetY = padding + (targetQubit * wireSpacing)
+
+        svg += `<circle cx="${x}" cy="${controlY}" r="5" class="control-point" />
+`
+        svg += `<line x1="${x}" y1="${controlY}" x2="${x}" y2="${targetY}" class="connector-line" />
+`
+
+        const gateColorHex = getGateColor(gateColor)
+        svg += `<rect x="${x - 20}" y="${targetY - 20}" width="40" height="40" rx="5" fill="${gateColorHex}" class="gate-rect" />
+`
+        svg += `<text x="${x}" y="${targetY}" class="gate-text" fill="white">${gateDefinition.symbol}</text>
+`
+
+        // Add parameter if present
+        if (gateDefinition.params && gateDefinition.params.length > 0 && gate.params) {
+          const paramName = gateDefinition.params[0].name
+          const paramValue = gate.params[paramName] !== undefined 
+            ? gate.params[paramName] 
+            : gateDefinition.params[0].default
+            
+          svg += `<text x="${x}" y="${targetY + 30}" font-family="sans-serif" font-size="10px" text-anchor="middle">${paramValue}</text>
+`
+        }
       } else if (gate.type === 'swap') {
         // Draw SWAP gate
         const qubit1 = gate.qubit || 0

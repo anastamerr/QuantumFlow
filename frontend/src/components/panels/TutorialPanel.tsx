@@ -56,6 +56,9 @@ const TutorialPanel = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600')
   const accentColor = useColorModeValue('blue.600', 'blue.300')
   const codeColor = useColorModeValue('gray.600', 'gray.300')
+  const tipBg = useColorModeValue('yellow.50', 'yellow.900')
+  const successBg = useColorModeValue('green.50', 'green.900')
+  const subtleBg = useColorModeValue('gray.50', 'gray.900')
   
   // Responsive values
   const modalSize = useBreakpointValue({ base: 'full', md: '6xl' })
@@ -189,7 +192,7 @@ const TutorialPanel = () => {
             </CardBody>
           </Card>
           
-          <Box p={4} bg={useColorModeValue('yellow.50', 'yellow.900')} borderRadius="md" borderLeft="4px" borderColor="yellow.400">
+          <Box p={4} bg={tipBg} borderRadius="md" borderLeft="4px" borderColor="yellow.400">
             <HStack>
               <Icon as={InfoIcon} color="yellow.500" />
               <Text fontWeight="medium">Pro Tip:</Text>
@@ -408,7 +411,7 @@ const TutorialPanel = () => {
             </CardBody>
           </Card>
           
-          <Card bg={useColorModeValue('green.50', 'green.900')}>
+          <Card bg={successBg}>
             <CardBody>
               <Text fontWeight="bold" mb={2} color="green.600">📈 Simulation Options:</Text>
               <List spacing={1}>
@@ -455,7 +458,7 @@ const TutorialPanel = () => {
               <TabPanel>
                 <VStack align="stretch" spacing={4}>
                   <Text fontWeight="bold">IBM Qiskit Code Generation</Text>
-                  <Box bg={useColorModeValue('gray.50', 'gray.900')} p={4} borderRadius="md">
+                  <Box bg={subtleBg} p={4} borderRadius="md">
                     <Code fontSize="sm" whiteSpace="pre-wrap">{`from qiskit import QuantumCircuit, Aer, execute
 
 # Create a quantum circuit with 2 qubits
@@ -484,7 +487,7 @@ print("Results:", counts)`}</Code>
               <TabPanel>
                 <VStack align="stretch" spacing={4}>
                   <Text fontWeight="bold">Google Cirq Code Generation</Text>
-                  <Box bg={useColorModeValue('gray.50', 'gray.900')} p={4} borderRadius="md">
+                  <Box bg={subtleBg} p={4} borderRadius="md">
                     <Code fontSize="sm" whiteSpace="pre-wrap">{`import cirq
 import numpy as np
 
@@ -622,7 +625,7 @@ print("Results:", result.histogram(key='result'))`}</Code>
             </Card>
           </HStack>
           
-          <Card bg={useColorModeValue('yellow.50', 'yellow.900')} borderLeft="4px" borderColor="yellow.400">
+          <Card bg={tipBg} borderLeft="4px" borderColor="yellow.400">
             <CardBody>
               <HStack mb={2}>
                 <Icon as={InfoIcon} color="yellow.500" />

@@ -23,15 +23,16 @@ const CircuitGate: React.FC<CircuitGateProps> = ({
 }) => {
   // Find the gate definition from the library
   const gateDefinition = gateLibrary.find(g => g.id === gate.type)
-  
-  if (!gateDefinition) return null
+  const gateColor = gateDefinition?.color || 'gray'
   
   // Theme colors
-  const bg = useColorModeValue(`${gateDefinition.color}.500`, `${gateDefinition.color}.600`)
-  const hoverBg = useColorModeValue(`${gateDefinition.color}.600`, `${gateDefinition.color}.700`)
+  const bg = useColorModeValue(`${gateColor}.500`, `${gateColor}.600`)
+  const hoverBg = useColorModeValue(`${gateColor}.600`, `${gateColor}.700`)
   const selectedBorderColor = useColorModeValue('blue.500', 'blue.300')
   const textColor = 'white'
   const shadowColor = useColorModeValue('rgba(0, 0, 0, 0.1)', 'rgba(0, 0, 0, 0.4)')
+
+  if (!gateDefinition) return null
   
   return (
     <Tooltip 
