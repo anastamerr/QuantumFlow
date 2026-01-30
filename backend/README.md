@@ -130,6 +130,12 @@ curl http://localhost:8000/health
 
 Execute a quantum circuit and return measurement results.
 
+**Auth (optional):** If `AUTH_USERNAME`/`AUTH_PASSWORD` are set, include a Basic Auth header:
+
+```
+Authorization: Basic base64(username:password)
+```
+
 **Request Body:**
 ```json
 {
@@ -376,6 +382,17 @@ QISKIT_BACKEND=aer_simulator
 
 # IBM Quantum (if using real hardware)
 # IBM_QUANTUM_TOKEN=your_token_here
+
+# Basic Auth (optional)
+# AUTH_USERNAME=quantum
+# AUTH_PASSWORD=flow
+
+# Rate limiting (optional)
+# RATE_LIMIT_REQUESTS=60
+# RATE_LIMIT_WINDOW_SEC=60
+
+# Logging
+# LOG_LEVEL=INFO
 ```
 
 **Environment Variables:**
@@ -386,6 +403,11 @@ QISKIT_BACKEND=aer_simulator
 | `PORT` | `8000` | Server port |
 | `ALLOWED_ORIGINS` | (empty) | Comma-separated frontend URLs for CORS |
 | `QISKIT_BACKEND` | `aer_simulator` | Qiskit backend name |
+| `AUTH_USERNAME` | (unset) | Enable Basic Auth when set |
+| `AUTH_PASSWORD` | (unset) | Password for Basic Auth |
+| `RATE_LIMIT_REQUESTS` | `0` | Requests allowed per window (0 disables) |
+| `RATE_LIMIT_WINDOW_SEC` | `0` | Rate limit window in seconds |
+| `LOG_LEVEL` | `INFO` | Log verbosity |
 
 ---
 
@@ -488,11 +510,12 @@ def execute_with_noise(qc: QuantumCircuit, shots: int = 1024):
 
 | Issue | Solution |
 |-------|----------|
-| `ModuleNotFoundError: No module named 'qiskit'` | Run `pip install -r requirements.txt` |
+| `ModuleNotFoundError: No module named 'qiskit'` | Run `pip install -r requirements.lock` (preferred) or `pip install -r requirements.txt` |
 | `Port 8000 already in use` | Change `PORT` in `.env` or kill existing process |
 | `CORS error from frontend` | Add frontend URL to `ALLOWED_ORIGINS` in `.env` |
 | `Qiskit import error` | Ensure Python 3.8+ and reinstall: `pip install --upgrade qiskit` |
 | Server won't start | Check Python version: `python --version` |
+| `401 Unauthorized` | Ensure `AUTH_USERNAME`/`AUTH_PASSWORD` are set correctly and include Basic Auth header |
 
 ### Debugging
 
@@ -532,8 +555,8 @@ python -m venv .venv
 # Activate (macOS/Linux)
 source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (prefer the lockfile if present)
+pip install -r requirements.lock
 
 # Create .env file
 cp .env.example .env
@@ -554,38 +577,11 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Testing
 
-Currently, the backend doesn't have automated tests. Adding tests would be a great hackathon project!
+Run the backend unit + integration tests:
 
-**Suggested Testing Stack:**
-- **pytest** - Testing framework
-- **pytest-asyncio** - Async test support
-- **httpx** - Async HTTP client for API tests
-
-**Example Test:**
-```python
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
-
-def test_health_check():
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json()["status"] == "ok"
-
-def test_execute_circuit():
-    response = client.post("/api/v1/execute", json={
-        "num_qubits": 2,
-        "gates": [
-            {"type": "h", "qubit": 0, "position": 0},
-            {"type": "cx", "qubit": 0, "targets": [1], "position": 1}
-        ],
-        "shots": 1024,
-        "memory": False
-    })
-    assert response.status_code == 200
-    assert "counts" in response.json()
+```bash
+cd backend
+python -m unittest discover -s tests -p "test_*.py"
 ```
 
 ---

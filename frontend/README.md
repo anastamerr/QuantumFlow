@@ -650,6 +650,8 @@ Create `.env` file in `frontend/`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000
+# Optional: Basic Auth for backend (username:password or base64 token)
+# VITE_API_BASIC_AUTH=quantum:flow
 ```
 
 Access in code:
@@ -660,14 +662,18 @@ const apiUrl = import.meta.env.VITE_API_BASE_URL
 
 ---
 
-## Testing (Future Enhancement)
+## Testing
 
-Currently, QuantumFlow doesn't have tests. Adding tests would be a great hackathon project!
+Run unit/component tests:
 
-**Suggested setup:**
-- **Unit tests**: Vitest
-- **Component tests**: React Testing Library
-- **E2E tests**: Playwright
+```bash
+cd frontend
+npm run test
+```
+
+**Stack:**
+- **Unit + component tests**: Vitest + React Testing Library
+- **E2E (optional)**: Playwright (not configured)
 
 ---
 

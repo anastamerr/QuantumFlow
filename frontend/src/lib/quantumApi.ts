@@ -7,6 +7,18 @@ export function getApiBaseUrl(): string {
   return vite || globalWin || "";
 }
 
+function getBasicAuthHeader(): string | undefined {
+  const vite = (typeof import.meta !== "undefined" && (import.meta as any).env)
+    ? (import.meta as any).env.VITE_API_BASIC_AUTH
+    : undefined;
+  if (!vite) return undefined;
+  if (vite.startsWith("Basic ")) return vite;
+  if (vite.includes(":") && typeof btoa === "function") {
+    return `Basic ${btoa(vite)}`;
+  }
+  return `Basic ${vite}`;
+}
+
 export type StoreGate = {
   id?: string;
   type: string;
@@ -30,9 +42,13 @@ export async function executeCircuit(payload: ExecutePayload) {
   const base = getApiBaseUrl();
   if (!base) throw new Error("API base URL is not configured (VITE_API_BASE_URL)");
 
+  const authHeader = getBasicAuthHeader();
   const res = await fetch(`${base}/api/v1/execute`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -56,7 +72,11 @@ export async function checkHealth(): Promise<boolean> {
   const base = getApiBaseUrl();
   if (!base) return false;
   try {
-    const res = await fetch(`${base}/health`, { method: 'GET' });
+    const authHeader = getBasicAuthHeader();
+    const res = await fetch(`${base}/health`, {
+      method: 'GET',
+      headers: authHeader ? { Authorization: authHeader } : undefined,
+    });
     if (!res.ok) return false;
     // Optional: verify JSON status
     try {

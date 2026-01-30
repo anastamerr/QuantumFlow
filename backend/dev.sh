@@ -18,7 +18,11 @@ fi
 if [ "${NO_INSTALL:-}" != "1" ]; then
   echo "[dev] Upgrading pip and installing requirements (includes qiskit)"
   python -m pip install --upgrade pip
-  pip install -r requirements.txt
+  REQUIREMENTS_FILE="requirements.lock"
+  if [ ! -f "$REQUIREMENTS_FILE" ]; then
+    REQUIREMENTS_FILE="requirements.txt"
+  fi
+  pip install -r "$REQUIREMENTS_FILE"
 fi
 
 if [ ! -f .env ]; then
@@ -28,4 +32,3 @@ fi
 
 echo "[dev] Starting uvicorn on http://localhost:8000"
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-

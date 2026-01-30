@@ -19,3 +19,8 @@ This file tracks issues found in the sweep and their current status.
 - [x] Code generators updated for correct multi-controlled phase and Qiskit imports. Files: `frontend/src/components/generator/generators/*`.
 - [x] Frontend render guard for very large circuits and code splitting to reduce chunk size warnings. Files: `frontend/src/components/canvas/CircuitCanvas.tsx`, `frontend/vite.config.ts`, `frontend/src/components/visualization/ModernCodeBlock.tsx`.
 - [x] Verified UI text encoding: strings use valid Unicode codepoints (e.g., U+27E9 for ket) and render correctly under UTF-8; no corrupted sequences found.
+- [x] Backend hardened with optional Basic Auth, in-memory rate limiting, and structured JSON request logging. File: `backend/app/main.py`.
+- [x] Backend reproducible env: added `backend/requirements.lock` and dev scripts now prefer it.
+- [x] Backend integration tests added for health/auth/rate-limit and updated unit test imports for path stability. Files: `backend/tests/test_api.py`, `backend/tests/test_qiskit_runner.py`.
+- [x] Frontend test infrastructure added (Vitest + RTL) with smoke test. Files: `frontend/src/__tests__/Header.test.tsx`, `frontend/src/setupTests.ts`, `frontend/src/test-utils.tsx`, `frontend/vite.config.ts`, `frontend/package.json`.
+- [x] Frontend API client supports optional Basic Auth via `VITE_API_BASIC_AUTH`. File: `frontend/src/lib/quantumApi.ts`.

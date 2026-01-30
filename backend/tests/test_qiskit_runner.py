@@ -1,6 +1,11 @@
 import math
 import unittest
+import pathlib
+import sys
 
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from app.qiskit_runner import run_circuit
 
@@ -48,4 +53,3 @@ class TestQiskitRunner(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

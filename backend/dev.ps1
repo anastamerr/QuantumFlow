@@ -17,7 +17,11 @@ Write-Host "[dev] Activating venv"
 if (-not $NoInstall) {
   Write-Host "[dev] Upgrading pip and installing requirements (includes qiskit)"
   python -m pip install --upgrade pip
-  pip install -r requirements.txt
+  $requirementsFile = "requirements.lock"
+  if (-not (Test-Path $requirementsFile)) {
+    $requirementsFile = "requirements.txt"
+  }
+  pip install -r $requirementsFile
 }
 
 if (-not (Test-Path .env)) {
@@ -27,4 +31,3 @@ if (-not (Test-Path .env)) {
 
 Write-Host "[dev] Starting uvicorn on http://localhost:8000"
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
