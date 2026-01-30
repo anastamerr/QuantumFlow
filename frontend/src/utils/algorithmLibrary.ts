@@ -58,12 +58,14 @@ const createGate = (
   };
 };
 
+const radToDeg = (rad: number): number => (rad * 180) / Math.PI;
+
 /**
  * Deutsch-Jozsa Algorithm Implementation
  * Tests whether a function is constant or balanced
  */
 const deutschJozsaImplementation: AlgorithmImplementation = (params) => {
-  const { numQubits = 2, functionType = 'constant' } = params;
+  const { numQubits = 2, functionType = 'constant-0' } = params;
   const gates: Gate[] = [];
   const totalQubits = numQubits + 1; // n input qubits + 1 ancilla
   
@@ -119,7 +121,7 @@ const groverImplementation: AlgorithmImplementation = (params) => {
       id: `grover-h-init-${i}`,
       type: 'h',
       qubit: i,
-      position: { x: 0, y: i }
+      position: 0
     });
   }
   
@@ -137,30 +139,30 @@ const groverImplementation: AlgorithmImplementation = (params) => {
           id: `grover-oracle-x-${iter}-${i}`,
           type: 'x',
           qubit: i,
-          position: { x: baseX, y: i }
+          position: baseX
         });
       }
     }
     
-    // Multi-controlled Z gate (or equivalent)
+    // Multi-controlled Z gate (phase flip of |11...1>)
     if (numQubits === 2) {
       gates.push({
         id: `grover-oracle-cz-${iter}`,
         type: 'cz',
         qubit: 0,
         targets: [1],
-        position: { x: baseX + 1, y: 0 }
+        position: baseX + 1
       });
     } else {
-      // For larger systems, use multi-controlled Z
-      // Simplified implementation using Toffoli decomposition
       const controls = Array.from({ length: numQubits - 1 }, (_, i) => i);
+      const target = numQubits - 1;
       gates.push({
-        id: `grover-oracle-mcz-${iter}`,
-        type: 'toffoli',
-        controls: controls.slice(0, 2),
-        targets: [numQubits - 1],
-        position: { x: baseX + 1, y: controls[0] }
+        id: `grover-oracle-mcp-${iter}`,
+        type: 'p',
+        qubit: target,
+        controls,
+        params: { phi: 180 },
+        position: baseX + 1
       });
     }
     
@@ -171,7 +173,7 @@ const groverImplementation: AlgorithmImplementation = (params) => {
           id: `grover-oracle-x-undo-${iter}-${i}`,
           type: 'x',
           qubit: i,
-          position: { x: baseX + 2, y: i }
+          position: baseX + 2
         });
       }
     }
@@ -183,7 +185,7 @@ const groverImplementation: AlgorithmImplementation = (params) => {
         id: `grover-diff-h1-${iter}-${i}`,
         type: 'h',
         qubit: i,
-        position: { x: baseX + 3, y: i }
+        position: baseX + 3
       });
     }
     
@@ -193,7 +195,7 @@ const groverImplementation: AlgorithmImplementation = (params) => {
         id: `grover-diff-x-${iter}-${i}`,
         type: 'x',
         qubit: i,
-        position: { x: baseX + 4, y: i }
+        position: baseX + 4
       });
     }
     
@@ -204,7 +206,18 @@ const groverImplementation: AlgorithmImplementation = (params) => {
         type: 'cz',
         qubit: 0,
         targets: [1],
-        position: { x: baseX + 5, y: 0 }
+        position: baseX + 5
+      });
+    } else {
+      const controls = Array.from({ length: numQubits - 1 }, (_, i) => i);
+      const target = numQubits - 1;
+      gates.push({
+        id: `grover-diff-mcp-${iter}`,
+        type: 'p',
+        qubit: target,
+        controls,
+        params: { phi: 180 },
+        position: baseX + 5
       });
     }
     
@@ -214,7 +227,7 @@ const groverImplementation: AlgorithmImplementation = (params) => {
         id: `grover-diff-x-undo-${iter}-${i}`,
         type: 'x',
         qubit: i,
-        position: { x: baseX + 6, y: i }
+        position: baseX + 6
       });
     }
     
@@ -224,7 +237,7 @@ const groverImplementation: AlgorithmImplementation = (params) => {
         id: `grover-diff-h2-${iter}-${i}`,
         type: 'h',
         qubit: i,
-        position: { x: baseX + 7, y: i }
+        position: baseX + 7
       });
     }
   }
@@ -252,19 +265,19 @@ const qftImplementation: AlgorithmImplementation = (params) => {
         id: `qft-h-${i}`,
         type: 'h',
         qubit: i,
-        position: { x: i * (numQubits + 1), y: i }
+        position: i * (numQubits + 1)
       });
       
       // Apply controlled phase rotations
       for (let j = i + 1; j < numQubits; j++) {
-        const angle = Math.PI / Math.pow(2, j - i);
+        const angle = radToDeg(Math.PI / Math.pow(2, j - i));
         gates.push({
           id: `qft-cp-${i}-${j}`,
           type: 'p',
           qubit: j,
           controls: [i],
           params: { phi: angle },
-          position: { x: i * (numQubits + 1) + (j - i), y: j }
+          position: i * (numQubits + 1) + (j - i)
         });
       }
     }
@@ -276,7 +289,7 @@ const qftImplementation: AlgorithmImplementation = (params) => {
         type: 'swap',
         qubit: i,
         targets: [numQubits - 1 - i],
-        position: { x: numQubits * (numQubits + 1), y: i }
+        position: numQubits * (numQubits + 1)
       });
     }
   } else {
@@ -288,7 +301,7 @@ const qftImplementation: AlgorithmImplementation = (params) => {
         type: 'swap',
         qubit: i,
         targets: [numQubits - 1 - i],
-        position: { x: 0, y: i }
+        position: 0
       });
     }
     
@@ -296,14 +309,14 @@ const qftImplementation: AlgorithmImplementation = (params) => {
     for (let i = numQubits - 1; i >= 0; i--) {
       // Apply controlled phase rotations (with negative phases)
       for (let j = numQubits - 1; j > i; j--) {
-        const angle = -Math.PI / Math.pow(2, j - i);
+        const angle = radToDeg(-Math.PI / Math.pow(2, j - i));
         gates.push({
           id: `iqft-cp-${i}-${j}`,
           type: 'p',
           qubit: j,
           controls: [i],
           params: { phi: angle },
-          position: { x: (numQubits - 1 - i) * (numQubits + 1) + (j - i), y: j }
+          position: (numQubits - 1 - i) * (numQubits + 1) + (j - i)
         });
       }
       
@@ -312,7 +325,7 @@ const qftImplementation: AlgorithmImplementation = (params) => {
         id: `iqft-h-${i}`,
         type: 'h',
         qubit: i,
-        position: { x: (numQubits - i) * (numQubits + 1), y: i }
+        position: (numQubits - i) * (numQubits + 1)
       });
     }
   }
@@ -379,7 +392,7 @@ const phaseEstimationImplementation: AlgorithmImplementation = (params) => {
     id: 'qpe-x-eigenstate',
     type: 'x',
     qubit: precisionQubits,
-    position: { x: 0, y: precisionQubits }
+    position: 0
   });
   
   // Initialize precision qubits in superposition
@@ -388,14 +401,16 @@ const phaseEstimationImplementation: AlgorithmImplementation = (params) => {
       id: `qpe-h-${i}`,
       type: 'h',
       qubit: i,
-      position: { x: 1, y: i }
+      position: 1
     });
   }
   
   // Controlled unitary operations U^(2^j)
+  let time = 2;
   for (let j = 0; j < precisionQubits; j++) {
     const repetitions = Math.pow(2, j);
-    const phase = (2 * Math.PI * eigenvalue * repetitions) % (2 * Math.PI);
+    const phasePerStep = 2 * Math.PI * eigenvalue;
+    const phaseDegrees = radToDeg(phasePerStep);
     
     for (let rep = 0; rep < repetitions; rep++) {
       gates.push({
@@ -403,9 +418,10 @@ const phaseEstimationImplementation: AlgorithmImplementation = (params) => {
         type: 'p',
         qubit: precisionQubits,
         controls: [precisionQubits - 1 - j],
-        params: { phi: phase / repetitions },
-        position: { x: 2 + j, y: precisionQubits }
+        params: { phi: phaseDegrees },
+        position: time
       });
+      time += 1;
     }
   }
   
@@ -413,15 +429,16 @@ const phaseEstimationImplementation: AlgorithmImplementation = (params) => {
   for (let i = precisionQubits - 1; i >= 0; i--) {
     // Controlled phase rotations
     for (let j = precisionQubits - 1; j > i; j--) {
-      const angle = -Math.PI / Math.pow(2, j - i);
+      const angle = radToDeg(-Math.PI / Math.pow(2, j - i));
       gates.push({
         id: `qpe-iqft-cp-${i}-${j}`,
         type: 'p',
         qubit: j,
         controls: [i],
         params: { phi: angle },
-        position: { x: 2 + precisionQubits + (precisionQubits - 1 - i) * precisionQubits + (j - i), y: j }
+        position: time
       });
+      time += 1;
     }
     
     // Hadamard
@@ -429,8 +446,9 @@ const phaseEstimationImplementation: AlgorithmImplementation = (params) => {
       id: `qpe-iqft-h-${i}`,
       type: 'h',
       qubit: i,
-      position: { x: 2 + precisionQubits + (precisionQubits - i) * precisionQubits, y: i }
+      position: time
     });
+    time += 1;
   }
   
   return {

@@ -403,10 +403,11 @@ export const synthesizeCircuit = (gates: Gate[], level: 0 | 1 | 2 | 3): Gate[] =
           // Add a combined rotation gate with proper angle handling
           const angle1 = Number(g1.params[paramName] || 0);
           const angle2 = Number(g2.params[paramName] || 0);
-          const combinedAngle = (angle1 + angle2) % (2 * Math.PI);
+          const rawCombined = (angle1 + angle2) % 360;
+          const combinedAngle = rawCombined < 0 ? rawCombined + 360 : rawCombined;
           
           // Only add if the combined angle is not effectively zero
-          if (Math.abs(combinedAngle) > 1e-10 && Math.abs(combinedAngle - 2 * Math.PI) > 1e-10) {
+          if (Math.abs(combinedAngle) > 1e-10 && Math.abs(combinedAngle - 360) > 1e-10) {
             gatesToAdd.push({
               ...g1,
               id: `gate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
@@ -615,11 +616,10 @@ export const reduceCircuitDepth = (gates: Gate[], maxDepth?: number): Gate[] => 
   if (maxDepth !== undefined) {
     const actualDepth = calculateCircuitDepth(optimizedGates);
     if (actualDepth > maxDepth) {
-      // Simple approach: scale the positions
-      const scaleFactor = maxDepth / actualDepth;
-      optimizedGates.forEach(gate => {
-        gate.position = Math.floor((gate.position || 0) * scaleFactor);
-      });
+      // Avoid unsafe compression that can violate dependencies.
+      console.warn(
+        `reduceCircuitDepth: unable to fit circuit depth ${actualDepth} into maxDepth ${maxDepth} without breaking dependencies.`
+      );
     }
   }
   

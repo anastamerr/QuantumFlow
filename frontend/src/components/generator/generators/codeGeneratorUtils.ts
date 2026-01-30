@@ -1,5 +1,5 @@
 import { Gate, Qubit } from '../../../types/circuit';
-import { OptimizationOptions } from '../types/optimizationTypes';
+import { OptimizationOptions } from '../../../types/optimizationTypes';
 import { optimizeCircuit } from '../optimizers/circuitOptimizer';
 
 /**
@@ -36,9 +36,8 @@ export const prepareGatesForCodeGeneration = (
     }
     
     if (options.enableAdvancedOptimization) {
-      if (imports.indexOf('from qiskit.transpiler import PassManager') === -1) {
-        imports.push('from qiskit.transpiler import PassManager');
-        imports.push('from qiskit.transpiler.passes import *');
+      if (imports.indexOf('from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager') === -1) {
+        imports.push('from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager');
       }
     }
   }

@@ -221,7 +221,7 @@ const AlgorithmLibraryPanel = () => {
         // Transform algorithm gates to ensure they have valid positions
         const processedGates = result.gates.map((gate, index) => ({
           ...gate,
-          position: gate.position || index,
+          position: typeof gate.position === 'number' ? gate.position : index,
           id: `${gate.type}-${gate.qubit}-${Date.now()}-${index}`
         }));
         

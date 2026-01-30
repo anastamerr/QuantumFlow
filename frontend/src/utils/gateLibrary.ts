@@ -175,23 +175,5 @@ export const gateLibrary: GateDefinition[] = [
     color: 'gray',
   },
   
-  // Algorithm building blocks
-  {
-    id: 'qft',
-    name: 'QFT',
-    symbol: 'QFT',
-    description: 'Quantum Fourier Transform, a key component in many quantum algorithms',
-    category: 'Algorithm Blocks',
-    color: 'blue',
-    targets: 1,
-  },
-  {
-    id: 'iqft',
-    name: 'Inverse QFT',
-    symbol: 'QFT†',
-    description: 'Inverse Quantum Fourier Transform',
-    category: 'Algorithm Blocks',
-    color: 'blue',
-    targets: 1,
-  },
+  // Algorithm building blocks are provided via the Algorithm Library
 ]

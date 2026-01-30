@@ -10,6 +10,7 @@ from .qiskit_runner import run_circuit
 load_dotenv()
 
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
+ALLOW_ALL_ORIGINS = ALLOWED_ORIGINS == ["*"]
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
 
@@ -17,8 +18,8 @@ app = FastAPI(title="QuantumFlow Backend", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ["*"] else ["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS if not ALLOW_ALL_ORIGINS else ["*"],
+    allow_credentials=not ALLOW_ALL_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

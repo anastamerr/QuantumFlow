@@ -103,7 +103,14 @@ def _apply_gate(qc, gate: Dict[str, Any]):
                 if hasattr(qc, "mcp"):
                     qc.mcp(angle, controls, target)
                 else:
-                    raise ValueError("Multi-controlled phase not supported by this Qiskit version")
+                    import math
+                    # Fallback for pi-phase: implement MCZ via H + MCX + H if available
+                    if abs(angle - math.pi) < 1e-8 and hasattr(qc, "mcx"):
+                        qc.h(target)
+                        qc.mcx(controls, target)
+                        qc.h(target)
+                    else:
+                        raise ValueError("Multi-controlled phase not supported by this Qiskit version")
         else:
             qc.p(angle, qubit)
     elif gtype == "cp":  # explicit controlled-phase gate

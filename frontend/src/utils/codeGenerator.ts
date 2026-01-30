@@ -7,7 +7,7 @@
 
 // Import Types
 import { Gate, Qubit } from '../types/circuit';
-import { OptimizationOptions, defaultOptimizationOptions } from '../components/generator/types/optimizationTypes';
+import { OptimizationOptions, defaultOptimizationOptions } from '../types/optimizationTypes';
 
 // Import Generator Functions
 import { generateQiskitCode } from '../components/generator/generators/qiskitGenerator';

@@ -1,5 +1,5 @@
 import { Gate, Qubit } from '../../../types/circuit';
-import { OptimizationOptions, defaultOptimizationOptions } from '../types/optimizationTypes';
+import { OptimizationOptions, defaultOptimizationOptions } from '../../../types/optimizationTypes';
 import { coerceAngleToRadians, prepareGatesForCodeGeneration, validateCircuitInput } from './codeGeneratorUtils';
 import { hardwareModels } from '../../../utils/circuitOptimizer';
 
@@ -30,7 +30,7 @@ export const generateQiskitCode = (
   // Combine basic Qiskit imports with additional ones
   const basicImports = [
     'from qiskit import QuantumCircuit, transpile',
-    'from qiskit_aer import AerSimulator',
+    'from qiskit_aer import Aer, AerSimulator',
     'from qiskit.visualization import plot_histogram',
     'import numpy as np'
   ];
@@ -38,8 +38,6 @@ export const generateQiskitCode = (
   // Add optimization imports if needed
   if (optimize && optimizationOptions.enableAdvancedOptimization) {
     basicImports.push(
-      'from qiskit.transpiler import PassManager',
-      'from qiskit.transpiler.passes import *',
       'from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager'
     );
   }
@@ -234,59 +232,25 @@ function generateMeasurementSection(gates: Gate[], qubits: Qubit[]): string {
  */
 function generateAdvancedOptimizationSection(optimizationOptions: Partial<OptimizationOptions>): string {
   const options = { ...defaultOptimizationOptions, ...optimizationOptions };
+  const requestedLevel = options.advancedOptions?.synthesisLevel ?? 1;
+  const optimizationLevel = Math.min(3, Math.max(0, requestedLevel));
   
   let optimizationSection = '# Apply advanced circuit optimizations\n';
-  optimizationSection += 'pass_manager = PassManager()\n';
-  
-  // Add passes based on optimization options
-  if (options.advancedOptions?.synthesisLevel) {
-    optimizationSection += '# Synthesis optimization passes\n';
-    optimizationSection += 'pass_manager.append(Unroller())\n';
-    optimizationSection += 'pass_manager.append(Optimize1qGates())\n';
-    
-    if (options.advancedOptions.synthesisLevel >= 2) {
-      optimizationSection += 'pass_manager.append(CommutativeCancellation())\n';
-    }
-    
-    if (options.advancedOptions.synthesisLevel >= 3) {
-      optimizationSection += 'pass_manager.append(OptimizeSwap())\n';
-      optimizationSection += 'pass_manager.append(RemoveResetInZeroState())\n';
-    }
-  }
-  
+  optimizationSection += `optimization_level = ${optimizationLevel}\n`;
+  optimizationSection += '# Use Qiskit preset pass manager for stability across versions\n';
+  optimizationSection += 'pass_manager = generate_preset_pass_manager(optimization_level=optimization_level)\n';
+  optimizationSection += 'optimized_qc = pass_manager.run(qc)\n';
+
   if (options.advancedOptions?.depthReduction) {
-    optimizationSection += '\n# Depth reduction passes\n';
-    optimizationSection += 'pass_manager.append(Depth())\n';
-    optimizationSection += 'pass_manager.append(FixedPoint("depth"))\n';
-    
-    if (options.advancedOptions.maxDepth) {
-      optimizationSection += `# Target maximum depth: ${options.advancedOptions.maxDepth}\n`;
-    }
+    optimizationSection += `# Note: maxDepth=${options.advancedOptions.maxDepth ?? 'unset'} is advisory; preset passes do not enforce hard depth caps.\n`;
   }
-  
+
   if (options.advancedOptions?.noiseAware) {
-    optimizationSection += '\n# Noise-aware optimization passes\n';
-    optimizationSection += 'pass_manager.append(NoiseAdaptiveLayout())\n';
     const hardwareModelName = options.advancedOptions.hardwareModel || 'linear';
     if (hardwareModels[hardwareModelName]) {
-      optimizationSection += `# Optimizing for ${hardwareModels[hardwareModelName].name} topology\n`;
+      optimizationSection += `# Note: noise-aware optimization is approximated; consider calibrating to ${hardwareModels[hardwareModelName].name}.\n`;
     }
   }
-  
-  if (options.advancedOptions?.qubitMapping) {
-    optimizationSection += '\n# Qubit mapping passes\n';
-    if (options.advancedOptions.preserveLayout) {
-      optimizationSection += 'pass_manager.append(TrivialLayout())\n';
-    } else {
-      optimizationSection += 'pass_manager.append(DenseLayout())\n';
-    }
-    optimizationSection += 'pass_manager.append(FullAncillaAllocation())\n';
-    optimizationSection += 'pass_manager.append(EnlargeWithAncilla())\n';
-  }
-  
-  // Apply pass manager to circuit
-  optimizationSection += '\n# Apply the custom pass manager\n';
-  optimizationSection += 'optimized_qc = pass_manager.run(qc)\n';
   optimizationSection += '\n# Print circuit statistics before and after optimization\n';
   optimizationSection += 'print(f"Original circuit depth: {qc.depth()}")\n';
   optimizationSection += 'print(f"Original circuit gates: {len(qc.data)}")\n';
@@ -305,9 +269,16 @@ function generateAdvancedOptimizationSection(optimizationOptions: Partial<Optimi
  */
 function generateTranspilationSection(options: OptimizationOptions): string {
   let simulationSection = '# Transpile the circuit for the target backend\n';
-  simulationSection += `backend = AerSimulator(method='${options.backendName || 'qasm_simulator'}')\n`;
+  simulationSection += `backend_name = '${options.backendName || 'qasm_simulator'}'\n`;
+  simulationSection += 'try:\n';
+  simulationSection += '    backend = Aer.get_backend(backend_name)\n';
+  simulationSection += 'except Exception:\n';
+  simulationSection += '    backend = AerSimulator()\n';
 
-  const optimizationLevel = options.enableAdvancedOptimization ? 3 : 2;
+  const requestedLevel = options.advancedOptions?.synthesisLevel;
+  const optimizationLevel = typeof requestedLevel === 'number'
+    ? Math.min(3, Math.max(0, requestedLevel))
+    : (options.enableAdvancedOptimization ? 3 : 2);
   simulationSection += `transpiled_qc = transpile(qc, backend=backend, optimization_level=${optimizationLevel})\n\n`;
 
   // Add a comment about what transpiling does

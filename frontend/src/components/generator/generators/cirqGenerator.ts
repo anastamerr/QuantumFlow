@@ -1,5 +1,5 @@
 import { Gate, Qubit } from '../../../types/circuit';
-import { OptimizationOptions, defaultOptimizationOptions } from '../types/optimizationTypes';
+import { OptimizationOptions, defaultOptimizationOptions } from '../../../types/optimizationTypes';
 import { coerceAngleToRadians, prepareGatesForCodeGeneration, validateCircuitInput, groupGatesByPosition } from './codeGeneratorUtils';
 import { hardwareModels } from '../../../utils/circuitOptimizer';
 
@@ -160,7 +160,9 @@ function generateGateSection(gates: Gate[]): string {
               } else if (gate.controls.length === 1) {
                 gateSection += `circuit.append(cirq.CZPowGate(exponent=${phaseExponent})(qubits[${gate.controls[0]}], qubits[${targetQubit}]))\n`;
               } else {
-                gateSection += `# Warning: Multi-controlled phase not directly supported in this Cirq generator\n`;
+                const controlList = gate.controls.map(c => `qubits[${c}]`).join(', ');
+                gateSection += `multi_cp_gate = cirq.ZPowGate(exponent=${phaseExponent}).controlled(num_controls=${gate.controls.length})\n`;
+                gateSection += `circuit.append(multi_cp_gate.on(${controlList}, qubits[${targetQubit}]))\n`;
               }
             } else if (targetQubit === undefined) {
               gateSection += `# Warning: P gate missing target qubit\n`;

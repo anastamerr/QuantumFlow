@@ -69,6 +69,19 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
   
   // Calculate total steps (gates + final measurement)
   const totalSteps = sortedGates.length;
+
+  const buildInitialState = () => {
+    const initialState: Record<string, [number, number]> = {};
+    const zeroState = '0'.repeat(qubits.length);
+    initialState[zeroState] = [1, 0];
+
+    for (let i = 1; i < Math.pow(2, qubits.length); i++) {
+      const binaryString = i.toString(2).padStart(qubits.length, '0');
+      initialState[binaryString] = [0, 0];
+    }
+
+    return { initialState, zeroState };
+  };
   
   // Colors
   const barColor = useColorModeValue('blue.500', 'blue.300');
@@ -84,20 +97,7 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
   // Initialize quantum state when qubits change
   useEffect(() => {
     if (qubits.length > 0) {
-      // Initialize to |0⟩ for all qubits
-      // For n qubits, we have 2^n basis states
-      const initialState: Record<string, [number, number]> = {};
-      
-      // The |0...0⟩ state has probability 1, all others have 0
-      const zeroState = '0'.repeat(qubits.length);
-      initialState[zeroState] = [1, 0]; // amplitude 1+0i
-      
-      // Fill all other states with zero amplitude
-      for (let i = 1; i < Math.pow(2, qubits.length); i++) {
-        const binaryString = i.toString(2).padStart(qubits.length, '0');
-        initialState[binaryString] = [0, 0]; // amplitude 0+0i
-      }
-      
+      const { initialState, zeroState } = buildInitialState();
       setQuantumState(initialState);
       setProbabilities({ [zeroState]: 1 });
       setCurrentStep(-1);
@@ -226,43 +226,30 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
   };
   
   const handleStepBackward = () => {
-    if (currentStep > -1) {
-      // We need to recalculate state from the beginning to this step
-      setCurrentStep(-1); // Go back to initial state
-      
-      // Then apply gates up to the new step
-      setTimeout(() => {
-        const targetStep = currentStep - 1;
-        if (targetStep >= 0) {
-          // Apply gates sequentially from 0 to targetStep
-          let newState = { ...quantumState };
-          
-          for (let i = 0; i <= targetStep; i++) {
-            newState = simulateGateApplication(newState, sortedGates[i], qubits.length);
-          }
-          
-          setQuantumState(newState);
-          setProbabilities(calculateProbabilities(newState));
-          setCurrentStep(targetStep);
-        }
-      }, 0);
+    if (currentStep <= -1) return;
+
+    const targetStep = currentStep - 1;
+    if (targetStep < 0) {
+      handleReset();
+      return;
     }
+
+    const { initialState } = buildInitialState();
+    let newState = initialState;
+    for (let i = 0; i <= targetStep; i++) {
+      newState = simulateGateApplication(newState, sortedGates[i], qubits.length);
+    }
+
+    setQuantumState(newState);
+    setProbabilities(calculateProbabilities(newState));
+    setCurrentStep(targetStep);
   };
   
   const handleReset = () => {
     setIsPlaying(false);
     setCurrentStep(-1);
-    
-    // Reset to initial state
-    const initialState: Record<string, [number, number]> = {};
-    const zeroState = '0'.repeat(qubits.length);
-    initialState[zeroState] = [1, 0];
-    
-    for (let i = 1; i < Math.pow(2, qubits.length); i++) {
-      const binaryString = i.toString(2).padStart(qubits.length, '0');
-      initialState[binaryString] = [0, 0];
-    }
-    
+
+    const { initialState, zeroState } = buildInitialState();
     setQuantumState(initialState);
     setProbabilities({ [zeroState]: 1 });
   };

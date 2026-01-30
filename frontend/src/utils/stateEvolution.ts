@@ -52,6 +52,42 @@ export const formatComplexNumber = (z: Complex): string => {
   }
 };
 
+const getGateAngleDegrees = (gate: Gate, fallback: number = 0): number => {
+  const raw =
+    gate.params?.phi ??
+    gate.params?.lambda ??
+    gate.params?.theta ??
+    gate.params?.angle ??
+    gate.params?.phase ??
+    fallback;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+};
+
+const resolveControlledPhase = (
+  gate: Gate
+): { controls: number[]; target: number } | null => {
+  const controls =
+    gate.controls && gate.controls.length > 0
+      ? gate.controls
+      : gate.type === 'cp' && gate.qubit !== undefined
+        ? [gate.qubit]
+        : [];
+
+  const target =
+    gate.type === 'cp'
+      ? gate.targets?.[0]
+      : gate.qubit !== undefined
+        ? gate.qubit
+        : gate.targets?.[0];
+
+  if (!controls.length || target === undefined) {
+    return null;
+  }
+
+  return { controls, target };
+};
+
 /**
  * Apply a single-qubit gate to the quantum state
  */
@@ -92,6 +128,9 @@ export const applySingleQubitGate = (
         break;
       case 'rz': // Rotation around Z
         applyRotationZ(basisState, amplitude, targetQubit, newState, Number(gate.params?.phi) || 0);
+        break;
+      case 'p': // Phase gate
+        applyPhaseP(basisState, amplitude, targetQubit, newState, getGateAngleDegrees(gate, 0));
         break;
       default:
         // For unsupported gates, just copy the amplitude
@@ -173,6 +212,13 @@ export const simulateGateApplication = (
   numQubits: number
 ): QuantumState => {
   // Determine the type of gate and route to appropriate handler
+  if (gate.type === 'p' || gate.type === 'cp') {
+    const resolved = resolveControlledPhase(gate);
+    if (resolved) {
+      return applyControlledPhaseGate(state, resolved.controls, resolved.target, getGateAngleDegrees(gate, 0));
+    }
+  }
+
   if (['h', 'x', 'y', 'z', 's', 't', 'rx', 'ry', 'rz', 'p'].includes(gate.type)) {
     return applySingleQubitGate(state, gate, numQubits);
   } else if (['cnot', 'cz', 'swap'].includes(gate.type)) {
@@ -339,6 +385,33 @@ const applyPhaseT = (
 };
 
 /**
+ * Apply a P (phase) gate to qubit targetQubit in basis state
+ */
+const applyPhaseP = (
+  basisState: string,
+  amplitude: Complex,
+  targetQubit: number,
+  newState: QuantumState,
+  angleInDegrees: number
+) => {
+  const n = basisState.length;
+  const targetBit = basisState[n - 1 - targetQubit];
+
+  if (targetBit === '1') {
+    const angle = angleInDegrees * Math.PI / 180;
+    const cosPhase = Math.cos(angle);
+    const sinPhase = Math.sin(angle);
+    const newAmplitude: Complex = [
+      amplitude[0] * cosPhase - amplitude[1] * sinPhase,
+      amplitude[0] * sinPhase + amplitude[1] * cosPhase
+    ];
+    addToState(newState, basisState, newAmplitude);
+  } else {
+    addToState(newState, basisState, amplitude);
+  }
+};
+
+/**
  * Apply an RX gate (rotation around X) to qubit targetQubit in basis state
  */
 const applyRotationX = (
@@ -480,6 +553,38 @@ const applyRotationZ = (
     ];
     addToState(newState, basisState, newAmplitude);
   }
+};
+
+/**
+ * Apply a multi-controlled phase gate (phase on |1...1>)
+ */
+const applyControlledPhaseGate = (
+  state: QuantumState,
+  controls: number[],
+  targetQubit: number,
+  angleInDegrees: number
+): QuantumState => {
+  const newState: QuantumState = {};
+  const angle = angleInDegrees * Math.PI / 180;
+  const cosPhase = Math.cos(angle);
+  const sinPhase = Math.sin(angle);
+
+  Object.entries(state).forEach(([basisState, amplitude]) => {
+    const n = basisState.length;
+    const targetBit = basisState[n - 1 - targetQubit];
+    const controlsOn = controls.every((c) => basisState[n - 1 - c] === '1');
+
+    if (controlsOn && targetBit === '1') {
+      newState[basisState] = [
+        amplitude[0] * cosPhase - amplitude[1] * sinPhase,
+        amplitude[0] * sinPhase + amplitude[1] * cosPhase
+      ];
+    } else {
+      newState[basisState] = [...amplitude];
+    }
+  });
+
+  return newState;
 };
 
 /**

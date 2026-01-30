@@ -154,7 +154,7 @@ function generateGateDefinitions(gates: Gate[]): string {
             } else if (gate.controls.length === 1) {
               gateSection += `circuit.cphaseshift(${gate.controls[0]}, ${targetQubit}, ${phaseAngle})\n`;
             } else {
-              gateSection += `# Warning: Multi-controlled phase not directly supported in this Braket generator\n`;
+              gateSection += `circuit.phaseshift(${targetQubit}, ${phaseAngle}, control=(${gate.controls.join(', ')}))\n`;
             }
           } else if (targetQubit === undefined) {
             gateSection += `# Warning: P gate missing target qubit\n`;

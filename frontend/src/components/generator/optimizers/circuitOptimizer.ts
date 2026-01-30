@@ -1,5 +1,5 @@
 import { Gate, Qubit } from '../../../types/circuit';
-import { OptimizationOptions } from '../types/optimizationTypes';
+import { OptimizationOptions } from '../../../types/optimizationTypes';
 import { applyAdvancedOptimization, defaultAdvancedOptions } from '../../../utils/circuitOptimizer';
 
 /**
