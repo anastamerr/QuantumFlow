@@ -25,9 +25,14 @@ const CircuitCanvas: React.FC = () => {
   
   // Local state
   const svgContainerRef = useRef<HTMLDivElement>(null)
+  const lastSvgRef = useRef<string>('')
   const [gridHeight, setGridHeight] = useState(300)
   const [visualizationHeight, setVisualizationHeight] = useState(300)
   const [cellSize, setCellSize] = useState(60) // Default cell size
+  const [forceRenderLargeGrid, setForceRenderLargeGrid] = useState(false)
+  const MAX_RENDER_CELLS = 20000
+  const totalCells = qubits.length * maxPosition
+  const shouldRenderGrid = forceRenderLargeGrid || totalCells <= MAX_RENDER_CELLS
   
   // Theme colors
   const gridBg = useColorModeValue('gray.50', 'gray.700')
@@ -78,6 +83,7 @@ const CircuitCanvas: React.FC = () => {
   useEffect(() => {
     // Don't update SVG for empty circuits
     if (qubits.length === 0) return;
+    if (!shouldRenderGrid) return;
     
     const debounceTimer = setTimeout(() => {
       try {
@@ -85,8 +91,9 @@ const CircuitCanvas: React.FC = () => {
         const svg = renderCircuitSvg(qubits, circuitGates);
         
         // Apply SVG to the container
-        if (svgContainerRef.current) {
+        if (svgContainerRef.current && svg !== lastSvgRef.current) {
           svgContainerRef.current.innerHTML = svg;
+          lastSvgRef.current = svg;
         }
       } catch (err) {
         console.error('Error rendering circuit SVG:', err);
@@ -102,7 +109,7 @@ const CircuitCanvas: React.FC = () => {
     }, 100); // 100ms debounce
     
     return () => clearTimeout(debounceTimer);
-  }, [qubits, circuitGates, toast]); // Updated dependency array
+  }, [qubits, circuitGates, toast, shouldRenderGrid]); // Updated dependency array
   
   // Handle zoom level changes
   const handleZoomIn = useCallback(() => {
@@ -273,7 +280,7 @@ const CircuitCanvas: React.FC = () => {
    * Create the grid cells for the circuit
    */
   const renderGrid = useMemo(() => {
-    if (qubits.length === 0) return null;
+    if (qubits.length === 0 || !shouldRenderGrid) return null;
     
     const grid = [];
     
@@ -337,7 +344,8 @@ const CircuitCanvas: React.FC = () => {
     handleDrop,
     handleGateClick,
     handleGateRemove,
-    cellSize
+    cellSize,
+    shouldRenderGrid
   ]);
   
   // If no qubits, show a message
@@ -404,6 +412,25 @@ const CircuitCanvas: React.FC = () => {
       >
         <Box p={4}>
           <Heading size="md" mb={4} color={headingColor}>Quantum Circuit</Heading>
+          {!shouldRenderGrid && (
+            <Box p={4} borderWidth={1} borderColor={gridBorderColor} borderRadius="md" mb={4}>
+              <Text fontWeight="medium">Circuit too large to render ({totalCells} cells).</Text>
+              <Text fontSize="sm" color="gray.500" mt={1}>
+                Rendering is paused to keep the UI responsive. You can still simulate/export.
+              </Text>
+              <Flex mt={3} gap={2}>
+                <IconButton
+                  aria-label="Render anyway"
+                  icon={<AddIcon />}
+                  onClick={() => setForceRenderLargeGrid(true)}
+                  size="sm"
+                  colorScheme="blue"
+                />
+                <Text fontSize="sm">Render anyway (may be slow)</Text>
+              </Flex>
+            </Box>
+          )}
+
           <Box 
             borderWidth={1} 
             borderColor={canvasBorder} 

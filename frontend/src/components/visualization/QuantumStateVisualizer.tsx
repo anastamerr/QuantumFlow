@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { 
   Box, 
   Heading, 
@@ -49,9 +49,11 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
   onComplete 
 }, ref) => {
   // Sort gates by position for step-by-step application
-  const sortedGates = [...gates].sort((a, b) => 
-    (a.position !== undefined ? a.position : 0) - (b.position !== undefined ? b.position : 0)
-  );
+  const sortedGates = useMemo(() => (
+    [...gates].sort((a, b) =>
+      (a.position !== undefined ? a.position : 0) - (b.position !== undefined ? b.position : 0)
+    )
+  ), [gates]);
   
   // Track current state evolution
   const [currentStep, setCurrentStep] = useState<number>(-1); // -1 means initial state
@@ -60,6 +62,8 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [localPlaybackSpeed, setLocalPlaybackSpeed] = useState<number>(playbackSpeed);
   const [frameRate, setFrameRate] = useState<number>(30); // Frames per second for smoother animation
+  const stateRef = useRef<Record<string, [number, number]>>({});
+  const stepRef = useRef<number>(-1);
   
   // Refs for animation
   const animationRef = useRef<number | null>(null);
@@ -101,6 +105,8 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
       setQuantumState(initialState);
       setProbabilities({ [zeroState]: 1 });
       setCurrentStep(-1);
+      stateRef.current = initialState;
+      stepRef.current = -1;
     }
   }, [qubits]);
   
@@ -184,31 +190,42 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
   // Effect to update quantum state when the step changes
   useEffect(() => {
     if (currentStep === -1) {
-      // Initial state already set
+      const { initialState, zeroState } = buildInitialState();
+      stateRef.current = initialState;
+      stepRef.current = -1;
+      setQuantumState(initialState);
+      setProbabilities({ [zeroState]: 1 });
       return;
     }
-    
+
     if (currentStep >= 0 && currentStep < sortedGates.length) {
-      // Apply the gate at the current step
       try {
-        const gate = sortedGates[currentStep];
-        const newState = simulateGateApplication(quantumState, gate, qubits.length);
+        let newState = stateRef.current;
+        if (stepRef.current === -1 || currentStep < stepRef.current) {
+          newState = buildInitialState().initialState;
+          for (let i = 0; i <= currentStep; i++) {
+            newState = simulateGateApplication(newState, sortedGates[i], qubits.length);
+          }
+        } else {
+          for (let i = stepRef.current + 1; i <= currentStep; i++) {
+            newState = simulateGateApplication(newState, sortedGates[i], qubits.length);
+          }
+        }
+
+        stateRef.current = newState;
+        stepRef.current = currentStep;
         setQuantumState(newState);
-        
-        // Update probabilities
-        const newProbs = calculateProbabilities(newState);
-        setProbabilities(newProbs);
+        setProbabilities(calculateProbabilities(newState));
       } catch (err) {
         console.error("Error applying gate:", err);
         setIsPlaying(false);
       }
     } else if (currentStep === sortedGates.length) {
-      // Final measurement
       if (onComplete) {
-        onComplete(probabilities);
+        onComplete(calculateProbabilities(stateRef.current));
       }
     }
-  }, [currentStep, onComplete, sortedGates, quantumState, qubits.length, probabilities]);
+  }, [currentStep, onComplete, sortedGates, qubits.length]);
   
   // Start simulation if isRunning changes to true
   useEffect(() => {
@@ -243,6 +260,8 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
     setQuantumState(newState);
     setProbabilities(calculateProbabilities(newState));
     setCurrentStep(targetStep);
+    stateRef.current = newState;
+    stepRef.current = targetStep;
   };
   
   const handleReset = () => {
@@ -252,6 +271,8 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
     const { initialState, zeroState } = buildInitialState();
     setQuantumState(initialState);
     setProbabilities({ [zeroState]: 1 });
+    stateRef.current = initialState;
+    stepRef.current = -1;
   };
   
   const handlePlayPause = () => {
@@ -269,7 +290,7 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
     // This needs to be done in chunks to prevent UI freezing
     const chunkSize = 5; // Process 5 gates at a time
     let currentGateIndex = currentStep + 1;
-    let currentStateSnapshot = { ...quantumState };
+    let currentStateSnapshot = { ...stateRef.current };
     
     const processNextChunk = () => {
       if (currentGateIndex >= sortedGates.length) {
@@ -278,6 +299,8 @@ const QuantumStateVisualizer = forwardRef<any, QuantumStateVisualizerProps>(({
         setQuantumState(currentStateSnapshot);
         setProbabilities(finalProbs);
         setCurrentStep(sortedGates.length);
+        stateRef.current = currentStateSnapshot;
+        stepRef.current = sortedGates.length;
         
         // Notify completion
         if (onComplete) {

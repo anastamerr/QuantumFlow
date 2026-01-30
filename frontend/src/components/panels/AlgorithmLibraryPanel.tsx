@@ -74,11 +74,6 @@ const AlgorithmLibraryPanel = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
-  // Debug algorithm library loading
-  console.log('Algorithm library loaded:', quantumAlgorithmLibrary);
-  console.log('Number of algorithms:', quantumAlgorithmLibrary.algorithms.length);
-  console.log('Modal state - isOpen:', isOpen, 'selectedAlgorithm:', selectedAlgorithm?.name);
-
   // Theme colors
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -109,7 +104,6 @@ const AlgorithmLibraryPanel = () => {
         );
       }
       
-      console.log('Filtered algorithms:', algorithms.length);
       return algorithms;
     } catch (error) {
       console.error('Error filtering algorithms:', error);
@@ -119,14 +113,10 @@ const AlgorithmLibraryPanel = () => {
 
   // Initialize parameters for selected algorithm
   const initializeParameters = (algorithm: QuantumAlgorithm) => {
-    console.log('Initializing algorithm:', algorithm.name);
-    
     const params: Record<string, any> = {};
     algorithm.parameters.forEach(param => {
       params[param.name] = param.defaultValue;
     });
-    
-    console.log('Algorithm parameters:', params);
     setAlgorithmParams(params);
     setSelectedAlgorithm(algorithm);
     onOpen();
