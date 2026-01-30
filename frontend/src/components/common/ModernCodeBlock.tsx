@@ -16,10 +16,15 @@ import {
   Flex,
   Divider
 } from '@chakra-ui/react'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
+import python from 'react-syntax-highlighter/dist/esm/languages/prism/python'
+import json from 'react-syntax-highlighter/dist/esm/languages/prism/json'
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { CopyIcon, DownloadIcon, CheckIcon, ChevronDownIcon } from '@chakra-ui/icons'
 import { useState, useMemo } from 'react'
+
+SyntaxHighlighter.registerLanguage('python', python)
+SyntaxHighlighter.registerLanguage('json', json)
 
 interface ModernCodeBlockProps {
   code: string
