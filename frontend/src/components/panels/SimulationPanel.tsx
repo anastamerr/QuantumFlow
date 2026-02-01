@@ -1128,7 +1128,7 @@ const SimulationPanel = () => {
                                 MOST LIKELY
                               </Text>
                               <Text fontSize="lg" fontWeight="bold">
-                                {topState ? `|${topState}{'>'}` : '--'}
+                                {topState ? `|${topState}>` : '--'}
                               </Text>
                               {topProbability !== null && (
                                 <Text fontSize="xs" color="gray.500">
