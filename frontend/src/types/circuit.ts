@@ -12,7 +12,7 @@ export interface Gate {
   qubit?: number
   position?: number
   params?: {
-    [key: string]: number | string
+    [key: string]: number | string | boolean
   }
   targets?: number[] // For multi-qubit gates like CNOT
   controls?: number[] // For controlled gates

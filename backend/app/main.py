@@ -15,8 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from starlette.responses import JSONResponse
 
-from .models import ExecuteRequest, ExecuteResponse
+from .models import ExecuteRequest, ExecuteResponse, MetricsRequest, COSMICMetrics, HardwareMetrics
 from .qiskit_runner import run_circuit
+from .cosmic_metrics import calculate_cosmic_metrics
+from .hardware_metrics import calculate_hardware_metrics
 
 
 @dataclass(frozen=True)
@@ -275,8 +277,42 @@ def create_app() -> FastAPI:
                 shots=req.shots,
                 memory=req.memory,
                 override_backend=req.backend,
+                include_metrics=req.include_metrics,
+                cosmic_approach=req.cosmic_approach,
+                measurement_config=req.measurement_config.model_dump() if req.measurement_config else None,
             )
             return ExecuteResponse(**result, status="success")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @app.post(
+        "/api/v1/metrics/cosmic",
+        response_model=COSMICMetrics,
+        dependencies=[Depends(require_basic_auth)],
+    )
+    def cosmic_metrics(req: MetricsRequest) -> COSMICMetrics:
+        try:
+            metrics = calculate_cosmic_metrics(
+                [g.model_dump() for g in req.gates],
+                req.cosmic_approach or "occurrences",
+                num_qubits=req.num_qubits,
+            )
+            return COSMICMetrics(**metrics)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @app.post(
+        "/api/v1/metrics/hardware",
+        response_model=HardwareMetrics,
+        dependencies=[Depends(require_basic_auth)],
+    )
+    def hardware_metrics(req: MetricsRequest) -> HardwareMetrics:
+        try:
+            metrics = calculate_hardware_metrics(
+                req.num_qubits,
+                [g.model_dump() for g in req.gates],
+            )
+            return HardwareMetrics(**metrics)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
 

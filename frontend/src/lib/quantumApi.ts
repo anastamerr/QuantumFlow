@@ -24,7 +24,7 @@ export type StoreGate = {
   type: string;
   qubit?: number;
   position?: number;
-  params?: Record<string, number | string>;
+  params?: Record<string, number | string | boolean>;
   targets?: number[];
   controls?: number[];
 };
@@ -36,6 +36,15 @@ export type ExecutePayload = {
   shots?: number;
   memory?: boolean;
   backend?: string;
+  include_metrics?: boolean;
+  cosmic_approach?: 'occurrences' | 'types' | 'q-cosmic';
+  measurement_config?: {
+    basis: 'z' | 'x' | 'y';
+    qubits?: number[];
+    classical_bits?: number[];
+    reset_after?: boolean;
+    mid_circuit?: boolean;
+  };
 };
 
 export async function executeCircuit(payload: ExecutePayload) {
@@ -62,10 +71,86 @@ export async function executeCircuit(payload: ExecutePayload) {
     counts: Record<string, number>;
     probabilities: Record<string, number>;
     statevector?: Record<string, [number, number]> | null;
+    measurement_basis?: Record<string, string> | null;
+    per_qubit_probabilities?: Record<string, Record<string, number>> | null;
+    cosmic_metrics?: {
+      approach: string;
+      entries: number;
+      exits: number;
+      reads: number;
+      writes: number;
+      total_cfp: number;
+      functional_processes: {
+        name: string;
+        gate_type: string;
+        entries: number;
+        exits: number;
+        reads: number;
+        writes: number;
+        cfp: number;
+      }[];
+    } | null;
+    hardware_metrics?: {
+      circuit_depth: number;
+      circuit_width: number;
+      gate_count: Record<string, number>;
+      t_count: number;
+      t_depth: number;
+      cnot_count: number;
+      single_qubit_gates: number;
+      two_qubit_gates: number;
+      multi_qubit_gates: number;
+      measurement_count: number;
+      entanglement_ratio?: number | null;
+      entanglement_depth?: number | null;
+      quantum_volume?: number | null;
+      estimated_fidelity?: number | null;
+    } | null;
+    confidence_intervals?: Record<string, [number, number]> | null;
     warnings?: string[] | null;
     memory?: string[] | null;
     status: string;
   }>;
+}
+
+export async function fetchCosmicMetrics(payload: ExecutePayload) {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured (VITE_API_BASE_URL)");
+
+  const authHeader = getBasicAuthHeader();
+  const res = await fetch(`${base}/api/v1/metrics/cosmic`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Backend error ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+export async function fetchHardwareMetrics(payload: ExecutePayload) {
+  const base = getApiBaseUrl();
+  if (!base) throw new Error("API base URL is not configured (VITE_API_BASE_URL)");
+
+  const authHeader = getBasicAuthHeader();
+  const res = await fetch(`${base}/api/v1/metrics/hardware`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Backend error ${res.status}: ${text}`);
+  }
+  return res.json();
 }
 
 export async function checkHealth(): Promise<boolean> {

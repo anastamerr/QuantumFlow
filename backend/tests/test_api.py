@@ -55,6 +55,30 @@ class TestApi(unittest.TestCase):
         self.assertEqual(data["shots"], 32)
         self.assertIn("counts", data)
 
+    def test_execute_with_measurement_override_and_metrics(self):
+        client = TestClient(create_app())
+        payload = {
+            "num_qubits": 2,
+            "gates": [{"type": "h", "qubit": 0, "position": 0}],
+            "shots": 128,
+            "memory": False,
+            "include_metrics": True,
+            "measurement_config": {
+                "basis": "x",
+                "qubits": [0],
+                "classical_bits": [0],
+                "reset_after": False,
+            },
+        }
+        response = client.post("/api/v1/execute", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("measurement_basis", data)
+        self.assertIn("per_qubit_probabilities", data)
+        self.assertIn("cosmic_metrics", data)
+        self.assertIn("hardware_metrics", data)
+        self.assertIn("confidence_intervals", data)
+
     def test_basic_auth_required(self):
         with _EnvGuard({"AUTH_USERNAME": "user", "AUTH_PASSWORD": "pass"}):
             client = TestClient(create_app())
@@ -80,3 +104,19 @@ class TestApi(unittest.TestCase):
 
             response = client.get("/health")
             self.assertEqual(response.status_code, 429)
+
+    def test_metrics_endpoints(self):
+        client = TestClient(create_app())
+        payload = {
+            "num_qubits": 1,
+            "gates": [{"type": "h", "qubit": 0, "position": 0}],
+        }
+        cosmic_response = client.post("/api/v1/metrics/cosmic", json=payload)
+        self.assertEqual(cosmic_response.status_code, 200)
+        cosmic_data = cosmic_response.json()
+        self.assertIn("total_cfp", cosmic_data)
+
+        hardware_response = client.post("/api/v1/metrics/hardware", json=payload)
+        self.assertEqual(hardware_response.status_code, 200)
+        hardware_data = hardware_response.json()
+        self.assertIn("circuit_depth", hardware_data)

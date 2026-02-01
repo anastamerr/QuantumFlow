@@ -2,6 +2,7 @@ import { Box, VStack, Heading, Divider, Text, useColorModeValue, InputGroup, Inp
 import { useDispatch, useSelector } from 'react-redux'
 import { addQubit, removeQubit, selectQubits } from '../../store/slices/circuitSlice'
 import GateItem from '../gates/GateItem'
+import MeasurementGate from '../gates/MeasurementGate'
 import { gateLibrary } from '../../utils/gateLibrary'
 import { SearchIcon } from '@chakra-ui/icons'
 import { useState, useEffect, useMemo } from 'react'
@@ -130,7 +131,11 @@ const Sidebar = () => {
             <Heading size="sm" mb={2}>{category}</Heading>
             <VStack spacing={2} align="stretch">
               {gates.map(gate => (
-                <GateItem key={gate.id} gate={gate} />
+                gate.id === 'measure' ? (
+                  <MeasurementGate key={gate.id} gate={gate} />
+                ) : (
+                  <GateItem key={gate.id} gate={gate} />
+                )
               ))}
             </VStack>
           </Box>

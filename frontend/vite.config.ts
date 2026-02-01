@@ -15,6 +15,19 @@ export default defineConfig({
     setupFiles: './src/setupTests.ts',
     globals: true,
     css: true,
+    include: ['src/__tests__/**/*.test.ts', 'src/__tests__/**/*.test.tsx'],
+    exclude: ['e2e/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary', 'html'],
+      include: [
+        'src/components/visualization/MeasurementVisualizer.tsx',
+        'src/components/panels/COSMICMetricsPanel.tsx',
+        'src/utils/measurementStats.ts',
+        'src/components/gates/MeasurementGate.tsx',
+      ],
+      exclude: ['**/node_modules/**'],
+    },
   },
   server: {
     port: 3000,

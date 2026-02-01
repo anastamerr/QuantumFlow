@@ -170,9 +170,23 @@ export const gateLibrary: GateDefinition[] = [
     id: 'measure',
     name: 'Measure',
     symbol: 'M',
-    description: 'Measures the qubit in the computational basis',
+    description: 'Measures the qubit in the selected basis (default Z)',
     category: 'Measurement',
     color: 'gray',
+    params: [
+      {
+        name: 'basis',
+        type: 'select',
+        default: 'z',
+        options: ['z', 'x', 'y'],
+      },
+      {
+        name: 'reset_after',
+        type: 'select',
+        default: 'false',
+        options: ['false', 'true'],
+      },
+    ],
   },
   
   // Algorithm building blocks are provided via the Algorithm Library

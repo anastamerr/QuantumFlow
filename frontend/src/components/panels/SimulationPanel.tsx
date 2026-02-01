@@ -1,22 +1,22 @@
 import {
-  Box, 
-  Heading, 
-  Text, 
-  Button, 
-  VStack, 
-  HStack, 
-  Spinner, 
-  useColorModeValue, 
-  Select, 
-  FormControl, 
-  FormLabel, 
-  useToast, 
-  Flex, 
-  Tab, 
-  TabList, 
-  TabPanel, 
-  TabPanels, 
-  Tabs, 
+  Box,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Spinner,
+  useColorModeValue,
+  Select,
+  FormControl,
+  FormLabel,
+  useToast,
+  Flex,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
   Divider,
   Badge,
   Icon,
@@ -29,33 +29,73 @@ import {
   Progress,
   Stack,
   Tag,
-  useBreakpointValue
+  useBreakpointValue,
+  Checkbox,
+  Table,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
-import { useSelector } from 'react-redux';
-import { selectQubits, selectGates } from '../../store/slices/circuitSlice';
-import { Suspense, lazy, useState, useCallback, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  selectQubits,
+  selectGates,
+  selectMeasurementSettings,
+  selectMeasurementHistory,
+  addMeasurementHistoryEntry,
+  setMeasurementSettings,
+  setCosmicMetrics as setCosmicMetricsAction,
+  setHardwareMetrics as setHardwareMetricsAction,
+} from '../../store/slices/circuitSlice';
+import { Suspense, lazy, useState, useCallback, useEffect, useMemo } from 'react';
 // import QuantumStateVisualizer from '../visualization/QuantumStateVisualizer'; // removed
 // Local mock measurement removed in favor of backend
 import { executeCircuit, checkHealth } from '@/lib/quantumApi';
 import { transformStoreGatesToCircuitGates } from '../../utils/circuitUtils';
 import { stateVectorToBloch } from '../../utils/blochSphereUtils';
+import {
+  calculateEntropy,
+  calculateMean,
+  calculateVariance,
+  chiSquaredTest,
+  calculateQubitCorrelations,
+} from '../../utils/measurementStats';
 import { InfoIcon, RepeatIcon, ChevronRightIcon, StarIcon } from '@chakra-ui/icons';
 import FullViewToggle from '../common/FullViewToggle';
+import COSMICMetricsPanel from './COSMICMetricsPanel';
+import HardwareMetricsPanel from './HardwareMetricsPanel';
 
 const QubitVisualization = lazy(() => import('../visualization/QubitVisualizer'));
 const BlochSphereVisualization = lazy(() => import('../visualization/BlochSphereVisualizer'));
+const MeasurementVisualizer = lazy(() => import('../visualization/MeasurementVisualizer'));
 
 const SimulationPanel = () => {
+  const dispatch = useDispatch();
   const qubits = useSelector(selectQubits);
   const storeGates = useSelector(selectGates);
+  const measurementSettings = useSelector(selectMeasurementSettings);
+  const measurementHistory = useSelector(selectMeasurementHistory);
   const toast = useToast();
   const [isSimulating, setIsSimulating] = useState(false);
   const [results, setResults] = useState<Record<string, number> | null>(null);
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
   const [stateVector, setStateVector] = useState<Record<string, [number, number]> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shots, setShots] = useState<number>(1024);
   const [method, setMethod] = useState<'statevector' | 'noisy'>('statevector');
   const [serverConnected, setServerConnected] = useState<boolean | null>(null);
+  const [warnings, setWarnings] = useState<string[] | null>(null);
+  const [measurementBasis, setMeasurementBasis] = useState<Record<string, string> | null>(null);
+  const [perQubitProbabilities, setPerQubitProbabilities] = useState<Record<string, Record<string, number>> | null>(null);
+  const [cosmicMetrics, setCosmicMetrics] = useState<any | null>(null);
+  const [hardwareMetrics, setHardwareMetrics] = useState<any | null>(null);
+  const [confidenceIntervals, setConfidenceIntervals] = useState<Record<string, [number, number]> | null>(null);
+  const [includeMetrics, setIncludeMetrics] = useState<boolean>(true);
+  const [cosmicApproach, setCosmicApproach] = useState<'occurrences' | 'types' | 'q-cosmic'>('occurrences');
   // Real-time visualization removed: backend-only measurements
   // const [showRealTimeVisualization, setShowRealTimeVisualization] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<number>(0);
@@ -68,6 +108,11 @@ const SimulationPanel = () => {
   
   // Transform store gates to circuit gates for visualization
   const gates = transformStoreGatesToCircuitGates(storeGates);
+  const numQubits = qubits.length;
+  const measurementOverride = measurementSettings.overrideEnabled;
+  const measurementOverrideBasis = measurementSettings.basis;
+  const measurementResetAfter = measurementSettings.resetAfter;
+  const measurementQubits = measurementSettings.qubits;
   
   // Theme colors
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -93,7 +138,14 @@ const SimulationPanel = () => {
   useEffect(() => {
     if (results !== null || simulationComplete) {
       setResults(null);
+      setCounts(null);
       setStateVector(null);
+      setMeasurementBasis(null);
+      setPerQubitProbabilities(null);
+      setCosmicMetrics(null);
+      setHardwareMetrics(null);
+      setConfidenceIntervals(null);
+      setWarnings(null);
       setSimulationComplete(false);
       setActiveTab(0); // Reset to simulation tab when circuit changes
     }
@@ -110,6 +162,21 @@ const SimulationPanel = () => {
     timer = setInterval(ping, 15000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const qubitIds = qubits.map((qubit) => qubit.id);
+    if (qubitIds.length === 0) {
+      return;
+    }
+    if (measurementSettings.qubits.length === 0) {
+      dispatch(setMeasurementSettings({ qubits: qubitIds }));
+      return;
+    }
+    const filtered = measurementSettings.qubits.filter((id) => qubitIds.includes(id));
+    if (filtered.length !== measurementSettings.qubits.length) {
+      dispatch(setMeasurementSettings({ qubits: filtered }));
+    }
+  }, [dispatch, measurementSettings.qubits, qubits]);
   
   // Check if circuit has a Hadamard gate (creates superposition)
   const hasHadamard = gates.some(gate => gate.type === 'h');
@@ -128,6 +195,20 @@ const SimulationPanel = () => {
     
     return stats;
   }, [gates]);
+
+  const toggleMeasurementQubit = useCallback(
+    (qubitId: number) => {
+      const current = measurementSettings.qubits;
+      const hasQubit = current.includes(qubitId);
+      if (hasQubit) {
+        if (current.length === 1) return;
+        dispatch(setMeasurementSettings({ qubits: current.filter((id) => id !== qubitId) }));
+        return;
+      }
+      dispatch(setMeasurementSettings({ qubits: [...current, qubitId] }));
+    },
+    [dispatch, measurementSettings.qubits],
+  );
   
   // Function to run the simulation
   const runSimulation = async () => {
@@ -135,8 +216,10 @@ const SimulationPanel = () => {
     setIsSimulating(true);
     setSimulationComplete(false);
     setResults(null);
+    setCounts(null);
     setStateVector(null);
     setError(null);
+    setWarnings(null);
     
     try {
       // Validate circuit first
@@ -146,16 +229,63 @@ const SimulationPanel = () => {
       
       // Execute on backend (Qiskit) for measurement probabilities
       try {
+        const execMeasurementQubits =
+          measurementQubits.length > 0 ? measurementQubits : qubits.map((qubit) => qubit.id);
+        const executionGates = storeGates;
+        const measurementConfig = measurementOverride
+          ? {
+              basis: measurementOverrideBasis,
+              qubits: execMeasurementQubits,
+              classical_bits: execMeasurementQubits,
+              reset_after: measurementResetAfter,
+              mid_circuit: false,
+            }
+          : undefined;
+
         const response = await executeCircuit({
           num_qubits: qubits.length,
-          gates: storeGates,
+          gates: executionGates,
           method,
           shots,
           memory: false,
+          include_metrics: includeMetrics,
+          cosmic_approach: includeMetrics ? cosmicApproach : undefined,
+          measurement_config: measurementConfig,
         });
         setServerConnected(true);
         setResults(response.probabilities);
+        setCounts(response.counts ?? null);
         setStateVector(response.statevector ?? null);
+        setMeasurementBasis(response.measurement_basis ?? null);
+        setPerQubitProbabilities(response.per_qubit_probabilities ?? null);
+        setCosmicMetrics(response.cosmic_metrics ?? null);
+        setHardwareMetrics(response.hardware_metrics ?? null);
+        setConfidenceIntervals(response.confidence_intervals ?? null);
+        setWarnings(response.warnings ?? null);
+        dispatch(setCosmicMetricsAction(response.cosmic_metrics ?? null));
+        dispatch(setHardwareMetricsAction(response.hardware_metrics ?? null));
+        dispatch(
+          addMeasurementHistoryEntry({
+            timestamp: new Date().toISOString(),
+            shots: response.shots,
+            method: response.method ?? method,
+            probabilities: response.probabilities,
+            counts: response.counts ?? undefined,
+            measurementBasis: response.measurement_basis ?? undefined,
+            perQubitProbabilities: response.per_qubit_probabilities ?? undefined,
+            confidenceIntervals: response.confidence_intervals ?? undefined,
+            cosmicMetrics: response.cosmic_metrics ?? null,
+            hardwareMetrics: response.hardware_metrics ?? null,
+            measurementOverride: measurementOverride
+              ? {
+                  overrideEnabled: measurementOverride,
+                  basis: measurementOverrideBasis,
+                  resetAfter: measurementResetAfter,
+                  qubits: selectedMeasurementQubits,
+                }
+              : null,
+          }),
+        );
         setSimulationComplete(true);
         setActiveTab(1);
       } catch (err) {
@@ -206,27 +336,233 @@ const SimulationPanel = () => {
     }
   }, [simulationComplete, results]);
   
+  const selectedMeasurementQubits =
+    measurementQubits.length > 0 ? measurementQubits : qubits.map((qubit) => qubit.id);
+  const orderedMeasurementQubits = [...selectedMeasurementQubits].sort((a, b) => b - a);
+  const shouldMarginalize =
+    measurementOverride && selectedMeasurementQubits.length > 0 && selectedMeasurementQubits.length < numQubits;
+
+  const maxGatePosition = useMemo(() => {
+    const base = measurementOverride
+      ? storeGates.filter((gate) => gate.type !== 'measure')
+      : storeGates;
+    return base.reduce((max, gate) => {
+      if (typeof gate.position === 'number') {
+        return Math.max(max, gate.position);
+      }
+      return max;
+    }, -1);
+  }, [measurementOverride, storeGates]);
+
+  const measurementTimeline = useMemo(() => {
+    if (measurementOverride) {
+      return selectedMeasurementQubits.map((qubitId, index) => ({
+        qubit: qubitId,
+        position: maxGatePosition + 1 + index,
+        basis: measurementOverrideBasis,
+      }));
+    }
+    return storeGates
+      .filter((gate) => gate.type === 'measure')
+      .map((gate, index) => {
+        const params = gate.params || {};
+        const target = typeof gate.qubit === 'number' ? gate.qubit : gate.targets?.[0] ?? 0;
+        return {
+          qubit: target,
+          position: typeof gate.position === 'number' ? gate.position : index,
+          basis: typeof params.basis === 'string' ? params.basis : 'z',
+        };
+      })
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  }, [measurementOverride, measurementOverrideBasis, maxGatePosition, selectedMeasurementQubits, storeGates]);
+
+  const cosmicComparison = useMemo(() => {
+    const map = new Map<string, any>();
+    measurementHistory.forEach((entry) => {
+      if (entry.cosmicMetrics) {
+        map.set(entry.cosmicMetrics.approach, entry.cosmicMetrics);
+      }
+    });
+    if (cosmicMetrics) {
+      map.set(cosmicMetrics.approach, cosmicMetrics);
+    }
+    return Array.from(map.values());
+  }, [measurementHistory, cosmicMetrics]);
+
+  const buildMarginalDistribution = (
+    sourceProbs: Record<string, number>,
+    sourceCounts?: Record<string, number> | null,
+  ) => {
+    const probs: Record<string, number> = {};
+    const countsMap: Record<string, number> = {};
+
+    Object.entries(sourceProbs).forEach(([state, prob]) => {
+      const bits = state.replace(/\s+/g, '').padStart(numQubits, '0');
+      const measuredBits = orderedMeasurementQubits.map((q) => bits[bits.length - 1 - q] || '0').join('');
+      const key = measuredBits.length > 0 ? measuredBits : '0';
+      probs[key] = (probs[key] || 0) + prob;
+
+      if (sourceCounts) {
+        const count = sourceCounts[state] ?? Math.round(shots * prob);
+        countsMap[key] = (countsMap[key] || 0) + count;
+      }
+    });
+
+    return { probs, counts: sourceCounts ? countsMap : null };
+  };
+
+  const marginal = results && shouldMarginalize ? buildMarginalDistribution(results, counts) : null;
+  const displayResults = marginal ? marginal.probs : results;
+  const displayCounts = marginal ? marginal.counts : counts;
+
+  const filteredMeasurementBasis =
+    measurementOverride && measurementBasis
+      ? Object.fromEntries(
+          Object.entries(measurementBasis).filter(([qubit]) => selectedMeasurementQubits.includes(Number(qubit))),
+        )
+      : measurementBasis;
+  const filteredPerQubitProbabilities =
+    measurementOverride && perQubitProbabilities
+      ? Object.fromEntries(
+          Object.entries(perQubitProbabilities).filter(([qubit]) => selectedMeasurementQubits.includes(Number(qubit))),
+        )
+      : perQubitProbabilities;
+
+  const sortedResults = displayResults
+    ? Object.entries(displayResults)
+        .filter(([_, prob]) => prob > 0.001)
+        .sort((a, b) => b[1] - a[1])
+    : [];
+  const allResults = displayResults ? Object.entries(displayResults).sort((a, b) => b[1] - a[1]) : [];
+  const totalShots = displayCounts ? Object.values(displayCounts).reduce((sum, value) => sum + value, 0) : shots;
+  const distributionEntropy = displayResults ? calculateEntropy(displayResults) : null;
+  const distributionMean = displayResults ? calculateMean(displayResults) : null;
+  const distributionVariance = displayResults ? calculateVariance(displayResults) : null;
+  const topResult = sortedResults.length > 0 ? sortedResults[0] : null;
+  const topState = topResult ? topResult[0] : null;
+  const topProbability = topResult ? topResult[1] : null;
+  const chiSquare = displayCounts && displayResults ? chiSquaredTest(displayCounts, displayResults) : null;
+  const correlationsRaw = displayResults
+    ? calculateQubitCorrelations(
+        displayResults,
+        shouldMarginalize ? selectedMeasurementQubits.length : numQubits,
+      )
+    : { correlations: [], numQubits: 0 };
+  const correlationPairs = correlationsRaw.correlations.map(({ i, j, value }) => {
+    if (!shouldMarginalize) {
+      return { pair: `q${i}-q${j}`, value };
+    }
+    const mapIndex = (idx: number) =>
+      orderedMeasurementQubits[orderedMeasurementQubits.length - 1 - idx] ?? idx;
+    return { pair: `q${mapIndex(i)}-q${mapIndex(j)}`, value };
+  });
+
+  const exportResults = useCallback(
+    (format: 'csv' | 'json') => {
+      if (!displayResults) {
+        toast({
+          title: 'No results to export',
+          description: 'Run a simulation first to generate results.',
+          status: 'info',
+          duration: 2000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      let content = '';
+      let mime = '';
+      let filename = `measurement-results-${timestamp}.${format}`;
+
+      if (format === 'json') {
+        content = JSON.stringify(
+          {
+            shots,
+            method,
+            probabilities: displayResults,
+            counts: displayCounts ?? undefined,
+            measurement_basis: filteredMeasurementBasis ?? undefined,
+            per_qubit_probabilities: filteredPerQubitProbabilities ?? undefined,
+            confidence_intervals: confidenceIntervals ?? undefined,
+            measurement_override: measurementOverride
+              ? {
+                  basis: measurementOverrideBasis,
+                  reset_after: measurementResetAfter,
+                  qubits: selectedMeasurementQubits,
+                  marginalize: shouldMarginalize,
+                }
+              : undefined,
+            cosmic_metrics: cosmicMetrics ?? undefined,
+            hardware_metrics: hardwareMetrics ?? undefined,
+          },
+          null,
+          2,
+        );
+        mime = 'application/json';
+      } else {
+        const header = ['state', 'probability', 'count', 'ci_lower', 'ci_upper'];
+        const rows = (allResults.length > 0 ? allResults : Object.entries(displayResults)).map(
+          ([state, prob]) => {
+            const count = displayCounts?.[state] ?? Math.round(shots * prob);
+            const interval = confidenceIntervals?.[state];
+            const lower = interval ? interval[0] : '';
+            const upper = interval ? interval[1] : '';
+            return [state, prob.toFixed(6), count, lower, upper].join(',');
+          },
+        );
+        content = [header.join(','), ...rows].join('\n');
+        mime = 'text/csv';
+      }
+
+      const blob = new Blob([content], { type: mime });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    },
+    [
+      shots,
+      method,
+      displayResults,
+      displayCounts,
+      filteredMeasurementBasis,
+      filteredPerQubitProbabilities,
+      confidenceIntervals,
+      cosmicMetrics,
+      hardwareMetrics,
+      allResults,
+      measurementOverride,
+      measurementOverrideBasis,
+      measurementResetAfter,
+      selectedMeasurementQubits,
+      shouldMarginalize,
+      toast,
+    ],
+  );
+
   // Render the results as a bar chart
   const renderResultsChart = () => {
-    if (!results) return null;
+    if (!displayResults) return null;
     
     // Sort results by count (descending)
-    const sortedResults = Object.entries(results)
-      .filter(([_, count]) => count > 0.001) // Only show non-zero results
-      .sort((a, b) => b[1] - a[1]);
-    
     if (sortedResults.length === 0) return <Text>No significant measurement results.</Text>;
     
     const maxValue = Math.max(...sortedResults.map(([_, count]) => count));
     const maxResults = isMobile ? 6 : 10; // Show fewer results on mobile
-    const displayResults = sortedResults.slice(0, maxResults);
-    const hiddenResults = sortedResults.length - displayResults.length;
+    const displayRows = sortedResults.slice(0, maxResults);
+    const hiddenResults = sortedResults.length - displayRows.length;
     
     return (
       <VStack spacing={3} align="stretch" mt={4}>
-        {displayResults.map(([state, prob]) => {
+        {displayRows.map(([state, prob]) => {
           const percentage = prob * 100;
-          const count = Math.round(shots * prob);
+          const count = displayCounts?.[state] ?? Math.round(shots * prob);
+          const interval = shouldMarginalize ? null : confidenceIntervals?.[state];
+          const lower = interval ? interval[0] : null;
+          const upper = interval ? interval[1] : null;
           
           return (
             <Box key={state} mb={2}>
@@ -241,7 +577,7 @@ const SimulationPanel = () => {
                     py={1} 
                     borderRadius="md"
                   >
-                    |{state}⟩
+                    |{state}{'>'}
                   </Text>
                   {prob > 0.2 && <StarIcon color="yellow.400" />}
                 </HStack>
@@ -254,6 +590,7 @@ const SimulationPanel = () => {
                 bg={barBg}
                 borderRadius="full"
                 overflow="hidden"
+                position="relative"
               >
                 <Box
                   h="100%" 
@@ -262,6 +599,18 @@ const SimulationPanel = () => {
                   transition="width 0.3s ease-in-out"
                   borderRadius="full"
                 />
+                {lower !== null && upper !== null && maxValue > 0 && (
+                  <Box
+                    position="absolute"
+                    top="50%"
+                    left={`${(lower / maxValue) * 100}%`}
+                    transform="translateY(-50%)"
+                    height="4px"
+                    width={`${((upper - lower) / maxValue) * 100}%`}
+                    bg="orange.400"
+                    borderRadius="full"
+                  />
+                )}
               </Box>
             </Box>
           );
@@ -383,6 +732,92 @@ const SimulationPanel = () => {
                     <option value="5000">5000</option>
                     <option value="10000">10000</option>
                   </Select>
+                </FormControl>
+              </GridItem>
+
+              <GridItem>
+                <FormControl>
+                  <FormLabel fontSize="sm" fontWeight="medium">Metrics</FormLabel>
+                  <VStack align="start" spacing={2}>
+                    <Checkbox
+                      isChecked={includeMetrics}
+                      onChange={(e) => setIncludeMetrics(e.target.checked)}
+                      isDisabled={isSimulating}
+                      size="sm"
+                    >
+                      Include metrics
+                    </Checkbox>
+                    <Select
+                      size="sm"
+                      value={cosmicApproach}
+                      onChange={(e) => setCosmicApproach(e.target.value as 'occurrences' | 'types' | 'q-cosmic')}
+                      isDisabled={!includeMetrics || isSimulating}
+                      borderRadius="md"
+                      bg={inputBg}
+                      boxShadow="sm"
+                    >
+                      <option value="occurrences">COSMIC: Occurrences</option>
+                      <option value="types">COSMIC: Types</option>
+                      <option value="q-cosmic">COSMIC: Q-COSMIC</option>
+                    </Select>
+                  </VStack>
+                </FormControl>
+              </GridItem>
+
+              <GridItem colSpan={isMobile ? 1 : 2}>
+                <FormControl>
+                  <FormLabel fontSize="sm" fontWeight="medium">Measurement Override</FormLabel>
+                  <VStack align="start" spacing={2}>
+                    <Checkbox
+                      isChecked={measurementOverride}
+                      onChange={(e) => dispatch(setMeasurementSettings({ overrideEnabled: e.target.checked }))}
+                      isDisabled={isSimulating}
+                      size="sm"
+                    >
+                      Override circuit measurements
+                    </Checkbox>
+                    <HStack spacing={3} align="center" w="100%" flexWrap="wrap">
+                      <Select
+                        size="sm"
+                        value={measurementOverrideBasis}
+                        onChange={(e) => dispatch(setMeasurementSettings({ basis: e.target.value as 'z' | 'x' | 'y' }))}
+                        isDisabled={!measurementOverride || isSimulating}
+                        borderRadius="md"
+                        bg={inputBg}
+                        boxShadow="sm"
+                        maxW="180px"
+                      >
+                        <option value="z">Basis: Z</option>
+                        <option value="x">Basis: X</option>
+                        <option value="y">Basis: Y</option>
+                      </Select>
+                      <Checkbox
+                        isChecked={measurementResetAfter}
+                        onChange={(e) => dispatch(setMeasurementSettings({ resetAfter: e.target.checked }))}
+                        isDisabled={!measurementOverride || isSimulating}
+                        size="sm"
+                      >
+                        Reset after measurement
+                      </Checkbox>
+                    </HStack>
+                    <Text fontSize="xs" color="gray.500">
+                      Select which qubits to measure (partial measurement). Overrides any measurement gates in the circuit.
+                    </Text>
+                    <Wrap spacing={2}>
+                      {qubits.map((qubit) => (
+                        <WrapItem key={qubit.id}>
+                          <Checkbox
+                            isChecked={selectedMeasurementQubits.includes(qubit.id)}
+                            onChange={() => toggleMeasurementQubit(qubit.id)}
+                            isDisabled={!measurementOverride || isSimulating}
+                            size="sm"
+                          >
+                            {qubit.name}
+                          </Checkbox>
+                        </WrapItem>
+                      ))}
+                    </Wrap>
+                  </VStack>
                 </FormControl>
               </GridItem>
               
@@ -614,7 +1049,15 @@ const SimulationPanel = () => {
                           borderColor={borderColor}
                         >
                           <Heading size="md">Measurement Results</Heading>
-                          <Flex align="center">
+                          <HStack spacing={3} align="center">
+                            <HStack spacing={2}>
+                              <Button size="xs" variant="outline" onClick={() => exportResults('csv')}>
+                                Export CSV
+                              </Button>
+                              <Button size="xs" variant="outline" onClick={() => exportResults('json')}>
+                                Export JSON
+                              </Button>
+                            </HStack>
                             <Badge 
                               colorScheme="blue" 
                               variant="solid" 
@@ -625,13 +1068,205 @@ const SimulationPanel = () => {
                             >
                               {shots} shots
                             </Badge>
-                            <Text fontSize="sm" color="gray.500" ml={2}>
+                            <Text fontSize="sm" color="gray.500">
                               {method === 'statevector' ? 'State Vector' : 'Noisy Simulator'}
                             </Text>
-                          </Flex>
+                          </HStack>
                         </Flex>
+
+                        {measurementOverride && (
+                          <Box mb={4} p={3} borderRadius="md" bg={neutralBg} borderWidth="1px" borderColor={borderColor}>
+                            <Text fontSize="sm" fontWeight="medium" mb={1}>
+                              Measurement override enabled
+                            </Text>
+                            <Text fontSize="sm" color="gray.500">
+                              Basis: {measurementOverrideBasis.toUpperCase()} · Reset after: {measurementResetAfter ? 'On' : 'Off'} · Qubits:{' '}
+                              {selectedMeasurementQubits.map((id) => `q${id}`).join(', ')}
+                            </Text>
+                            {shouldMarginalize && (
+                              <Text fontSize="xs" color="gray.500" mt={1}>
+                                Showing marginal distribution over measured qubits only.
+                              </Text>
+                            )}
+                          </Box>
+                        )}
                         
                         {renderResultsChart()}
+
+                        {distributionEntropy !== null && (
+                          <Grid
+                            templateColumns={isMobile ? '1fr' : 'repeat(auto-fit, minmax(160px, 1fr))'}
+                            gap={3}
+                            mt={6}
+                          >
+                            <Box p={3} borderRadius="md" bg={accentBg} borderWidth="1px" borderColor={borderColor}>
+                              <Text fontSize="xs" color={accentColor} fontWeight="bold">
+                                ENTROPY
+                              </Text>
+                              <Text fontSize="lg" fontWeight="bold">
+                                {distributionEntropy.toFixed(4)}
+                              </Text>
+                            </Box>
+                            <Box p={3} borderRadius="md" bg={accentBg} borderWidth="1px" borderColor={borderColor}>
+                              <Text fontSize="xs" color={accentColor} fontWeight="bold">
+                                MEAN VALUE
+                              </Text>
+                              <Text fontSize="lg" fontWeight="bold">
+                                {distributionMean !== null ? distributionMean.toFixed(4) : '--'}
+                              </Text>
+                            </Box>
+                            <Box p={3} borderRadius="md" bg={accentBg} borderWidth="1px" borderColor={borderColor}>
+                              <Text fontSize="xs" color={accentColor} fontWeight="bold">
+                                VARIANCE
+                              </Text>
+                              <Text fontSize="lg" fontWeight="bold">
+                                {distributionVariance !== null ? distributionVariance.toFixed(4) : '--'}
+                              </Text>
+                            </Box>
+                            <Box p={3} borderRadius="md" bg={accentBg} borderWidth="1px" borderColor={borderColor}>
+                              <Text fontSize="xs" color={accentColor} fontWeight="bold">
+                                MOST LIKELY
+                              </Text>
+                              <Text fontSize="lg" fontWeight="bold">
+                                {topState ? `|${topState}{'>'}` : '--'}
+                              </Text>
+                              {topProbability !== null && (
+                                <Text fontSize="xs" color="gray.500">
+                                  {(topProbability * 100).toFixed(1)}%
+                                </Text>
+                              )}
+                            </Box>
+                            <Box p={3} borderRadius="md" bg={accentBg} borderWidth="1px" borderColor={borderColor}>
+                              <Text fontSize="xs" color={accentColor} fontWeight="bold">
+                                TOTAL SHOTS
+                              </Text>
+                              <Text fontSize="lg" fontWeight="bold">
+                                {totalShots}
+                              </Text>
+                            </Box>
+                            <Box p={3} borderRadius="md" bg={accentBg} borderWidth="1px" borderColor={borderColor}>
+                              <Text fontSize="xs" color={accentColor} fontWeight="bold">
+                                CHI-SQUARE
+                              </Text>
+                              <Text fontSize="lg" fontWeight="bold">
+                                {chiSquare ? chiSquare.statistic.toFixed(3) : '--'}
+                              </Text>
+                              {chiSquare && (
+                                <Text fontSize="xs" color="gray.500">
+                                  dof {chiSquare.dof}
+                                </Text>
+                              )}
+                            </Box>
+                            <Box p={3} borderRadius="md" bg={accentBg} borderWidth="1px" borderColor={borderColor}>
+                              <Text fontSize="xs" color={accentColor} fontWeight="bold">
+                                P-VALUE
+                              </Text>
+                              <Text fontSize="lg" fontWeight="bold">
+                                {chiSquare && chiSquare.pValue !== null ? chiSquare.pValue.toFixed(4) : '--'}
+                              </Text>
+                            </Box>
+                          </Grid>
+                        )}
+
+                        <Box mt={6}>
+                          <Heading size="sm" mb={2}>
+                            Result Details
+                          </Heading>
+                          {sortedResults.length === 0 ? (
+                            <Text fontSize="sm" color="gray.500">
+                              No detailed results to display.
+                            </Text>
+                          ) : (
+                            <Box overflowX="auto">
+                              <Table size="sm" variant="simple">
+                                <Thead>
+                                  <Tr>
+                                    <Th>State</Th>
+                                    <Th isNumeric>Probability</Th>
+                                    <Th isNumeric>Count</Th>
+                                    <Th isNumeric>CI Low</Th>
+                                    <Th isNumeric>CI High</Th>
+                                  </Tr>
+                                </Thead>
+                                <Tbody>
+                                  {sortedResults.slice(0, isMobile ? 8 : 12).map(([state, prob]) => {
+                                    const count = displayCounts?.[state] ?? Math.round(shots * prob);
+                                    const interval = shouldMarginalize ? null : confidenceIntervals?.[state];
+                                    const lower = interval ? interval[0] : null;
+                                    const upper = interval ? interval[1] : null;
+
+                                    return (
+                                      <Tr key={state}>
+                                        <Td fontFamily="monospace">|{state}{'>'}</Td>
+                                        <Td isNumeric>{prob.toFixed(4)}</Td>
+                                        <Td isNumeric>{count}</Td>
+                                        <Td isNumeric>{lower !== null ? lower.toFixed(4) : '--'}</Td>
+                                        <Td isNumeric>{upper !== null ? upper.toFixed(4) : '--'}</Td>
+                                      </Tr>
+                                    );
+                                  })}
+                                </Tbody>
+                              </Table>
+                            </Box>
+                          )}
+                        </Box>
+
+                        <Box mt={6}>
+                          <Suspense
+                            fallback={
+                              <Flex align="center" justify="center" h="120px">
+                                <Spinner size="sm" />
+                              </Flex>
+                            }
+                          >
+                            <MeasurementVisualizer
+                              perQubitProbabilities={filteredPerQubitProbabilities}
+                              measurementBasis={filteredMeasurementBasis}
+                              confidenceIntervals={shouldMarginalize ? null : confidenceIntervals}
+                              stateProbabilities={displayResults ?? undefined}
+                              measurementTimeline={measurementTimeline}
+                            />
+                          </Suspense>
+                        </Box>
+
+                        <Box mt={6}>
+                          <Heading size="sm" mb={2}>
+                            Qubit Correlations
+                          </Heading>
+                          {correlationPairs.length === 0 ? (
+                            <Text fontSize="sm" color="gray.500">
+                              Correlations are unavailable for a single-qubit distribution.
+                            </Text>
+                          ) : (
+                            <Wrap spacing={2}>
+                              {correlationPairs.map((item) => (
+                                <WrapItem key={item.pair}>
+                                  <Tag size="sm" colorScheme={item.value >= 0 ? 'green' : 'red'}>
+                                    {item.pair}: {item.value.toFixed(3)}
+                                  </Tag>
+                                </WrapItem>
+                              ))}
+                            </Wrap>
+                          )}
+                        </Box>
+
+                        {warnings && warnings.length > 0 && (
+                          <Box mt={6} p={3} borderRadius="md" bg={warningBg}>
+                            <Flex align="center" mb={1}>
+                              <Icon as={InfoIcon} color={warningColor} mr={2} />
+                              <Text fontSize="sm" color={warningColor} fontWeight="medium">
+                                Backend Notice
+                              </Text>
+                            </Flex>
+                            <VStack align="start" spacing={1} mt={1}>
+                              {warnings.map((warning, idx) => (
+                                <Text key={`${warning}-${idx}`} fontSize="sm" color={warningColor}>
+                                  {warning}
+                                </Text>
+                              ))}
+                            </VStack>
+                          </Box>
+                        )}
                         
                         <Box mt={6} p={3} borderRadius="md" bg={accentBg}>
                           <Flex align="center">
@@ -890,6 +1525,25 @@ const SimulationPanel = () => {
                             </CardBody>
                           </Card>
                         )}
+
+                        <Box mt={6}>
+                          <Heading size="md" mb={4}>
+                            Backend Metrics
+                          </Heading>
+                          {!includeMetrics ? (
+                            <Text fontSize="sm" color="gray.500">
+                              Enable "Include metrics" to view COSMIC and hardware metrics.
+                            </Text>
+                          ) : (
+                            <Grid
+                              templateColumns={isMobile ? '1fr' : 'repeat(2, minmax(280px, 1fr))'}
+                              gap={4}
+                            >
+                              <COSMICMetricsPanel metrics={cosmicMetrics} comparison={cosmicComparison} />
+                              <HardwareMetricsPanel metrics={hardwareMetrics} />
+                            </Grid>
+                          )}
+                        </Box>
                         
                         <Box 
                           mt={4} 
@@ -944,7 +1598,9 @@ const SimulationPanel = () => {
                     ) : !stateVector ? (
                       <VStack spacing={4} align="stretch" justify="center" h="300px">
                         <Text color="gray.500" textAlign="center" fontWeight="medium">
-                          Statevector visualization is unavailable for this run. Select "State Vector" as the simulation method.
+                          {warnings && warnings.length > 0
+                            ? warnings.join(' ')
+                            : 'Statevector visualization is unavailable for this run. Select "State Vector" as the simulation method.'}
                         </Text>
                       </VStack>
                     ) : (

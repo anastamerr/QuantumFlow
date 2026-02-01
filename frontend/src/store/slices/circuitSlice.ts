@@ -1,5 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { RootState } from '../index'
+import {
+  COSMICMetrics,
+  HardwareMetrics,
+  MeasurementRun,
+  MeasurementSettings,
+} from '../../types/measurement'
 
 // Define types for our state
 export interface Gate {
@@ -8,7 +14,7 @@ export interface Gate {
   qubit: number
   position: number
   params?: {
-    [key: string]: number | string
+    [key: string]: number | string | boolean
   }
   targets?: number[] // For multi-qubit gates like CNOT
   controls?: number[] // For controlled gates
@@ -25,6 +31,10 @@ export interface CircuitState {
   maxPosition: number
   name: string
   description: string
+  measurementSettings: MeasurementSettings
+  measurementHistory: MeasurementRun[]
+  cosmicMetrics: COSMICMetrics | null
+  hardwareMetrics: HardwareMetrics | null
 }
 
 // Define the initial state
@@ -37,6 +47,15 @@ const initialState: CircuitState = {
   maxPosition: 10, // Initial circuit width
   name: 'New Circuit',
   description: '',
+  measurementSettings: {
+    overrideEnabled: false,
+    basis: 'z',
+    resetAfter: false,
+    qubits: [],
+  },
+  measurementHistory: [],
+  cosmicMetrics: null,
+  hardwareMetrics: null,
 }
 
 export const circuitSlice = createSlice({
@@ -84,6 +103,12 @@ export const circuitSlice = createSlice({
           gate.controls = gate.controls.map(control => oldToNewIdMap[control]).filter(id => id !== undefined)
         }
       })
+
+      if (state.measurementSettings.qubits.length > 0) {
+        state.measurementSettings.qubits = state.measurementSettings.qubits
+          .map((id) => oldToNewIdMap[id])
+          .filter((id) => id !== undefined)
+      }
     },
     addGate: (state, action: PayloadAction<Omit<Gate, 'id'>>) => {
       const newGate = {
@@ -117,6 +142,15 @@ export const circuitSlice = createSlice({
       state.maxPosition = 10
       state.name = 'New Circuit'
       state.description = ''
+      state.measurementSettings = {
+        overrideEnabled: false,
+        basis: 'z',
+        resetAfter: false,
+        qubits: [],
+      }
+      state.measurementHistory = []
+      state.cosmicMetrics = null
+      state.hardwareMetrics = null
     },
     setCircuitName: (state, action: PayloadAction<string>) => {
       state.name = action.payload
@@ -129,6 +163,33 @@ export const circuitSlice = createSlice({
     },
     extendCircuit: (state, action: PayloadAction<number>) => {
       state.maxPosition = action.payload
+    },
+    setMeasurementSettings: (state, action: PayloadAction<Partial<MeasurementSettings>>) => {
+      const updates = action.payload
+      const nextQubits = updates.qubits
+        ? Array.from(new Set(updates.qubits)).sort((a, b) => a - b)
+        : state.measurementSettings.qubits
+
+      state.measurementSettings = {
+        ...state.measurementSettings,
+        ...updates,
+        qubits: nextQubits,
+      }
+    },
+    addMeasurementHistoryEntry: (state, action: PayloadAction<MeasurementRun>) => {
+      state.measurementHistory.unshift(action.payload)
+      if (state.measurementHistory.length > 20) {
+        state.measurementHistory = state.measurementHistory.slice(0, 20)
+      }
+    },
+    clearMeasurementHistory: (state) => {
+      state.measurementHistory = []
+    },
+    setCosmicMetrics: (state, action: PayloadAction<COSMICMetrics | null>) => {
+      state.cosmicMetrics = action.payload
+    },
+    setHardwareMetrics: (state, action: PayloadAction<HardwareMetrics | null>) => {
+      state.hardwareMetrics = action.payload
     },
     addGates: (state, action: PayloadAction<Omit<Gate, 'id'>[]>) => {
       const newGates = action.payload.map((gate, index) => ({
@@ -182,6 +243,11 @@ export const {
   importCircuit,
   extendCircuit,
   addGates,
+  setMeasurementSettings,
+  addMeasurementHistoryEntry,
+  clearMeasurementHistory,
+  setCosmicMetrics,
+  setHardwareMetrics,
 } = circuitSlice.actions
 
 // Export selectors
@@ -190,6 +256,10 @@ export const selectGates = (state: RootState) => state.circuit.gates
 export const selectCircuitName = (state: RootState) => state.circuit.name
 export const selectCircuitDescription = (state: RootState) => state.circuit.description
 export const selectMaxPosition = (state: RootState) => state.circuit.maxPosition
+export const selectMeasurementSettings = (state: RootState) => state.circuit.measurementSettings
+export const selectMeasurementHistory = (state: RootState) => state.circuit.measurementHistory
+export const selectCosmicMetrics = (state: RootState) => state.circuit.cosmicMetrics
+export const selectHardwareMetrics = (state: RootState) => state.circuit.hardwareMetrics
 
 // Export the reducer
 export default circuitSlice.reducer

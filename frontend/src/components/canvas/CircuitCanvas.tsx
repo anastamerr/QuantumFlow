@@ -31,7 +31,9 @@ const CircuitCanvas: React.FC = () => {
   const [cellSize, setCellSize] = useState(60) // Default cell size
   const [forceRenderLargeGrid, setForceRenderLargeGrid] = useState(false)
   const MAX_RENDER_CELLS = 20000
-  const totalCells = qubits.length * maxPosition
+  const showClassicalRegister = true
+  const classicalRowCount = showClassicalRegister ? qubits.length : 0
+  const totalCells = (qubits.length + classicalRowCount) * maxPosition
   const shouldRenderGrid = forceRenderLargeGrid || totalCells <= MAX_RENDER_CELLS
   
   // Theme colors
@@ -39,6 +41,12 @@ const CircuitCanvas: React.FC = () => {
   const gridBorderColor = useColorModeValue('gray.200', 'gray.600')
   const qubitLabelBg = useColorModeValue('blue.50', 'blue.900')
   const qubitLabelColor = useColorModeValue('blue.800', 'blue.100')
+  const classicalLabelBg = useColorModeValue('purple.50', 'purple.900')
+  const classicalLabelColor = useColorModeValue('purple.800', 'purple.100')
+  const classicalCellBg = useColorModeValue('gray.50', 'gray.800')
+  const classicalMarkerBg = useColorModeValue('orange.400', 'orange.300')
+  const classicalMarkerText = useColorModeValue('orange.700', 'orange.200')
+  const classicalWireColor = useColorModeValue('gray.400', 'gray.500')
   const canvasBg = useColorModeValue('white', 'gray.800')
   const canvasBorder = useColorModeValue('gray.200', 'gray.600')
   const headingColor = useColorModeValue('gray.700', 'gray.200')
@@ -78,6 +86,26 @@ const CircuitCanvas: React.FC = () => {
       return [];
     }
   }, [gates]);
+
+  const classicalCellSize = Math.max(24, Math.round(cellSize * 0.55))
+
+  const measurementMarkers = useMemo(() => {
+    const markerMap = new Map<string, { basis: string; resetAfter: boolean }>()
+    circuitGates.forEach((gate) => {
+      if (gate.type !== 'measure') return
+      if (gate.qubit === undefined || gate.position === undefined) return
+      const params = gate.params || {}
+      const basisRaw = typeof params.basis === 'string' ? params.basis : 'z'
+      const resetRaw = params.reset_after
+      const resetAfter =
+        resetRaw === true || resetRaw === 'true' || resetRaw === 1 || resetRaw === '1'
+      markerMap.set(`${gate.qubit}-${gate.position}`, {
+        basis: String(basisRaw).toUpperCase(),
+        resetAfter,
+      })
+    })
+    return markerMap
+  }, [circuitGates])
   
   // Update SVG representation when circuit changes, with debounce for better performance
   useEffect(() => {
@@ -347,6 +375,121 @@ const CircuitCanvas: React.FC = () => {
     cellSize,
     shouldRenderGrid
   ]);
+
+  const renderClassicalRows = useMemo(() => {
+    if (!showClassicalRegister || qubits.length === 0 || !shouldRenderGrid) return null;
+
+    const rows = []
+    const showBasisLabel = classicalCellSize >= 26
+
+    for (let bit = 0; bit < qubits.length; bit++) {
+      const cells = []
+
+      for (let position = 0; position < maxPosition; position++) {
+        const marker = measurementMarkers.get(`${bit}-${position}`)
+
+        cells.push(
+          <Box
+            key={`classical-cell-${bit}-${position}`}
+            w={`${cellSize}px`}
+            h={`${classicalCellSize}px`}
+            borderWidth={1}
+            borderColor={gridBorderColor}
+            bg={classicalCellBg}
+            position="relative"
+          >
+            {marker && (
+              <>
+                <Box
+                  position="absolute"
+                  top={0}
+                  left="50%"
+                  transform="translateX(-50%)"
+                  w="2px"
+                  h="40%"
+                  bg={classicalWireColor}
+                />
+                <Box
+                  position="absolute"
+                  top="45%"
+                  left="50%"
+                  transform="translate(-50%, -50%)"
+                  w="12px"
+                  h="12px"
+                  borderRadius="full"
+                  bg={classicalMarkerBg}
+                />
+                {showBasisLabel && (
+                  <Text
+                    position="absolute"
+                    top="58%"
+                    left="50%"
+                    transform="translateX(-50%)"
+                    fontSize="xs"
+                    fontWeight="bold"
+                    color={classicalMarkerText}
+                  >
+                    {marker.basis}
+                  </Text>
+                )}
+                {marker.resetAfter && (
+                  <Text
+                    position="absolute"
+                    top="6%"
+                    right="8%"
+                    fontSize="9px"
+                    fontWeight="bold"
+                    color={classicalMarkerText}
+                  >
+                    R
+                  </Text>
+                )}
+              </>
+            )}
+          </Box>
+        )
+      }
+
+      rows.push(
+        <HStack key={`classical-row-${bit}`} spacing={0} align="center">
+          <Box
+            w={`${cellSize + 20}px`}
+            h={`${classicalCellSize}px`}
+            bg={classicalLabelBg}
+            color={classicalLabelColor}
+            borderWidth={1}
+            borderColor={gridBorderColor}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            fontWeight="bold"
+            fontSize="sm"
+            borderRadius="md 0 0 md"
+          >
+            c{bit}
+          </Box>
+          {cells}
+        </HStack>
+      )
+    }
+
+    return rows
+  }, [
+    showClassicalRegister,
+    qubits,
+    maxPosition,
+    gridBorderColor,
+    classicalCellBg,
+    classicalLabelBg,
+    classicalLabelColor,
+    classicalMarkerBg,
+    classicalMarkerText,
+    classicalWireColor,
+    measurementMarkers,
+    classicalCellSize,
+    cellSize,
+    shouldRenderGrid,
+  ])
   
   // If no qubits, show a message
   if (qubits.length === 0) {
@@ -442,6 +585,20 @@ const CircuitCanvas: React.FC = () => {
           >
             <VStack spacing={0} align="stretch">
               {renderGrid}
+              {showClassicalRegister && (
+                <Box
+                  px={2}
+                  py={1}
+                  bg={controlsBg}
+                  borderTopWidth={1}
+                  borderColor={gridBorderColor}
+                >
+                  <Text fontSize="xs" fontWeight="bold" color={headingColor}>
+                    Classical Register
+                  </Text>
+                </Box>
+              )}
+              {renderClassicalRows}
             </VStack>
           </Box>
         </Box>

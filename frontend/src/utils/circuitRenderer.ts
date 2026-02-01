@@ -18,6 +18,7 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
     const cellHeight = 60
     const labelWidth = 80
     const wireSpacing = 60
+    const classicalSpacing = 40
     const padding = 20
 
     // Find the maximum position used by any gate
@@ -25,8 +26,14 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
       ? Math.max(...gates.map(g => g.position || 0)) + 1 
       : 10
 
+    const classicalCount = qubits.length
+    const showClassical = classicalCount > 0
+    const classicalGap = showClassical ? 30 : 0
+    const classicalHeight = showClassical ? classicalCount * classicalSpacing : 0
+    const classicalStartY = padding + (qubits.length * wireSpacing) + classicalGap
+
     const width = labelWidth + (maxPos * cellWidth) + (2 * padding)
-    const height = (qubits.length * wireSpacing) + (2 * padding)
+    const height = (qubits.length * wireSpacing) + classicalGap + classicalHeight + (2 * padding)
 
     // Start SVG
     let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
@@ -41,6 +48,10 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
       .control-point { stroke: #2D3748; stroke-width: 1; fill: #2D3748; }
       .target-x { stroke: #2D3748; stroke-width: 2; fill: none; }
       .connector-line { stroke: #2D3748; stroke-width: 2; }
+      .classical-wire { stroke: #A0AEC0; stroke-width: 2; stroke-dasharray: 4, 3; }
+      .classical-label { font-family: sans-serif; font-size: 12px; text-anchor: middle; dominant-baseline: middle; }
+      .measurement-line { stroke: #DD6B20; stroke-width: 2; }
+      .classical-bit { fill: #DD6B20; }
       /* Time markers */
       .time-marker { stroke: #E2E8F0; stroke-width: 1; stroke-dasharray: 4, 4; }
       .time-label { font-family: sans-serif; font-size: 10px; text-anchor: middle; fill: #718096; }
@@ -71,6 +82,19 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
       // Wire
       svg += `<line x1="${padding + labelWidth}" y1="${y}" x2="${width - padding}" y2="${y}" class="wire" />
 `
+    }
+
+    // Draw classical wires
+    if (showClassical) {
+      for (let i = 0; i < classicalCount; i++) {
+        const y = classicalStartY + (i * classicalSpacing)
+        svg += `<rect x="${padding}" y="${y - cellHeight/3}" width="${labelWidth}" height="${cellHeight/1.5}" fill="#FAF5FF" stroke="#D6BCFA" rx="3" />
+`
+        svg += `<text x="${padding + labelWidth/2}" y="${y}" class="classical-label">c${i}</text>
+`
+        svg += `<line x1="${padding + labelWidth}" y1="${y}" x2="${width - padding}" y2="${y}" class="classical-wire" />
+`
+      }
     }
 
     // Draw gates
@@ -194,6 +218,31 @@ export const renderCircuitSvg = (qubits: Qubit[], gates: Gate[]): string => {
 `
         svg += `<line x1="${x}" y1="${y3-15}" x2="${x}" y2="${y3+15}" class="target-x" />
 `
+      } else if (gate.type === 'measure') {
+        // Draw measurement gate with classical connector
+        const gateColorHex = getGateColor(gateColor)
+        svg += `<rect x="${x - 20}" y="${y - 20}" width="40" height="40" rx="5" fill="${gateColorHex}" class="gate-rect" />
+`
+        svg += `<text x="${x}" y="${y}" class="gate-text" fill="white">${gateDefinition.symbol}</text>
+`
+
+        // Add basis parameter if present
+        if (gateDefinition.params && gateDefinition.params.length > 0 && gate.params) {
+          const paramName = gateDefinition.params[0].name
+          const paramValue = gate.params[paramName] !== undefined 
+            ? gate.params[paramName] 
+            : gateDefinition.params[0].default
+          svg += `<text x="${x}" y="${y + 30}" font-family="sans-serif" font-size="10px" text-anchor="middle">${paramValue}</text>
+`
+        }
+
+        if (showClassical) {
+          const classicalY = classicalStartY + (qubit * classicalSpacing)
+          svg += `<line x1="${x}" y1="${y + 20}" x2="${x}" y2="${classicalY}" class="measurement-line" />
+`
+          svg += `<circle cx="${x}" cy="${classicalY}" r="4" class="classical-bit" />
+`
+        }
       } else {
         // Draw standard gate
         const gateColorHex = getGateColor(gateColor)
