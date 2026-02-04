@@ -504,6 +504,8 @@ def run_circuit(
     override_backend: Optional[str] = None,
     include_metrics: bool = False,
     cosmic_approach: Optional[str] = None,
+    cosmic_input_vectors: Optional[List[List[int]]] = None,
+    cosmic_measurement_vectors: Optional[List[List[int]]] = None,
     measurement_config: Optional[Dict[str, Any]] = None,
 ) -> Dict:
     load_dotenv()
@@ -711,6 +713,8 @@ def run_circuit(
                 gates_sorted,
                 cosmic_approach or "occurrences",
                 num_qubits=num_qubits,
+                input_vectors=cosmic_input_vectors,
+                measurement_vectors=cosmic_measurement_vectors,
             )
             hardware_metrics = calculate_hardware_metrics(num_qubits, gates_sorted)
 
@@ -783,6 +787,8 @@ def run_circuit(
             gates_sorted,
             cosmic_approach or "occurrences",
             num_qubits=num_qubits,
+            input_vectors=cosmic_input_vectors,
+            measurement_vectors=cosmic_measurement_vectors,
         )
         hardware_metrics = calculate_hardware_metrics(num_qubits, gates_sorted)
 

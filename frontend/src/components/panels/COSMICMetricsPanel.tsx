@@ -29,6 +29,10 @@ interface FunctionalProcess {
   reads: number
   writes: number
   cfp: number
+  q_entries?: number
+  q_exits?: number
+  qEntries?: number
+  qExits?: number
 }
 
 interface COSMICMetrics {
@@ -37,6 +41,10 @@ interface COSMICMetrics {
   exits: number
   reads: number
   writes: number
+  q_entries?: number
+  q_exits?: number
+  qEntries?: number
+  qExits?: number
   total_cfp?: number
   totalCFP?: number
   functional_processes?: FunctionalProcess[]
@@ -58,10 +66,31 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
   }
 
   const processes = metrics.functional_processes ?? metrics.functionalProcesses ?? []
+  const qEntries = metrics.q_entries ?? metrics.qEntries
+  const qExits = metrics.q_exits ?? metrics.qExits
   const totalCFP =
-    metrics.total_cfp ?? metrics.totalCFP ?? metrics.entries + metrics.exits + metrics.reads + metrics.writes
+    metrics.total_cfp ??
+    metrics.totalCFP ??
+    metrics.entries +
+      metrics.exits +
+      metrics.reads +
+      metrics.writes +
+      (qEntries ?? 0) +
+      (qExits ?? 0)
+  const hasQuantumMoves = typeof qEntries === 'number' || typeof qExits === 'number'
   const approachLabel = metrics.approach ? metrics.approach.toUpperCase() : 'UNKNOWN'
   const comparisonRows = (comparison ?? []).filter((item) => item.approach !== metrics.approach)
+  const comparisonHasQuantum = comparisonRows.some(
+    (item) => typeof item.q_entries === 'number' || typeof item.qEntries === 'number' || typeof item.q_exits === 'number' || typeof item.qExits === 'number',
+  )
+  const showQuantum = hasQuantumMoves || comparisonHasQuantum
+  const processesHaveQuantum = processes.some(
+    (process) =>
+      typeof process.q_entries === 'number' ||
+      typeof process.qEntries === 'number' ||
+      typeof process.q_exits === 'number' ||
+      typeof process.qExits === 'number',
+  )
 
   const exportMetrics = (format: 'csv' | 'json') => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
@@ -80,7 +109,7 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
       )
       mime = 'application/json'
     } else {
-      const header = ['approach', 'entries', 'exits', 'reads', 'writes', 'total_cfp']
+      const header = ['approach', 'entries', 'exits', 'q_entries', 'q_exits', 'reads', 'writes', 'total_cfp']
       const rows = [
         metrics,
         ...comparisonRows,
@@ -88,6 +117,8 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
         item.approach,
         item.entries,
         item.exits,
+        item.q_entries ?? item.qEntries ?? '',
+        item.q_exits ?? item.qExits ?? '',
         item.reads,
         item.writes,
         item.total_cfp ?? item.totalCFP ?? item.entries + item.exits + item.reads + item.writes,
@@ -143,6 +174,26 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
               {metrics.exits}
             </Text>
           </GridItem>
+          {hasQuantumMoves && (
+            <>
+              <GridItem>
+                <Text fontSize="xs" color={labelColor}>
+                  QEntry
+                </Text>
+                <Text fontSize="lg" fontWeight="bold">
+                  {qEntries ?? 0}
+                </Text>
+              </GridItem>
+              <GridItem>
+                <Text fontSize="xs" color={labelColor}>
+                  QExit
+                </Text>
+                <Text fontSize="lg" fontWeight="bold">
+                  {qExits ?? 0}
+                </Text>
+              </GridItem>
+            </>
+          )}
           <GridItem>
             <Text fontSize="xs" color={labelColor}>
               Reads
@@ -182,6 +233,16 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
             <Text fontSize="sm" color={labelColor}>
               →
             </Text>
+            {hasQuantumMoves && (
+              <>
+                <Tag size="sm" colorScheme="cyan">
+                  QEntry (QE): {qEntries ?? 0}
+                </Tag>
+                <Text fontSize="sm" color={labelColor}>
+                  →
+                </Text>
+              </>
+            )}
             <Tag size="sm" colorScheme="purple">
               Read (R): {metrics.reads}
             </Tag>
@@ -194,6 +255,16 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
             <Text fontSize="sm" color={labelColor}>
               →
             </Text>
+            {hasQuantumMoves && (
+              <>
+                <Tag size="sm" colorScheme="cyan">
+                  QExit (QX): {qExits ?? 0}
+                </Tag>
+                <Text fontSize="sm" color={labelColor}>
+                  →
+                </Text>
+              </>
+            )}
             <Tag size="sm" colorScheme="orange">
               Exit (X): {metrics.exits}
             </Tag>
@@ -212,6 +283,8 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
                     <Th>Approach</Th>
                     <Th isNumeric>E</Th>
                     <Th isNumeric>X</Th>
+                    {showQuantum && <Th isNumeric>QE</Th>}
+                    {showQuantum && <Th isNumeric>QX</Th>}
                     <Th isNumeric>R</Th>
                     <Th isNumeric>W</Th>
                     <Th isNumeric>CFP</Th>
@@ -223,6 +296,12 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
                       <Td>{item.approach}</Td>
                       <Td isNumeric>{item.entries}</Td>
                       <Td isNumeric>{item.exits}</Td>
+                      {showQuantum && (
+                        <Td isNumeric>{item.q_entries ?? item.qEntries ?? 0}</Td>
+                      )}
+                      {showQuantum && (
+                        <Td isNumeric>{item.q_exits ?? item.qExits ?? 0}</Td>
+                      )}
                       <Td isNumeric>{item.reads}</Td>
                       <Td isNumeric>{item.writes}</Td>
                       <Td isNumeric>
@@ -249,6 +328,8 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
                   <Th>Gate</Th>
                   <Th isNumeric>E</Th>
                   <Th isNumeric>X</Th>
+                  {processesHaveQuantum && <Th isNumeric>QE</Th>}
+                  {processesHaveQuantum && <Th isNumeric>QX</Th>}
                   <Th isNumeric>R</Th>
                   <Th isNumeric>W</Th>
                   <Th isNumeric>CFP</Th>
@@ -261,6 +342,12 @@ const COSMICMetricsPanel = ({ metrics, comparison }: COSMICMetricsPanelProps) =>
                     <Td>{process.gate_type ?? process.gateType ?? '-'}</Td>
                     <Td isNumeric>{process.entries}</Td>
                     <Td isNumeric>{process.exits}</Td>
+                    {processesHaveQuantum && (
+                      <Td isNumeric>{process.q_entries ?? process.qEntries ?? 0}</Td>
+                    )}
+                    {processesHaveQuantum && (
+                      <Td isNumeric>{process.q_exits ?? process.qExits ?? 0}</Td>
+                    )}
                     <Td isNumeric>{process.reads}</Td>
                     <Td isNumeric>{process.writes}</Td>
                     <Td isNumeric fontWeight="bold">

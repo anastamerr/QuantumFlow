@@ -20,15 +20,17 @@ with the current COSMIC counting implementation.
 
 ## Notes on Approach 3 (Q-COSMIC)
 
-The current implementation models Q-COSMIC as:
+Q-COSMIC now reports explicit quantum data movements (QE/QX) in line with the
+paper examples. The metrics are derived from input/measurement vectors:
 
 ```
-entries = num_qubits
-exits   = measurement_count
-total   = entries + exits
+entries = # input vectors
+exits   = # measurement vectors
+q_entries = 1 (if quantum processing present)
+q_exits   = 1 (if quantum processing present)
+total   = entries + exits + q_entries + q_exits
 ```
 
-This differs from the paper's UC1/UC2 examples that include explicit QE/QX data
-movements and yield higher totals (e.g., 6 CFP for UC1). Those deviations are
-intentional for now and will be revisited if QE/QX accounting is promoted into
-the backend data model.
+To match the paper’s Shor example (UC1: 2E, 2X, 1QE, 1QX = 6 QCFP), provide
+`cosmic_input_vectors` and `cosmic_measurement_vectors` with two registers
+(e.g., `[[0,1,2], [3,4]]`).

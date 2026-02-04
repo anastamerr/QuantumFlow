@@ -38,6 +38,8 @@ export type ExecutePayload = {
   backend?: string;
   include_metrics?: boolean;
   cosmic_approach?: 'occurrences' | 'types' | 'q-cosmic';
+  cosmic_input_vectors?: number[][];
+  cosmic_measurement_vectors?: number[][];
   measurement_config?: {
     basis: 'z' | 'x' | 'y';
     qubits?: number[];
@@ -79,6 +81,8 @@ export async function executeCircuit(payload: ExecutePayload) {
       exits: number;
       reads: number;
       writes: number;
+      q_entries?: number | null;
+      q_exits?: number | null;
       total_cfp: number;
       functional_processes: {
         name: string;
@@ -87,6 +91,8 @@ export async function executeCircuit(payload: ExecutePayload) {
         exits: number;
         reads: number;
         writes: number;
+        q_entries?: number | null;
+        q_exits?: number | null;
         cfp: number;
       }[];
     } | null;

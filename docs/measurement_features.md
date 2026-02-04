@@ -18,6 +18,8 @@
 - `qubits`: subset of qubits to measure.
 - `classical_bits`: mapping target classical bits.
 - `reset_after`: reset qubits after measurement (if supported in simulator).
+- `cosmic_input_vectors`: optional register groupings for COSMIC approaches `types` and `q-cosmic`.
+- `cosmic_measurement_vectors`: optional measurement register groupings for COSMIC approaches `types` and `q-cosmic`.
 
 ## Execute Response: New Fields
 
@@ -25,6 +27,7 @@
 - `per_qubit_probabilities`: marginal probabilities per qubit.
 - `confidence_intervals`: Wilson score intervals per bitstring.
 - `cosmic_metrics`, `hardware_metrics`: metrics blocks when `include_metrics=true`.
+- `cosmic_metrics.q_entries`, `cosmic_metrics.q_exits`: Q-COSMIC quantum data movements when applicable.
 
 ## Metrics Endpoints
 

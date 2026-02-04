@@ -279,6 +279,8 @@ def create_app() -> FastAPI:
                 override_backend=req.backend,
                 include_metrics=req.include_metrics,
                 cosmic_approach=req.cosmic_approach,
+                cosmic_input_vectors=req.cosmic_input_vectors,
+                cosmic_measurement_vectors=req.cosmic_measurement_vectors,
                 measurement_config=req.measurement_config.model_dump() if req.measurement_config else None,
             )
             return ExecuteResponse(**result, status="success")
@@ -296,6 +298,8 @@ def create_app() -> FastAPI:
                 [g.model_dump() for g in req.gates],
                 req.cosmic_approach or "occurrences",
                 num_qubits=req.num_qubits,
+                input_vectors=req.cosmic_input_vectors,
+                measurement_vectors=req.cosmic_measurement_vectors,
             )
             return COSMICMetrics(**metrics)
         except Exception as e:

@@ -77,7 +77,7 @@ const TutorialPanel = () => {
         <VStack spacing={6} align="stretch">
           <Box textAlign="center">
             <Heading size="lg" color={accentColor} mb={4}>
-              🚀 Welcome to QuantumFlow
+              Welcome to QuantumFlow
             </Heading>
             <Text fontSize="lg" mb={4}>
               A modern, interactive quantum circuit design and simulation platform
@@ -96,13 +96,13 @@ const TutorialPanel = () => {
             </VStack>
             <VStack>
               <Icon as={RepeatIcon} boxSize={8} color="orange.500" />
-              <Text fontWeight="bold">Real-time Simulation</Text>
-              <Text fontSize="sm" textAlign="center">Instant quantum state evolution</Text>
+              <Text fontWeight="bold">Backend Simulation</Text>
+              <Text fontSize="sm" textAlign="center">Accurate results from the simulator</Text>
             </VStack>
             <VStack>
               <Icon as={ViewIcon} boxSize={8} color="green.500" />
-              <Text fontWeight="bold">3D Visualization</Text>
-              <Text fontSize="sm" textAlign="center">Bloch sphere & state vectors</Text>
+              <Text fontWeight="bold">Visualization</Text>
+              <Text fontSize="sm" textAlign="center">Bloch sphere and state vectors</Text>
             </VStack>
             <VStack>
               <Icon as={DownloadIcon} boxSize={8} color="blue.500" />
@@ -113,7 +113,7 @@ const TutorialPanel = () => {
           
           <Card borderRadius="lg" bg={headerBg}>
             <CardBody>
-              <Text fontWeight="medium" mb={2}>✨ What you'll learn:</Text>
+              <Text fontWeight="medium" mb={2}>What you'll learn:</Text>
               <List spacing={2}>
                 <ListItem>
                   <ListIcon as={CheckCircleIcon} color="green.500" />
@@ -126,6 +126,10 @@ const TutorialPanel = () => {
                 <ListItem>
                   <ListIcon as={CheckCircleIcon} color="green.500" />
                   Understanding quantum gates and their properties
+                </ListItem>
+                <ListItem>
+                  <ListIcon as={CheckCircleIcon} color="green.500" />
+                  Using COSMIC metrics to measure circuit size
                 </ListItem>
                 <ListItem>
                   <ListIcon as={CheckCircleIcon} color="green.500" />
@@ -143,7 +147,7 @@ const TutorialPanel = () => {
         <VStack spacing={6} align="stretch">
           <Box textAlign="center">
             <Heading size="lg" color={accentColor} mb={4}>
-              🔧 Building Your First Circuit
+              Building Your First Circuit
             </Heading>
             <Progress value={((currentStep + 1) / 6) * 100} colorScheme="blue" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -211,7 +215,7 @@ const TutorialPanel = () => {
         <VStack spacing={6} align="stretch">
           <Box textAlign="center">
             <Heading size="lg" color={accentColor} mb={4}>
-              ⚛️ Understanding Quantum Gates
+              Understanding Quantum Gates
             </Heading>
             <Progress value={((currentStep + 1) / 6) * 100} colorScheme="blue" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -354,7 +358,7 @@ const TutorialPanel = () => {
         <VStack spacing={6} align="stretch">
           <Box textAlign="center">
             <Heading size="lg" color={accentColor} mb={4}>
-              🔬 Running Quantum Simulations
+              Running Quantum Simulations
             </Heading>
             <Progress value={((currentStep + 1) / 6) * 100} colorScheme="blue" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -371,9 +375,9 @@ const TutorialPanel = () => {
                 <HStack>
                   <Icon as={RepeatIcon} color="blue.500" />
                   <VStack align="start" spacing={0}>
-                    <Text fontWeight="bold">State Vector Evolution</Text>
+                    <Text fontWeight="bold">State Vector Simulation</Text>
                     <Text fontSize="sm" color={codeColor}>
-                      Watch your quantum states evolve step-by-step as gates are applied
+                      Exact simulation for small circuits
                     </Text>
                   </VStack>
                 </HStack>
@@ -383,7 +387,7 @@ const TutorialPanel = () => {
                   <VStack align="start" spacing={0}>
                     <Text fontWeight="bold">Measurement Results</Text>
                     <Text fontSize="sm" color={codeColor}>
-                      See probability distributions and measurement outcomes
+                      Backend measurements with probabilities and counts
                     </Text>
                   </VStack>
                 </HStack>
@@ -401,9 +405,9 @@ const TutorialPanel = () => {
                 <HStack>
                   <Icon as={InfoIcon} color="purple.500" />
                   <VStack align="start" spacing={0}>
-                    <Text fontWeight="bold">Circuit Analysis</Text>
+                    <Text fontWeight="bold">Metrics and Analysis</Text>
                     <Text fontSize="sm" color={codeColor}>
-                      Automatic detection of quantum properties like entanglement
+                      COSMIC size metrics and hardware metrics
                     </Text>
                   </VStack>
                 </HStack>
@@ -413,7 +417,7 @@ const TutorialPanel = () => {
           
           <Card bg={successBg}>
             <CardBody>
-              <Text fontWeight="bold" mb={2} color="green.600">📈 Simulation Options:</Text>
+              <Text fontWeight="bold" mb={2} color="green.600">Simulation Options:</Text>
               <List spacing={1}>
                 <ListItem>
                   <Text fontSize="sm"><Code>State Vector</Code> - Exact quantum simulation (default)</Text>
@@ -425,9 +429,44 @@ const TutorialPanel = () => {
                   <Text fontSize="sm"><Code>Shots</Code> - Number of measurement repetitions (100-10,000)</Text>
                 </ListItem>
                 <ListItem>
-                  <Text fontSize="sm"><Code>Real-time Viz</Code> - Live animation during simulation</Text>
+                  <Text fontSize="sm"><Code>Measurement override</Code> - Choose basis and which qubits to measure</Text>
+                </ListItem>
+                <ListItem>
+                  <Text fontSize="sm"><Code>Include metrics</Code> - COSMIC and hardware metrics</Text>
+                </ListItem>
+                <ListItem>
+                  <Text fontSize="sm"><Code>COSMIC approach</Code> - Occurrences, Types, or Q-COSMIC</Text>
                 </ListItem>
               </List>
+            </CardBody>
+          </Card>
+
+          <Card bg={subtleBg}>
+            <CardHeader bg={headerBg}>
+              <Heading size="sm">COSMIC in Simple Terms</Heading>
+            </CardHeader>
+            <CardBody>
+              <Text fontSize="sm" mb={2}>
+                We size a circuit by counting data movements:
+              </Text>
+              <List spacing={1}>
+                <ListItem>
+                  <Text fontSize="sm"><Code>Entry (E)</Code> - data goes into a process</Text>
+                </ListItem>
+                <ListItem>
+                  <Text fontSize="sm"><Code>Exit (X)</Code> - data leaves a process</Text>
+                </ListItem>
+                <ListItem>
+                  <Text fontSize="sm"><Code>Read (R)</Code> - data read from classical bits</Text>
+                </ListItem>
+                <ListItem>
+                  <Text fontSize="sm"><Code>Write (W)</Code> - data written by measurements</Text>
+                </ListItem>
+              </List>
+              <Text fontSize="sm" color={codeColor} mt={2}>
+                Approach 1 counts every gate, Approach 2 groups by gate type and register,
+                and Approach 3 adds high-level quantum entries and exits (QE/QX).
+              </Text>
             </CardBody>
           </Card>
         </VStack>
@@ -439,7 +478,7 @@ const TutorialPanel = () => {
         <VStack spacing={6} align="stretch">
           <Box textAlign="center">
             <Heading size="lg" color={accentColor} mb={4}>
-              💻 Code Generation & Export
+              Code Generation & Export
             </Heading>
             <Progress value={((currentStep + 1) / 6) * 100} colorScheme="blue" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -541,7 +580,7 @@ print("Results:", result.histogram(key='result'))`}</Code>
                     </Card>
                   </HStack>
                   
-                  <Text fontWeight="bold" mt={4}>🚀 Optimization Features:</Text>
+                  <Text fontWeight="bold" mt={4}>Optimization Features:</Text>
                   <List spacing={1}>
                     <ListItem>
                       <ListIcon as={CheckCircleIcon} color="green.500" />
@@ -559,6 +598,10 @@ print("Results:", result.histogram(key='result'))`}</Code>
                       <ListIcon as={CheckCircleIcon} color="green.500" />
                       <Text fontSize="sm">Noise-aware optimization</Text>
                     </ListItem>
+                    <ListItem>
+                      <ListIcon as={CheckCircleIcon} color="green.500" />
+                      <Text fontSize="sm">Export measurement and metrics results as CSV or JSON</Text>
+                    </ListItem>
                   </List>
                 </VStack>
               </TabPanel>
@@ -573,7 +616,7 @@ print("Results:", result.histogram(key='result'))`}</Code>
         <VStack spacing={6} align="stretch">
           <Box textAlign="center">
             <Heading size="lg" color={accentColor} mb={4}>
-              💡 Tips & Best Practices
+              Tips & Best Practices
             </Heading>
             <Progress value={100} colorScheme="green" />
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -584,7 +627,7 @@ print("Results:", result.histogram(key='result'))`}</Code>
           <HStack spacing={6} wrap="wrap" justify="center">
             <Card maxW="300px">
               <CardHeader bg="blue.50">
-                <Text fontWeight="bold" color="blue.600">🎯 Circuit Design Tips</Text>
+                <Text fontWeight="bold" color="blue.600">Circuit Design Tips</Text>
               </CardHeader>
               <CardBody>
                 <List spacing={2}>
@@ -592,18 +635,20 @@ print("Results:", result.histogram(key='result'))`}</Code>
                   <ListItem fontSize="sm">Use Hadamard gates to create superposition</ListItem>
                   <ListItem fontSize="sm">CNOT gates create entanglement</ListItem>
                   <ListItem fontSize="sm">Measure at the end of your circuit</ListItem>
+                  <ListItem fontSize="sm">Collapse the gate palette to focus on the canvas</ListItem>
                 </List>
               </CardBody>
             </Card>
             
             <Card maxW="300px">
               <CardHeader bg="green.50">
-                <Text fontWeight="bold" color="green.600">⚡ Performance Tips</Text>
+                <Text fontWeight="bold" color="green.600">Performance Tips</Text>
               </CardHeader>
               <CardBody>
                 <List spacing={2}>
                   <ListItem fontSize="sm">Limit circuits to ~8 qubits for smooth performance</ListItem>
-                  <ListItem fontSize="sm">Disable real-time visualization for large circuits</ListItem>
+                  <ListItem fontSize="sm">Use the state vector method for exact results on small circuits</ListItem>
+                  <ListItem fontSize="sm">Use the noisy simulator to explore realistic noise</ListItem>
                   <ListItem fontSize="sm">Use "Jump to End" for faster simulation results</ListItem>
                   <ListItem fontSize="sm">Clear circuit before building new designs</ListItem>
                 </List>
@@ -612,7 +657,7 @@ print("Results:", result.histogram(key='result'))`}</Code>
             
             <Card maxW="300px">
               <CardHeader bg="purple.50">
-                <Text fontWeight="bold" color="purple.600">🔍 Learning Resources</Text>
+                <Text fontWeight="bold" color="purple.600">Learning Resources</Text>
               </CardHeader>
               <CardBody>
                 <List spacing={2}>
@@ -620,6 +665,7 @@ print("Results:", result.histogram(key='result'))`}</Code>
                   <ListItem fontSize="sm">Experiment with rotation gate angles</ListItem>
                   <ListItem fontSize="sm">Compare different simulation methods</ListItem>
                   <ListItem fontSize="sm">Export code to run on real quantum hardware</ListItem>
+                  <ListItem fontSize="sm">Compare COSMIC approaches to see how size changes</ListItem>
                 </List>
               </CardBody>
             </Card>
@@ -646,7 +692,7 @@ print("Results:", result.histogram(key='result'))`}</Code>
           
           <Box textAlign="center" mt={6}>
             <Text fontSize="lg" fontWeight="bold" color={accentColor} mb={2}>
-              🎉 Congratulations!
+              Congratulations!
             </Text>
             <Text>
               You're now ready to build amazing quantum circuits with QuantumFlow. 

@@ -35,6 +35,14 @@ class ExecuteRequest(BaseModel):
         default=None,
         description="COSMIC approach: 'occurrences', 'types', or 'q-cosmic'",
     )
+    cosmic_input_vectors: Optional[List[List[int]]] = Field(
+        default=None,
+        description="Optional COSMIC input vectors (registers) for approaches 'types' and 'q-cosmic'",
+    )
+    cosmic_measurement_vectors: Optional[List[List[int]]] = Field(
+        default=None,
+        description="Optional COSMIC measurement vectors (registers) for approaches 'types' and 'q-cosmic'",
+    )
     measurement_config: Optional[MeasurementConfig] = None
 
 
@@ -44,6 +52,14 @@ class MetricsRequest(BaseModel):
     cosmic_approach: Optional[str] = Field(
         default=None,
         description="COSMIC approach: 'occurrences', 'types', or 'q-cosmic'",
+    )
+    cosmic_input_vectors: Optional[List[List[int]]] = Field(
+        default=None,
+        description="Optional COSMIC input vectors (registers) for approaches 'types' and 'q-cosmic'",
+    )
+    cosmic_measurement_vectors: Optional[List[List[int]]] = Field(
+        default=None,
+        description="Optional COSMIC measurement vectors (registers) for approaches 'types' and 'q-cosmic'",
     )
 
 
@@ -55,6 +71,8 @@ class FunctionalProcess(BaseModel):
     reads: int
     writes: int
     cfp: int
+    q_entries: Optional[int] = None
+    q_exits: Optional[int] = None
 
 
 class COSMICMetrics(BaseModel):
@@ -65,6 +83,8 @@ class COSMICMetrics(BaseModel):
     writes: int
     total_cfp: int
     functional_processes: List[FunctionalProcess]
+    q_entries: Optional[int] = None
+    q_exits: Optional[int] = None
 
 
 class HardwareMetrics(BaseModel):

@@ -26,6 +26,8 @@ export interface FunctionalProcess {
   reads: number
   writes: number
   cfp: number
+  qEntries?: number
+  qExits?: number
 }
 
 export interface COSMICMetrics {
@@ -36,6 +38,8 @@ export interface COSMICMetrics {
   writes: number
   totalCFP: number
   functionalProcesses: FunctionalProcess[]
+  qEntries?: number
+  qExits?: number
 }
 
 export interface HardwareMetrics {
