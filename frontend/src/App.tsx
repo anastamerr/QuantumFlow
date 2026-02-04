@@ -1,7 +1,7 @@
-import { Box, Flex, Spinner, VStack, useColorModeValue, useToast } from '@chakra-ui/react'
+import { Box, Flex, Spinner, VStack, useColorModeValue, usePrefersReducedMotion, useToast } from '@chakra-ui/react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import Header from './components/layout/Header'
 import Sidebar from './components/layout/Sidebar'
 import CircuitCanvas from './components/canvas/CircuitCanvas'
@@ -22,6 +22,9 @@ function App() {
   const toast = useToast()
   const panelBg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
+  const prefersReducedMotion = usePrefersReducedMotion()
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const sidebarWidth = useMemo(() => (isSidebarCollapsed ? '56px' : '280px'), [isSidebarCollapsed])
 
   // Handle keyboard shortcuts globally
   useEffect(() => {
@@ -97,8 +100,14 @@ function App() {
             h="calc(100vh - 60px)" // Adjust based on header height
             zIndex={10}
             flexShrink={0}
+            w={sidebarWidth}
+            transition={prefersReducedMotion ? undefined : 'width 180ms cubic-bezier(0.2, 0, 0, 1)'}
+            css={{ willChange: 'width' }}
           >
-            <Sidebar />
+            <Sidebar
+              isCollapsed={isSidebarCollapsed}
+              onToggle={() => setIsSidebarCollapsed((prev) => !prev)}
+            />
           </Box>
           
           {/* Main content area with vertical scrolling */}
