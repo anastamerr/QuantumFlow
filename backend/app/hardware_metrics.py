@@ -1,18 +1,32 @@
+import os
 from typing import Any, Dict, List
+
+try:
+    from ._native import analyze_hardware_metrics as _native_analyze_hardware_metrics
+except (ImportError, OSError):
+    _native_analyze_hardware_metrics = None
+
+
+def native_analyzer_available() -> bool:
+    """Return whether the optional C++ analyzer was built for this platform."""
+    return _native_analyze_hardware_metrics is not None
 
 
 def _gate_qubit_count(gate: Dict[str, Any]) -> int:
     qubits = set()
     if gate.get("qubit") is not None:
         qubits.add(gate["qubit"])
-    for t in gate.get("targets") or []:
-        qubits.add(t)
-    for c in gate.get("controls") or []:
-        qubits.add(c)
+    for target in gate.get("targets") or []:
+        qubits.add(target)
+    for control in gate.get("controls") or []:
+        qubits.add(control)
     return len(qubits)
 
 
-def calculate_hardware_metrics(num_qubits: int, gates: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _calculate_hardware_metrics_python(
+    num_qubits: int, gates: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Reference implementation and fallback for unsupported native platforms."""
     gate_count: Dict[str, int] = {}
     t_positions = set()
     cnot_count = 0
@@ -25,44 +39,44 @@ def calculate_hardware_metrics(num_qubits: int, gates: List[Dict[str, Any]]) -> 
 
     max_position = -1
     for gate in gates:
-        gtype = str(gate.get("type") or "unknown")
-        gate_count[gtype] = gate_count.get(gtype, 0) + 1
+        gate_type = str(gate.get("type") or "unknown")
+        gate_count[gate_type] = gate_count.get(gate_type, 0) + 1
 
-        if gtype in {"cnot", "cx"}:
+        if gate_type in {"cnot", "cx"}:
             cnot_count += 1
-        if gtype == "measure":
+        if gate_type == "measure":
             measurement_count += 1
-        if gtype == "t":
-            pos = gate.get("position")
-            if isinstance(pos, int):
-                t_positions.add(pos)
+        if gate_type == "t":
+            position = gate.get("position")
+            if isinstance(position, int):
+                t_positions.add(position)
 
-        pos = gate.get("position")
-        if isinstance(pos, int):
-            max_position = max(max_position, pos)
+        position = gate.get("position")
+        if isinstance(position, int):
+            max_position = max(max_position, position)
 
-        if gtype != "measure":
+        if gate_type != "measure":
             qubit_count = _gate_qubit_count(gate)
             if qubit_count <= 1:
                 single_qubit += 1
             elif qubit_count == 2:
                 two_qubit += 1
                 entangling_gate_count += 1
-                if isinstance(pos, int):
-                    entangling_positions.add(pos)
+                if isinstance(position, int):
+                    entangling_positions.add(position)
             else:
                 multi_qubit += 1
                 entangling_gate_count += 1
-                if isinstance(pos, int):
-                    entangling_positions.add(pos)
+                if isinstance(position, int):
+                    entangling_positions.add(position)
 
     circuit_depth = max_position + 1 if max_position >= 0 else 0
     t_count = gate_count.get("t", 0)
-    non_measure_gate_count = max((single_qubit + two_qubit + multi_qubit), 1)
+    non_measure_gate_count = max(single_qubit + two_qubit + multi_qubit, 1)
     entanglement_ratio = entangling_gate_count / non_measure_gate_count
     entanglement_depth = len(entangling_positions)
     qv_qubits = min(int(num_qubits), int(circuit_depth)) if num_qubits and circuit_depth else 0
-    quantum_volume = 2 ** qv_qubits if qv_qubits > 0 else 0
+    quantum_volume = 2**qv_qubits if qv_qubits > 0 else 0
 
     return {
         "circuit_depth": circuit_depth,
@@ -79,4 +93,24 @@ def calculate_hardware_metrics(num_qubits: int, gates: List[Dict[str, Any]]) -> 
         "entanglement_depth": entanglement_depth,
         "quantum_volume": quantum_volume,
         "estimated_fidelity": None,
+        "analyzer_engine": "python",
     }
+
+
+def calculate_hardware_metrics(
+    num_qubits: int, gates: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Analyze a circuit with the C++ engine when available, otherwise use Python."""
+    engine = os.getenv("QUANTUMFLOW_METRICS_ENGINE", "auto").strip().lower()
+    if engine not in {"auto", "cpp", "python"}:
+        raise ValueError("QUANTUMFLOW_METRICS_ENGINE must be auto, cpp, or python")
+
+    if engine != "python" and _native_analyze_hardware_metrics is not None:
+        return _native_analyze_hardware_metrics(int(num_qubits), gates)
+
+    if engine == "cpp" and _native_analyze_hardware_metrics is None:
+        raise RuntimeError(
+            "C++ hardware-metrics analyzer is unavailable; build backend/native first"
+        )
+
+    return _calculate_hardware_metrics_python(num_qubits, gates)

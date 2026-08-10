@@ -70,6 +70,19 @@ The backend is a **FastAPI application** that:
 - **Pydantic** - Data validation using Python type hints
 - **Uvicorn** - ASGI server for production-ready deployment
 
+### Optional native C++ analyzer
+
+Hardware-metrics requests can use the C++17 extension in `native/`. It performs gate counting, depth analysis, T-depth, entanglement metrics, and quantum-volume estimation in one native pass. The API loads it automatically and falls back to the Python reference implementation when no compiled module is present.
+
+```bash
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build --config Release
+python -m unittest tests.test_native_hardware_metrics
+python benchmarks/native_hardware_metrics_benchmark.py
+```
+
+Use `QUANTUMFLOW_METRICS_ENGINE=python` to force the reference implementation or `QUANTUMFLOW_METRICS_ENGINE=cpp` to require the accelerator.
+
 **Key Features:**
 - CORS support for frontend integration
 - Environment-based configuration

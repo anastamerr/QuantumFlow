@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 .env
+native/build/
+app/_native/*.pyd
+app/_native/*.pyd.manifest
+app/_native/*.so
+app/_native/*.dylib

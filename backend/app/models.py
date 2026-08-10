@@ -102,6 +102,7 @@ class HardwareMetrics(BaseModel):
     entanglement_depth: Optional[int] = None
     quantum_volume: Optional[int] = None
     estimated_fidelity: Optional[float] = None
+    analyzer_engine: Optional[str] = None
 
 
 class ExecuteResponse(BaseModel):

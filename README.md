@@ -10,18 +10,20 @@ QuantumFlow is a full-stack quantum circuit design, simulation, and measurement 
 - Per-qubit probabilities, confidence intervals, and measurement exports.
 - COSMIC functional size metrics (occurrences, types, q-cosmic).
 - Hardware-oriented metrics (depth, width, gate counts, T-count, CNOT count, etc.).
+- Optional C++17 hardware-metrics engine with automatic Python fallback.
 - Code generation for Qiskit, Cirq, and Braket.
 - Visualization panels for state, Bloch sphere, and measurement histograms.
 
 ## Architecture
 - Frontend: React + TypeScript + Vite + Chakra UI, with Redux for state management.
-- Backend: FastAPI + Qiskit, with measurement analytics and metrics modules.
+- Backend: FastAPI + Qiskit, with measurement analytics and a native C++17 metrics accelerator.
 
 ## Quick Start
 
 ### Prerequisites
 - Node.js 20.x (see `frontend/package.json` engines)
 - Python 3.8+ and pip
+- CMake and a C++17 compiler (optional, for the native metrics accelerator)
 
 ### Backend
 
@@ -39,6 +41,16 @@ chmod +x dev.sh
 ```
 
 The backend will start at `http://localhost:8000`.
+
+Build the optional C++ analyzer before starting the backend:
+
+```bash
+cd backend
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build --config Release
+```
+
+On Windows with Visual Studio Build Tools, run `backend/native/build_windows.cmd`.
 
 ### Frontend
 ```bash
@@ -110,6 +122,7 @@ Backend:
 ```bash
 cd backend
 python -m unittest discover -s tests -p "test_*.py"
+python benchmarks/native_hardware_metrics_benchmark.py
 ```
 
 Frontend:
